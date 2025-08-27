@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Ficha Técnica de Cozinha</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js';
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js';
+        
+        // Configuração do Firebase (substitua pelos seus dados)
+        const firebaseConfig = {
+            apiKey: "sua-api-key-aqui",
+            authDomain: "seu-projeto.firebaseapp.com",
+            projectId: "seu-projeto-id",
+            storageBucket: "seu-projeto.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "sua-app-id"
+        };
+        
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+        
+        // Tornar disponível globalmente
+        window.firebase = { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where, signInAnonymously, onAuthStateChanged };
+    </script>
+    <style>
+        html.dark { color-scheme: dark; }
+        body { font-family: 'Inter', sans-serif; }
+        .view { display: none; }
+        .view.active { display: block; }
+        .sidebar-link.active { background-color: #FFFBEB; color: #D97706; border-right: 3px solid #F97316; }
+        html.dark .sidebar-link.active { background-color: #374151; color: #FBBF24; }
+        @media print {
+            body * { visibility: hidden; }
+            #printableArea, #printableArea * { visibility: visible; }
+            #printableArea { position: absolute; left: 0; top: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+
+    <div class="flex min-h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 bg-white dark:bg-gray-800 shadow-md flex-shrink-0 flex flex-col">
+            <div class="p-6 flex items-center space-x-3 border-b border-gray-200 dark:border-gray-700">
+                <i data-lucide="chef-hat" class="h-10 w-10 text-orange-500"></i>
+                <h1 class="text-2xl font-bold text-gray-800 dark:text-white">Cozinha Eficiente</h1>
+            </div>
+            <nav class="mt-6 flex-grow">
+                <a href="#" onclick="showView('dashboard')" class="sidebar-link active flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="layout-dashboard" class="h-5 w-5 mr-3"></i><span>Dashboard</span>
+                </a>
+                 <a href="#" onclick="showView('relatorios')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="line-chart" class="h-5 w-5 mr-3"></i><span>Relatórios</span>
+                </a>
+                <a href="#" onclick="showView('pratos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="utensils-crossed" class="h-5 w-5 mr-3"></i><span>Pratos</span>
+                </a>
+                <a href="#" onclick="showView('fichas')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="notebook-tabs" class="h-5 w-5 mr-3"></i><span>Fichas Técnicas</span>
+                </a>
+                <a href="#" onclick="showView('insumos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="carrot" class="h-5 w-5 mr-3"></i><span>Insumos</span>
+                </a>
+                <a href="#" onclick="showView('importacao')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="file-up" class="h-5 w-5 mr-3"></i><span>Importação</span>
+                </a>
+            </nav>
+            <div class="p-6 border-t border-gray-200 dark:border-gray-700">
+                 <a href="#" onclick="showView('configuracoes')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                    <i data-lucide="cog" class="h-5 w-5 mr-3"></i><span>Configurações</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-grow p-4 sm:p-6 lg:p-8 bg-gray-100 dark:bg-gray-900">
+
+            <!-- Dashboard View -->
+            <div id="dashboard" class="view active">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Dashboard de Análises</h2>
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100"><i data-lucide="trending-up" class="h-6 w-6 mr-3 text-orange-500"></i>Fichas com Maiores Variações</h3>
+                        <div class="relative h-80">
+                            <canvas id="dashboardFichasChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100"><i data-lucide="bar-chart-3" class="h-6 w-6 mr-3 text-orange-500"></i>Insumos com Maiores Variações</h3>
+                        <div class="relative h-80">
+                            <canvas id="dashboardInsumosChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Relatórios View -->
+            <div id="relatorios" class="view">
+                 <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Relatórios Gerenciais</h2>
+                    <button onclick="printReports()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center shadow-sm transition-colors"><i data-lucide="printer" class="h-5 w-5 mr-2"></i>Imprimir Relatórios</button>
+                </div>
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md lg:col-span-2">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100"><i data-lucide="dollar-sign" class="h-6 w-6 mr-3 text-green-500"></i>Pratos Mais Lucrativos (Lucro em R$)</h3>
+                        <div class="relative h-96">
+                            <canvas id="relatorioPratosChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100"><i data-lucide="shopping-cart" class="h-6 w-6 mr-3 text-blue-500"></i>Compras por Fornecedor</h3>
+                        <div class="relative h-96">
+                            <canvas id="relatorioFornecedoresChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md lg:col-span-3">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100"><i data-lucide="archive" class="h-6 w-6 mr-3 text-yellow-500"></i>Custo Total de Compras Recentes</h3>
+                        <div id="relatorioEstoque" class="space-y-3"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pratos View -->
+            <div id="pratos" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Pratos Finais</h2>
+                    <button onclick="openPratoModal()" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 flex items-center shadow-sm transition-colors"><i data-lucide="plus" class="h-5 w-5 mr-2"></i>Novo Prato</button>
+                </div>
+                <div id="pratosContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <!-- Fichas Técnicas View -->
+            <div id="fichas" class="view">
+                <div class="flex justify-between items-center mb-6">
+                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Fichas Técnicas de Produção</h2>
+                    <button onclick="openFichaModal()" class="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 flex items-center shadow-sm transition-colors"><i data-lucide="plus" class="h-5 w-5 mr-2"></i>Nova Ficha Técnica</button>
+                </div>
+                <div id="fichasContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+            </div>
+
+            <!-- Insumos View -->
+            <div id="insumos" class="view">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Gerenciamento de Insumos</h2>
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
+                        <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Lista de Insumos</h3>
+                        <div class="flex items-center gap-2 flex-wrap">
+                             <button onclick="exportarInsumosCSV()" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 flex items-center shadow-sm transition-colors text-sm"><i data-lucide="download" class="h-4 w-4 mr-2"></i>Exportar CSV</button>
+                             <select id="filterFornecedor" onchange="renderInsumos()" class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg py-2 px-3 text-sm focus:ring-orange-500 focus:border-orange-500"><option value="">Todos os Fornecedores</option></select>
+                            <select id="filterUnidade" onchange="renderInsumos()" class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg py-2 px-3 text-sm focus:ring-orange-500 focus:border-orange-500"><option value="">Todas as Unidades</option></select>
+                            <div class="relative">
+                                <input type="text" id="searchInput" onkeyup="renderInsumos()" placeholder="Buscar insumo..." class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg w-full sm:w-64 focus:ring-orange-500 focus:border-orange-500">
+                                <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"></i>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-gray-100 dark:bg-gray-700">
+                                <tr>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Nome do Insumo</th><th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Unidade Padrão</th><th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Último Fornecedor</th>
+                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Último Preço</th><th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Data da Compra</th><th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Ações</th>
+                                </tr>
+                            </thead>
+                            <tbody id="insumosTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Importação View -->
+            <div id="importacao" class="view">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Importar XML</h2>
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <h3 class="text-xl font-semibold mb-4 text-gray-800 dark:text-gray-100">Importar Insumos via XML (DANFE)</h3>
+                    <p class="text-gray-600 dark:text-gray-400 mb-4">Selecione o arquivo XML da sua nota fiscal para carregar os produtos no sistema.</p>
+                    <div class="mt-2 flex items-center justify-center px-6 pt-5 pb-6 border-2 border-gray-300 dark:border-gray-600 border-dashed rounded-md">
+                        <div class="space-y-1 text-center">
+                            <i data-lucide="file-text" class="mx-auto h-12 w-12 text-gray-400"></i>
+                            <div class="flex text-sm text-gray-600 dark:text-gray-400">
+                                <label for="xmlFileInput" class="relative cursor-pointer bg-white dark:bg-gray-800 rounded-md font-medium text-orange-600 hover:text-orange-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-orange-500">
+                                    <span>Carregar um arquivo</span>
+                                    <input id="xmlFileInput" name="xmlFileInput" type="file" class="sr-only" accept=".xml" onchange="displayFileName()">
+                                </label>
+                                <p class="pl-1">ou arraste e solte</p>
+                            </div>
+                            <p class="text-xs text-gray-500" id="fileNameDisplay">Nenhum arquivo selecionado</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center mt-4 space-x-4">
+                         <button onclick="importarXML()" class="bg-orange-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-600 transition duration-300 flex items-center shadow-sm"><i data-lucide="upload-cloud" class="h-5 w-5 mr-2"></i>Processar XML</button>
+                        <div class="flex items-center">
+                            <label for="dataCompraInput" class="text-sm font-medium mr-2">Data da Compra:</label>
+                            <input type="date" id="dataCompraInput" class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md p-1.5 text-sm focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Configurações View -->
+            <div id="configuracoes" class="view">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Configurações</h2>
+                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md max-w-lg mx-auto">
+                    <div class="space-y-6">
+                        <div>
+                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Valores Padrão</h3>
+                            <div class="mt-4 space-y-4">
+                                <div>
+                                    <label for="defaultTaxaPerca" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Taxa de Perca Padrão (%)</label>
+                                    <input type="number" id="defaultTaxaPerca" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                                    <p class="mt-1 text-xs text-gray-500">Valor padrão para a perca de insumos na tela de revisão da importação.</p>
+                                </div>
+                                <div>
+                                    <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Custo de Finalização Padrão (%)</label>
+                                    <input type="number" id="defaultCustoFinalizacao" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                                    <p class="mt-1 text-xs text-gray-500">Valor padrão para o custo de finalização ao criar um novo prato.</p>
+                                </div>
+                                <div>
+                                    <label for="defaultMargemLucro" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Margem de Lucro Padrão (%)</label>
+                                    <input type="number" id="defaultMargemLucro" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                                    <p class="mt-1 text-xs text-gray-500">Valor padrão para a margem de lucro ao criar um novo prato.</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
+                             <h3 class="text-lg font-medium text-gray-900 dark:text-white">Aparência</h3>
+                             <div class="flex items-center justify-between mt-4">
+                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Modo Escuro</span>
+                                <button onclick="toggleDarkMode()" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors bg-gray-200 dark:bg-gray-600">
+                                    <span id="darkModeToggle" class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform translate-x-1 dark:translate-x-6"></span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-8 text-right">
+                        <button onclick="salvarConfiguracoes()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center shadow-sm transition-colors inline-flex">
+                            <i data-lucide="save" class="h-5 w-5 mr-2"></i>Salvar Configurações
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modals e outros elementos -->
+    
+    <script>
+        // --- BANCO DE DADOS ---
+        let insumosDB, comprasDB, fichasTecnicasDB, pratosDB, configuracoesDB;
+        let insumosParaRevisao = [];
+        const conversionFactors = { 'kg': 1000, 'g': 1, 'l': 1000, 'ml': 1 };
+        let charts = {};
+        
+        // --- FUNÇÕES PRINCIPAIS ---
+        function getTodayDate() { const t=new Date(); return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`; }
+        
+        function renderAll() {
+            populateFilters();
+            renderDashboard();
+            renderPratos();
+            renderFichasTecnicas();
+            renderInsumos();
+            renderReports();
+            renderConfiguracoes();
+            lucide.createIcons();
+        }
+
+        document.addEventListener('DOMContentLoaded', () => { 
+            loadData();
+            document.getElementById('dataCompraInput').value = getTodayDate(); 
+            renderAll(); 
+        });
+
+        // --- PERSISTÊNCIA DE DADOS ---
+        function saveData() {
+            localStorage.setItem('insumosDB', JSON.stringify(insumosDB));
+            localStorage.setItem('comprasDB', JSON.stringify(comprasDB));
+            localStorage.setItem('fichasTecnicasDB', JSON.stringify(fichasTecnicasDB));
+            localStorage.setItem('pratosDB', JSON.stringify(pratosDB));
+            localStorage.setItem('configuracoesDB', JSON.stringify(configuracoesDB));
+        }
+        function loadData() {
+            insumosDB = JSON.parse(localStorage.getItem('insumosDB')) || [
+                { id: 1, nome: 'Tomate Italiano', unidade: 'kg' }, { id: 2, nome: 'Cebola Pera', unidade: 'kg' }, { id: 3, nome: 'Azeite Extra Virgem', unidade: 'L' },
+                { id: 4, nome: 'Manjericão Fresco', unidade: 'maço' }, { id: 5, nome: 'Farinha de Trigo', unidade: 'kg' }, { id: 6, nome: 'Ovo de Galinha', unidade: 'unidade' },
+            ];
+            comprasDB = JSON.parse(localStorage.getItem('comprasDB')) || [
+                { id: 1, insumoMestreId: 1, data: '2024-07-20', preco: 7.90, perdaPercentual: 0, fornecedor: { nome: 'Hortifruti Frescor' } }, { id: 2, insumoMestreId: 1, data: '2024-08-15', preco: 8.50, perdaPercentual: 0, fornecedor: { nome: 'Hortifruti Frescor' } },
+                { id: 3, insumoMestreId: 2, data: '2024-07-20', preco: 5.50, perdaPercentual: 10, fornecedor: { nome: 'Hortifruti Frescor' } }, { id: 4, insumoMestreId: 2, data: '2024-08-15', preco: 5.20, perdaPercentual: 10, fornecedor: { nome: 'Hortifruti Frescor' } },
+                { id: 5, insumoMestreId: 3, data: '2024-07-15', preco: 42.50, perdaPercentual: 0, fornecedor: { nome: 'Importadora Sabor' } }, { id: 6, insumoMestreId: 3, data: '2024-08-10', preco: 45.00, perdaPercentual: 0, fornecedor: { nome: 'Importadora Sabor' } },
+                { id: 7, insumoMestreId: 4, data: '2024-08-01', preco: 3.80, perdaPercentual: 5, fornecedor: { nome: 'Hortifruti Frescor' } }, { id: 8, insumoMestreId: 4, data: '2024-08-20', preco: 4.00, perdaPercentual: 5, fornecedor: { nome: 'Hortifruti Frescor' } },
+                { id: 9, insumoMestreId: 5, data: '2024-07-05', preco: 6.00, perdaPercentual: 0, fornecedor: { nome: 'Distribuidora Grãos' } }, { id: 10, insumoMestreId: 5, data: '2024-08-05', preco: 6.00, perdaPercentual: 0, fornecedor: { nome: 'Distribuidora Grãos' } },
+                { id: 11, insumoMestreId: 6, data: '2024-07-18', preco: 0.95, perdaPercentual: 2, fornecedor: { nome: 'Distribuidora Grãos' } }, { id: 12, insumoMestreId: 6, data: '2024-08-18', preco: 1.00, perdaPercentual: 2, fornecedor: { nome: 'Distribuidora Grãos' } },
+            ];
+            fichasTecnicasDB = JSON.parse(localStorage.getItem('fichasTecnicasDB')) || [
+                { id: 1, nome: 'Molho de Tomate Clássico', rendimento: '1kg', custoAnterior: 18.96, custoProducaoPercentual: 20, ingredientes: [ { insumoId: 1, quantidade: 1.5 }, { insumoId: 2, quantidade: 0.3 }, { insumoId: 3, quantidade: 0.1 }, { insumoId: 4, quantidade: 1.0 } ] },
+                { id: 2, nome: 'Massa Fresca de Macarrão', rendimento: '500g', custoAnterior: 6.67, custoProducaoPercentual: 10, ingredientes: [ { insumoId: 5, quantidade: 0.4 }, { insumoId: 6, quantidade: 3 } ] }
+            ];
+            pratosDB = JSON.parse(localStorage.getItem('pratosDB')) || [
+                { id: 1, nome: 'Macarrão ao Sugo', custoProducaoPercentual: 15, fatorLucro: 200, fichas: [ { fichaId: 1, quantidade: 200, unidade: 'g' }, { fichaId: 2, quantidade: 150, unidade: 'g' } ] }
+            ];
+            configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { taxaPerca: 0, custoFinalizacao: 10, margemLucro: 200 };
+            
+            // Dark Mode
+            const darkModeOn = localStorage.getItem('darkMode') === 'true';
+            const toggle = document.getElementById('darkModeToggle');
+            if (darkModeOn) {
+                document.documentElement.classList.add('dark');
+            } else {
+                 document.documentElement.classList.remove('dark');
+            }
+            if(toggle) {
+                if(darkModeOn) toggle.classList.add('translate-x-6');
+                else toggle.classList.remove('translate-x-6');
+            }
+        }
+
+        // --- NAVEGAÇÃO ---
+        function showView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            document.querySelectorAll('.sidebar-link').forEach(l => {
+                l.classList.remove('active');
+                if (l.getAttribute('onclick') === `showView('${viewId}')`) {
+                    l.classList.add('active');
+                }
+            });
+        }
+
+        // --- IMPORTAÇÃO ---
+        function displayFileName() {
+            const fileInput = document.getElementById('xmlFileInput'), fileNameDisplay = document.getElementById('fileNameDisplay');
+            fileNameDisplay.textContent = fileInput.files.length > 0 ? fileInput.files[0].name : 'Nenhum arquivo selecionado';
+            fileNameDisplay.classList.toggle('text-green-600', fileInput.files.length > 0);
+            fileNameDisplay.classList.toggle('font-semibold', fileInput.files.length > 0);
+        }
+        function importarXML() {
+            const fileInput = document.getElementById('xmlFileInput'), dataCompra = document.getElementById('dataCompraInput').value;
+            if (fileInput.files.length === 0) { alert('Selecione um arquivo XML.'); return; }
+            if (!dataCompra) { alert('Selecione a data da compra.'); return; }
+            const reader = new FileReader();
+            reader.onload = (e) => processarConteudoXML(e.target.result, dataCompra);
+            reader.onerror = () => alert('Erro ao ler o arquivo.');
+            reader.readAsText(fileInput.files[0]);
+        }
+        function processarConteudoXML(xmlText, dataCompra) {
+            const parser = new DOMParser(), xmlDoc = parser.parseFromString(xmlText, "application/xml");
+            const emitente = xmlDoc.querySelector('emit'), produtos = xmlDoc.querySelectorAll('det');
+            if (!emitente || produtos.length === 0) { alert('XML inválido.'); return; }
+            const fornecedor = { cnpj: emitente.querySelector('CNPJ').textContent, nome: emitente.querySelector('xNome').textContent };
+            insumosParaRevisao = Array.from(produtos).map(item => {
+                const prod = item.querySelector('prod'), unidadeNota = prod.querySelector('uCom').textContent;
+                const match = unidadeNota.match(/(\d+)/);
+                return {
+                    codigoFornecedor: prod.querySelector('cProd').textContent, nome: prod.querySelector('xProd').textContent, unidadeNota: unidadeNota,
+                    unidadeFinal: match ? 'unidade' : unidadeNota, fator: match ? parseInt(match[0], 10) : 1, perdaPercentual: configuracoesDB.taxaPerca,
+                    precoNota: parseFloat(prod.querySelector('vUnCom').textContent), data: dataCompra, fornecedor: fornecedor, vincularA: 'novo'
+                };
+            });
+            populateReviewModal();
+        }
+        function populateReviewModal() {
+            const tableBody = document.getElementById('reviewTableBody');
+            tableBody.innerHTML = '';
+            const optionsHtml = `<option value="novo">-- Criar Novo Insumo --</option>${insumosDB.map(i => `<option value="${i.id}">${i.nome} (${i.unidade})</option>`).join('')}`;
+            insumosParaRevisao.forEach((insumo, index) => {
+                const match = insumosDB.find(i => i.nome.toLowerCase().includes(insumo.nome.toLowerCase().substring(0,5)));
+                const precoFinal = (insumo.precoNota / insumo.fator).toFixed(4);
+                const row = document.createElement('tr');
+                row.className = 'border-b dark:border-gray-700 align-top';
+                row.innerHTML = `
+                    <td class="p-2 pt-3">${insumo.nome}</td><td class="p-2 pt-3">${insumo.unidadeNota} (R$ ${insumo.precoNota.toFixed(2)})</td>
+                    <td class="p-2"><input type="text" value="${insumo.unidadeFinal}" oninput="recalcularPrecoRevisao(${index})" data-field="unidadeFinal" class="w-full p-1 border rounded dark:bg-gray-700 dark:border-gray-600"></td>
+                    <td class="p-2"><input type="number" value="${insumo.fator}" oninput="recalcularPrecoRevisao(${index})" data-field="fator" class="w-full p-1 border rounded dark:bg-gray-700 dark:border-gray-600"></td>
+                    <td class="p-2"><input type="number" value="${insumo.perdaPercentual}" oninput="recalcularPrecoRevisao(${index})" data-field="perdaPercentual" class="w-full p-1 border rounded dark:bg-gray-700 dark:border-gray-600"></td>
+                    <td class="p-2 pt-3 font-semibold" id="precoFinal-${index}">R$ ${precoFinal}</td>
+                    <td class="p-2"><select data-field="vincularA" class="w-full p-1 border rounded dark:bg-gray-700 dark:border-gray-600">${optionsHtml}</select></td>
+                `;
+                tableBody.appendChild(row);
+                row.querySelector('select').value = match ? match.id : 'novo';
+            });
+            openModal('reviewModal');
+        }
+        function recalcularPrecoRevisao(index) {
+            const row = document.querySelector(`#reviewTableBody tr:nth-child(${index + 1})`);
+            const fator = parseFloat(row.querySelector('input[data-field="fator"]').value) || 1;
+            const perda = parseFloat(row.querySelector('input[data-field="perdaPercentual"]').value) || 0;
+            const precoNota = insumosParaRevisao[index].precoNota;
+            const rendimento = 1 - (perda / 100);
+            const precoFinal = rendimento > 0 ? (precoNota / fator) / rendimento : Infinity;
+            document.getElementById(`precoFinal-${index}`).textContent = `R$ ${precoFinal.toFixed(4)}`;
+        }
+        function salvarInsumosRevisados() {
+            document.querySelectorAll('#reviewTableBody tr').forEach((row, index) => {
+                const insumo = insumosParaRevisao[index];
+                insumo.unidadeFinal = row.querySelector('input[data-field="unidadeFinal"]').value;
+                insumo.fator = parseFloat(row.querySelector('input[data-field="fator"]').value) || 1;
+                insumo.perdaPercentual = parseFloat(row.querySelector('input[data-field="perdaPercentual"]').value) || 0;
+                insumo.vincularA = row.querySelector('select').value;
+            });
+            insumosParaRevisao.forEach(insumo => {
+                let insumoMestreId;
+                const rendimento = 1 - (insumo.perdaPercentual / 100);
+                const precoFinal = rendimento > 0 ? (insumo.precoNota / insumo.fator) / rendimento : Infinity;
+
+                if (insumo.vincularA === 'novo') {
+                    insumoMestreId = (insumosDB.length ? Math.max(...insumosDB.map(i => i.id)) : 0) + 1;
+                    insumosDB.push({ id: insumoMestreId, nome: insumo.nome, unidade: insumo.unidadeFinal });
+                } else {
+                    insumoMestreId = parseInt(insumo.vincularA);
+                }
+                const compraId = (comprasDB.length ? Math.max(...comprasDB.map(c => c.id)) : 0) + 1;
+                comprasDB.push({ id: compraId, insumoMestreId, data: insumo.data, preco: precoFinal, perdaPercentual: insumo.perdaPercentual, fornecedor: insumo.fornecedor, codigoFornecedor: insumo.codigoFornecedor });
+            });
+            closeModal('reviewModal');
+            alert(`Importação concluída!`);
+            saveData();
+            renderAll();
+            showView('insumos');
+        }
+
+        // --- INSUMOS & FILTROS ---
+        function populateFilters() {
+            ['filterFornecedor', 'filterUnidade'].forEach(id => {
+                const select = document.getElementById(id);
+                const values = id === 'filterFornecedor' ? [...new Set(comprasDB.map(c => c.fornecedor.nome))] : [...new Set(insumosDB.map(i => i.unidade))];
+                const selected = select.value;
+                select.innerHTML = `<option value="">Todos os ${id === 'filterFornecedor' ? 'Fornecedores' : 'Unidades'}</option>`;
+                values.sort().forEach(v => select.innerHTML += `<option value="${v}">${v}</option>`);
+                select.value = selected;
+            });
+        }
+        function getUltimaCompra(insumoId) {
+            const compras = comprasDB.filter(c => c.insumoMestreId === insumoId);
+            return compras.length ? compras.sort((a, b) => new Date(b.data) - new Date(a.data))[0] : null;
+        }
+        function renderInsumos() {
+            const s = document.getElementById('searchInput').value.toLowerCase(), f = document.getElementById('filterFornecedor').value, u = document.getElementById('filterUnidade').value;
+            const tbody = document.getElementById('insumosTableBody');
+            let filtrados = insumosDB.filter(i => {
+                const uc = getUltimaCompra(i.id);
+                return (i.nome.toLowerCase().includes(s) || (uc && uc.fornecedor.nome.toLowerCase().includes(s))) && (!f || (uc && uc.fornecedor.nome === f)) && (!u || i.unidade === u);
+            });
+            if (filtrados.length === 0) { tbody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-gray-500">Nenhum insumo encontrado.</td></tr>`; return; }
+            tbody.innerHTML = filtrados.map(insumo => {
+                const uc = getUltimaCompra(insumo.id);
+                return `<tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <td class="p-4 font-medium">${insumo.nome}</td><td class="p-4">${insumo.unidade}</td>
+                    <td class="p-4">${uc ? uc.fornecedor.nome : 'N/A'}</td><td class="p-4 font-semibold text-green-700 dark:text-green-400">${uc ? `R$ ${uc.preco.toFixed(2)}` : 'N/A'}</td>
+                    <td class="p-4">${uc ? new Date(uc.data + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</td>
+                    <td class="p-4"><div class="flex items-center space-x-4">
+                        <button onclick="showPriceHistory(${insumo.id})" class="text-orange-500 hover:text-orange-700 font-semibold flex items-center text-sm"><i data-lucide="history" class="h-4 w-4 mr-1"></i>Histórico</button>
+                        <button onclick="openEditInsumoModal(${insumo.id})" class="text-blue-500 hover:text-blue-700 font-semibold flex items-center text-sm"><i data-lucide="edit-3" class="h-4 w-4 mr-1"></i>Editar</button>
+                        <button onclick="confirmDelete('insumo', ${insumo.id})" class="text-red-500 hover:text-red-700 font-semibold flex items-center text-sm"><i data-lucide="trash-2" class="h-4 w-4 mr-1"></i>Excluir</button>
+                    </div></td></tr>`;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // --- FICHAS TÉCNICAS ---
+        function openFichaModal(fichaId = null) {
+            const isEditing = fichaId !== null;
+            document.getElementById('fichaModalTitle').textContent = isEditing ? 'Editar Ficha Técnica' : 'Nova Ficha Técnica';
+            document.getElementById('fichaId').value = isEditing ? fichaId : '';
+            const ficha = isEditing ? fichasTecnicasDB.find(f => f.id === fichaId) : { nome: '', rendimento: '', custoProducaoPercentual: 0, ingredientes: [] };
+            document.getElementById('fichaNome').value = ficha.nome;
+            document.getElementById('fichaRendimento').value = ficha.rendimento;
+            document.getElementById('fichaCustoProducao').value = ficha.custoProducaoPercentual;
+            const container = document.getElementById('ingredientesContainer');
+            container.innerHTML = '';
+            if (ficha.ingredientes.length === 0) addIngredienteRow();
+            else ficha.ingredientes.forEach(ing => addIngredienteRow(ing.insumoId, ing.quantidade));
+            openModal('fichaModal');
+        }
+        function addIngredienteRow(insumoId = '', quantidade = '') {
+            const container = document.getElementById('ingredientesContainer');
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2';
+            const options = insumosDB.map(i => `<option value="${i.id}" ${i.id === insumoId ? 'selected' : ''}>${i.nome} (${i.unidade})</option>`).join('');
+            div.innerHTML = `<select class="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600">${options}</select><input type="number" value="${quantidade}" placeholder="Qtd" class="w-24 p-2 border rounded dark:bg-gray-700 dark:border-gray-600"><button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-2"><i data-lucide="trash-2" class="h-4 w-4"></i></button>`;
+            container.appendChild(div);
+            lucide.createIcons();
+        }
+        function salvarFichaTecnica() {
+            const id = document.getElementById('fichaId').value;
+            const ingredientes = Array.from(document.querySelectorAll('#ingredientesContainer > div')).map(row => ({
+                insumoId: parseInt(row.querySelector('select').value),
+                quantidade: parseFloat(row.querySelector('input').value)
+            })).filter(ing => ing.insumoId && ing.quantidade > 0);
+            const fichaData = { 
+                nome: document.getElementById('fichaNome').value, 
+                rendimento: document.getElementById('fichaRendimento').value, 
+                custoProducaoPercentual: parseFloat(document.getElementById('fichaCustoProducao').value) || 0,
+                ingredientes 
+            };
+            if (!fichaData.nome || ingredientes.length === 0) { alert("Nome e ingredientes são obrigatórios."); return; }
+            if (id) {
+                const index = fichasTecnicasDB.findIndex(f => f.id == id);
+                fichasTecnicasDB[index] = { ...fichasTecnicasDB[index], ...fichaData, custoAnterior: calcularCustoTotalFicha(fichaData) };
+            } else {
+                const novoId = (fichasTecnicasDB.length ? Math.max(...fichasTecnicasDB.map(f => f.id)) : 0) + 1;
+                fichasTecnicasDB.push({ id: novoId, ...fichaData, custoAnterior: calcularCustoTotalFicha(fichaData) });
+            }
+            closeModal('fichaModal');
+            saveData();
+            renderAll();
+        }
+        function renderFichasTecnicas() {
+            const container = document.getElementById('fichasContainer');
+            container.innerHTML = fichasTecnicasDB.map(ficha => {
+                const custoInsumos = calcularCustoInsumos(ficha);
+                const custoProducao = custoInsumos * (ficha.custoProducaoPercentual / 100);
+                const custoTotal = custoInsumos + custoProducao;
+                const diferenca = custoTotal - ficha.custoAnterior;
+                const percentual = ficha.custoAnterior > 0 ? (diferenca / ficha.custoAnterior) * 100 : 0;
+                let s = { t: 'Estável', i: 'minus', c: 'yellow' };
+                if (diferenca > 0.01) s = { t: 'Mais Caro', i: 'arrow-up', c: 'red' };
+                else if (diferenca < -0.01) s = { t: 'Mais Barato', i: 'arrow-down', c: 'green' };
+                return `<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+                    <div class="flex justify-between items-start">
+                        <h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">${ficha.nome}</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="printFicha(${ficha.id})" class="text-gray-500 hover:text-gray-800 dark:hover:text-gray-300"><i data-lucide="printer" class="h-4 w-4"></i></button>
+                            <button onclick="openFichaModal(${ficha.id})" class="text-blue-500 hover:text-blue-700"><i data-lucide="edit" class="h-4 w-4"></i></button>
+                            <button onclick="confirmDelete('ficha', ${ficha.id})" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+                        </div>
+                    </div>
+                    <p class="text-gray-500 dark:text-gray-400 mb-4">Rendimento: ${ficha.rendimento}</p>
+                    <div class="mb-4"><span class="font-semibold">Ingredientes:</span><ul class="list-disc list-inside text-gray-600 dark:text-gray-300 mt-2">
+                        ${ficha.ingredientes.map(ing => `<li>${ing.quantidade} ${insumosDB.find(i=>i.id===ing.insumoId).unidade} de ${insumosDB.find(i=>i.id===ing.insumoId).nome}</li>`).join('')}
+                    </ul></div>
+                    <div class="mt-auto pt-4 border-t dark:border-gray-700 space-y-2">
+                        <div class="flex justify-between items-center text-sm"><span class="text-gray-600 dark:text-gray-400">Custo Insumos:</span><span class="font-medium">R$ ${custoInsumos.toFixed(2)}</span></div>
+                        <div class="flex justify-between items-center text-sm"><span class="text-gray-600 dark:text-gray-400">Custo Produção (${ficha.custoProducaoPercentual}%):</span><span class="font-medium">R$ ${custoProducao.toFixed(2)}</span></div>
+                        <div class="flex justify-between items-center mb-2"><span class="text-gray-600 dark:text-gray-400">Custo de Referência:</span><span class="font-medium">R$ ${ficha.custoAnterior.toFixed(2)}</span></div>
+                        <div class="flex justify-between items-center mb-4"><span class="text-gray-600 dark:text-gray-300 font-bold">Custo Total:</span><span class="font-bold text-2xl text-orange-600">R$ ${custoTotal.toFixed(2)}</span></div>
+                        <div class="p-2 rounded-md flex items-center justify-center text-sm font-semibold bg-${s.c}-100 text-${s.c}-800 dark:bg-${s.c}-900/50 dark:text-${s.c}-300"><i data-lucide="${s.i}" class="h-4 w-4 mr-2"></i>${s.t} (${diferenca >= 0 ? '+' : ''}${diferenca.toFixed(2)} / ${percentual.toFixed(1)}%)</div>
+                    </div></div>`;
+            }).join('');
+            lucide.createIcons();
+        }
+
+        // --- PRATOS ---
+        function renderPratos() {
+            const container = document.getElementById('pratosContainer');
+            container.innerHTML = pratosDB.map(prato => {
+                const custoFichas = calcularCustoFichasPrato(prato);
+                const custoProducao = custoFichas * (prato.custoProducaoPercentual / 100);
+                const custoTotal = custoFichas + custoProducao;
+                const precoSugerido = custoTotal * (1 + prato.fatorLucro / 100);
+                return `<div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md flex flex-col">
+                    <div class="flex justify-between items-start"><h3 class="text-xl font-bold mb-2 text-gray-900 dark:text-white">${prato.nome}</h3>
+                        <div class="flex space-x-2">
+                            <button onclick="openSimulatorModal(${prato.id})" class="text-purple-500 hover:text-purple-700"><i data-lucide="calculator" class="h-4 w-4"></i></button>
+                            <button onclick="openPratoModal(${prato.id})" class="text-blue-500 hover:text-blue-700"><i data-lucide="edit" class="h-4 w-4"></i></button>
+                            <button onclick="confirmDelete('prato', ${prato.id})" class="text-red-500 hover:text-red-700"><i data-lucide="trash-2" class="h-4 w-4"></i></button>
+                        </div>
+                    </div>
+                    <div class="mb-4"><span class="font-semibold">Composição:</span><ul class="list-disc list-inside text-gray-600 dark:text-gray-300 mt-2">
+                        ${prato.fichas.map(f => `<li>${f.quantidade}${f.unidade} de ${fichasTecnicasDB.find(ft => ft.id === f.fichaId).nome}</li>`).join('')}
+                    </ul></div>
+                    <div class="mt-auto pt-4 border-t dark:border-gray-700 space-y-2">
+                        <div class="flex justify-between items-center text-sm"><span class="text-gray-600 dark:text-gray-400">Custo das Fichas:</span><span class="font-medium">R$ ${custoFichas.toFixed(2)}</span></div>
+                        <div class="flex justify-between items-center text-sm"><span class="text-gray-600 dark:text-gray-400">Custo Finalização (${prato.custoProducaoPercentual}%):</span><span class="font-medium">R$ ${custoProducao.toFixed(2)}</span></div>
+                        <div class="flex justify-between items-center"><span class="text-gray-600 dark:text-gray-300 font-bold">Custo Final do Prato:</span><span class="font-bold text-xl text-red-600">R$ ${custoTotal.toFixed(2)}</span></div>
+                        <div class="flex justify-between items-center mt-2 bg-green-50 dark:bg-green-900/50 p-2 rounded-md"><span class="text-green-800 dark:text-green-300 font-bold">Preço Sugerido (${prato.fatorLucro}%):</span><span class="font-bold text-2xl text-green-700 dark:text-green-400">R$ ${precoSugerido.toFixed(2)}</span></div>
+                    </div></div>`;
+            }).join('');
+            lucide.createIcons();
+        }
+        function openPratoModal(pratoId = null) {
+            const isEditing = pratoId !== null;
+            document.getElementById('pratoModalTitle').textContent = isEditing ? 'Editar Prato' : 'Novo Prato';
+            document.getElementById('pratoId').value = isEditing ? pratoId : '';
+            const prato = isEditing ? pratosDB.find(p => p.id === pratoId) : { nome: '', custoProducaoPercentual: configuracoesDB.custoFinalizacao, fatorLucro: configuracoesDB.margemLucro, fichas: [] };
+            document.getElementById('pratoNome').value = prato.nome;
+            document.getElementById('pratoCustoProducao').value = prato.custoProducaoPercentual;
+            document.getElementById('pratoFatorLucro').value = prato.fatorLucro;
+            const container = document.getElementById('fichasPratoContainer');
+            container.innerHTML = '';
+            if (prato.fichas.length === 0) addFichaPratoRow();
+            else prato.fichas.forEach(f => addFichaPratoRow(f.fichaId, f.quantidade, f.unidade));
+            openModal('pratoModal');
+        }
+        function addFichaPratoRow(fichaId = '', quantidade = '', unidade = '') {
+            const container = document.getElementById('fichasPratoContainer');
+            const div = document.createElement('div');
+            div.className = 'flex items-center gap-2';
+            const options = fichasTecnicasDB.map(f => `<option value="${f.id}" ${f.id === fichaId ? 'selected' : ''}>${f.nome}</option>`).join('');
+            div.innerHTML = `<select class="flex-grow p-2 border rounded dark:bg-gray-700 dark:border-gray-600">${options}</select>
+                             <input type="number" value="${quantidade}" placeholder="Qtd" class="w-24 p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                             <input type="text" value="${unidade}" placeholder="Unid." class="w-20 p-2 border rounded dark:bg-gray-700 dark:border-gray-600">
+                             <button onclick="this.parentElement.remove()" class="text-red-500 hover:text-red-700 p-2"><i data-lucide="trash-2" class="h-4 w-4"></i></button>`;
+            container.appendChild(div);
+            lucide.createIcons();
+        }
+        function salvarPrato() {
+            const id = document.getElementById('pratoId').value;
+            const fichas = Array.from(document.querySelectorAll('#fichasPratoContainer > div')).map(row => ({
+                fichaId: parseInt(row.querySelector('select').value),
+                quantidade: parseFloat(row.querySelector('input[type="number"]').value),
+                unidade: row.querySelector('input[type="text"]').value.toLowerCase()
+            })).filter(f => f.fichaId && f.quantidade > 0 && f.unidade);
+            const pratoData = { 
+                nome: document.getElementById('pratoNome').value,
+                custoProducaoPercentual: parseFloat(document.getElementById('pratoCustoProducao').value) || 0,
+                fatorLucro: parseFloat(document.getElementById('pratoFatorLucro').value) || 0,
+                fichas
+            };
+            if (!pratoData.nome || fichas.length === 0) { alert("Nome e pelo menos uma ficha completa são obrigatórios."); return; }
+            if (id) {
+                const index = pratosDB.findIndex(p => p.id == id);
+                pratosDB[index] = { ...pratosDB[index], ...pratoData };
+            } else {
+                const novoId = (pratosDB.length ? Math.max(...pratosDB.map(p => p.id)) : 0) + 1;
+                pratosDB.push({ id: novoId, ...pratoData });
+            }
+            closeModal('pratoModal');
+            saveData();
+            renderAll();
+        }
+
+        // --- DASHBOARD & CÁLCULOS ---
+        function parseRendimento(rendimentoStr) {
+            if (!rendimentoStr) return { quantidade: 0, unidade: '' };
+            const match = rendimentoStr.match(/([\d.,]+)\s*(\w+)/);
+            if (match) {
+                return { quantidade: parseFloat(match[1].replace(',', '.')), unidade: match[2].toLowerCase() };
+            }
+            return { quantidade: 0, unidade: '' };
+        }
+        function calcularCustoFichasPrato(prato) {
+            return prato.fichas.reduce((total, f) => {
+                const ficha = fichasTecnicasDB.find(ft => ft.id === f.fichaId);
+                if (!ficha) return total;
+
+                const custoTotalFicha = calcularCustoTotalFicha(ficha);
+                const rendimento = parseRendimento(ficha.rendimento);
+                if (rendimento.quantidade === 0) return total;
+
+                let rendimentoBase = rendimento.quantidade * (conversionFactors[rendimento.unidade] || 1);
+                let quantidadeBase = f.quantidade * (conversionFactors[f.unidade] || 1);
+                
+                if(rendimentoBase === 0) return total;
+                const custoProporcional = (custoTotalFicha / rendimentoBase) * quantidadeBase;
+                return total + custoProporcional;
+            }, 0);
+        }
+        function calcularCustoPrato(prato) {
+            const custoFichas = calcularCustoFichasPrato(prato);
+            const custoProducao = custoFichas * (prato.custoProducaoPercentual / 100);
+            return custoFichas + custoProducao;
+        }
+        function calcularCustoInsumos(ficha) {
+            return ficha.ingredientes.reduce((total, ing) => {
+                const uc = getUltimaCompra(ing.insumoId);
+                return total + (uc ? uc.preco * ing.quantidade : 0);
+            }, 0);
+        }
+        function calcularCustoTotalFicha(ficha) {
+            const custoInsumos = calcularCustoInsumos(ficha);
+            const custoProducao = custoInsumos * ((ficha.custoProducaoPercentual || 0) / 100);
+            return custoInsumos + custoProducao;
+        }
+        
+        // --- MODALS (GERAL) & AÇÕES ---
+        function openModal(modalId) { document.getElementById(modalId).classList.remove('hidden'); document.getElementById(modalId).classList.add('flex'); lucide.createIcons(); }
+        function closeModal(modalId) { document.getElementById(modalId).classList.add('hidden'); document.getElementById(modalId).classList.remove('flex'); }
+        function showPriceHistory(insumoId) {
+            const insumo = insumosDB.find(i => i.id === insumoId);
+            document.getElementById('modalTitle').innerText = `Histórico de Preços: ${insumo.nome}`;
+            const compras = comprasDB.filter(c => c.insumoMestreId === insumoId).sort((a, b) => new Date(b.data) - new Date(a.data));
+            document.getElementById('modalContent').innerHTML = `<ul class="space-y-2">${compras.map((h, i) => `<li class="flex justify-between items-center p-2 rounded ${i===0 ? 'bg-orange-50 dark:bg-orange-900/50':''}"><div ><span>${new Date(h.data+'T00:00:00').toLocaleDateString('pt-BR')}</span><span class="text-sm text-gray-500 ml-2">(${h.fornecedor.nome})</span></div><span class="font-semibold ${i===0?'text-orange-600':''}">${h.preco.toFixed(2)}</span></li>`).join('')}</ul>`;
+            openModal('priceHistoryModal');
+        }
+        function openEditInsumoModal(insumoId) {
+            const insumo = insumosDB.find(i => i.id === insumoId);
+            document.getElementById('editInsumoId').value = insumo.id;
+            document.getElementById('editInsumoNome').value = insumo.nome;
+            document.getElementById('editInsumoUnidade').value = insumo.unidade;
+            openModal('editInsumoModal');
+        }
+        function salvarInsumo() {
+            const id = parseInt(document.getElementById('editInsumoId').value), nome = document.getElementById('editInsumoNome').value, unidade = document.getElementById('editInsumoUnidade').value;
+            const insumo = insumosDB.find(i => i.id === id);
+            if (insumo) { insumo.nome = nome; insumo.unidade = unidade; }
+            closeModal('editInsumoModal');
+            saveData();
+            renderAll();
+        }
+        function confirmDelete(type, id) {
+            const item = type === 'insumo' ? insumosDB.find(i => i.id === id) : type === 'ficha' ? fichasTecnicasDB.find(f => f.id === id) : pratosDB.find(p => p.id === id);
+            document.getElementById('confirmModalTitle').textContent = `Excluir ${type.charAt(0).toUpperCase() + type.slice(1)}`;
+            document.getElementById('confirmModalText').textContent = `Você tem certeza que deseja excluir "${item.nome}"? Esta ação não pode ser desfeita.`;
+            document.getElementById('confirmModalButton').onclick = () => deleteItem(type, id);
+            openModal('confirmModal');
+        }
+        function deleteItem(type, id) {
+            if (type === 'insumo') {
+                insumosDB = insumosDB.filter(i => i.id !== id);
+                comprasDB = comprasDB.filter(c => c.insumoMestreId !== id);
+                fichasTecnicasDB.forEach(f => {
+                    f.ingredientes = f.ingredientes.filter(i => i.insumoId !== id);
+                });
+            } else if (type === 'ficha') {
+                fichasTecnicasDB = fichasTecnicasDB.filter(f => f.id !== id);
+                pratosDB.forEach(p => {
+                    p.fichas = p.fichas.filter(f => f.fichaId !== id);
+                });
+            } else if (type === 'prato') {
+                pratosDB = pratosDB.filter(p => p.id !== id);
+            }
+            closeModal('confirmModal');
+            saveData();
+            renderAll();
+        }
+        function printFicha(fichaId) {
+            const ficha = fichasTecnicasDB.find(f => f.id === fichaId);
+            const printable = document.getElementById('printableArea');
+            printable.innerHTML = `
+                <div class="p-8">
+                    <h1 class="text-3xl font-bold mb-2">${ficha.nome}</h1>
+                    <p class="text-gray-600 mb-6">Rendimento: ${ficha.rendimento}</p>
+                    <h2 class="text-xl font-semibold border-b pb-2 mb-4">Ingredientes</h2>
+                    <ul class="list-disc list-inside space-y-2">
+                        ${ficha.ingredientes.map(ing => {
+                            const insumo = insumosDB.find(i => i.id === ing.insumoId);
+                            return `<li>${ing.quantidade} ${insumo.unidade} - ${insumo.nome}</li>`;
+                        }).join('')}
+                    </ul>
+                </div>
+            `;
+            window.print();
+            printable.innerHTML = '';
+        }
+
+        // --- RELATÓRIOS E GRÁFICOS ---
+        function renderDashboard() {
+            const fichasVariacao = fichasTecnicasDB.map(f => ({ nome: f.nome, diferenca: calcularCustoTotalFicha(f) - f.custoAnterior, vAbs: Math.abs(calcularCustoTotalFicha(f) - f.custoAnterior) }))
+                .filter(f => f.vAbs > 0.01).sort((a, b) => b.vAbs - a.vAbs).slice(0, 5);
+            createChart('dashboardFichasChart', 'bar', fichasVariacao.map(f => f.nome), fichasVariacao.map(f => f.diferenca.toFixed(2)), 'Variação (R$)');
+            
+            const insumosVariacao = insumosDB.map(i => {
+                const compras = comprasDB.filter(c => c.insumoMestreId === i.id).sort((a,b) => new Date(b.data) - new Date(a.data));
+                const dif = compras.length < 2 ? 0 : compras[0].preco - compras[1].preco;
+                return { ...i, diferenca: dif, vAbs: Math.abs(dif) };
+            }).filter(i => i.vAbs > 0.01).sort((a, b) => b.vAbs - a.vAbs).slice(0, 5);
+            createChart('dashboardInsumosChart', 'bar', insumosVariacao.map(i => i.nome), insumosVariacao.map(i => i.diferenca.toFixed(2)), 'Variação (R$)');
+        }
+        function renderReports() {
+            const pratosLucro = pratosDB.map(prato => {
+                const custo = calcularCustoPrato(prato);
+                const venda = custo * (1 + prato.fatorLucro / 100);
+                return { nome: prato.nome, lucro: venda - custo };
+            }).sort((a, b) => b.lucro - a.lucro).slice(0, 10);
+            createChart('relatorioPratosChart', 'bar', pratosLucro.map(p => p.nome), pratosLucro.map(p => p.lucro.toFixed(2)), 'Lucro (R$)');
+
+            const fornCompras = comprasDB.reduce((acc, compra) => {
+                acc[compra.fornecedor.nome] = (acc[compra.fornecedor.nome] || 0) + compra.preco;
+                return acc;
+            }, {});
+            const fornSorted = Object.entries(fornCompras).sort(([,a],[,b]) => b-a);
+            createChart('relatorioFornecedoresChart', 'pie', fornSorted.map(([nome]) => nome), fornSorted.map(([,total]) => total.toFixed(2)), 'Custo por Fornecedor');
+
+            const estCont = document.getElementById('relatorioEstoque');
+            const custoRecente = insumosDB.reduce((total, insumo) => {
+                const uc = getUltimaCompra(insumo.id);
+                return total + (uc ? uc.preco : 0);
+            }, 0);
+            estCont.innerHTML = `<div class="text-center"><p class="text-gray-600 dark:text-gray-400">Soma do último preço de cada insumo</p><p class="text-3xl font-bold text-yellow-600 mt-2">R$ ${custoRecente.toFixed(2)}</p></div>`;
+        }
+
+        // --- CONFIGURAÇÕES ---
+        function renderConfiguracoes() {
+            document.getElementById('defaultTaxaPerca').value = configuracoesDB.taxaPerca;
+            document.getElementById('defaultCustoFinalizacao').value = configuracoesDB.custoFinalizacao;
+            document.getElementById('defaultMargemLucro').value = configuracoesDB.margemLucro;
+        }
+        function salvarConfiguracoes() {
+            configuracoesDB.taxaPerca = parseFloat(document.getElementById('defaultTaxaPerca').value) || 0;
+            configuracoesDB.custoFinalizacao = parseFloat(document.getElementById('defaultCustoFinalizacao').value) || 0;
+            configuracoesDB.margemLucro = parseFloat(document.getElementById('defaultMargemLucro').value) || 0;
+            saveData();
+            alert('Configurações salvas com sucesso!');
+            renderAll();
+        }
+        
+        // --- UTILITÁRIOS ---
+        function toggleDarkMode() {
+            const html = document.documentElement;
+            const isDarkMode = html.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDarkMode);
+            renderAll(); // Rerender charts with new colors
+        }
+        function createChart(canvasId, type, labels, data, label) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            const isDark = document.documentElement.classList.contains('dark');
+            const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
+            const textColor = isDark ? '#E5E7EB' : '#374151';
+
+            if (charts[canvasId]) {
+                charts[canvasId].destroy();
+            }
+
+            const chartColors = type === 'pie' ? 
+                ['#F97316', '#10B981', '#3B82F6', '#8B5CF6', '#EC4899'] :
+                data.map(d => d >= 0 ? '#10B981' : '#EF4444');
+
+            charts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: label,
+                        data: data,
+                        backgroundColor: chartColors,
+                        borderColor: isDark ? '#4B5563' : '#FFFFFF',
+                        borderWidth: type === 'pie' ? 2 : 0
+                    }]
+                },
+                options: {
+                    indexAxis: type === 'bar' ? 'y' : 'x',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            display: type === 'pie',
+                            labels: { color: textColor }
+                        }
+                    },
+                    scales: type === 'pie' ? {} : {
+                        x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                        y: { ticks: { color: textColor }, grid: { color: 'transparent' } }
+                    }
+                }
+            });
+        }
+        function exportarInsumosCSV() {
+            let csvContent = "data:text/csv;charset=utf-8,";
+            csvContent += "ID,Nome,Unidade,Ultimo Fornecedor,Ultimo Preco,Data Ultima Compra\r\n";
+            insumosDB.forEach(insumo => {
+                const uc = getUltimaCompra(insumo.id);
+                const row = [insumo.id, insumo.nome, insumo.unidade, uc ? uc.fornecedor.nome : 'N/A', uc ? uc.preco.toFixed(2) : 'N/A', uc ? uc.data : 'N/A'].join(",");
+                csvContent += row + "\r\n";
+            });
+            const encodedUri = encodeURI(csvContent);
+            const link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "lista_de_insumos.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+        function printReports() {
+            const printable = document.getElementById('printableArea');
+            printable.innerHTML = document.getElementById('relatorios').innerHTML;
+            window.print();
+            printable.innerHTML = '';
+        }
+        function openSimulatorModal(pratoId) {
+            const prato = pratosDB.find(p => p.id === pratoId);
+            const custo = calcularCustoPrato(prato);
+            
+            document.getElementById('simulatorModalTitle').textContent = `Simulador de Preço: ${prato.nome}`;
+            document.getElementById('simulatorCusto').textContent = `R$ ${custo.toFixed(2)}`;
+            
+            const margemSlider = document.getElementById('simulatorMargem');
+            margemSlider.value = prato.fatorLucro;
+            
+            const updateSimulator = () => {
+                const margem = parseFloat(margemSlider.value);
+                const preco = custo * (1 + margem / 100);
+                const lucro = preco - custo;
+                document.getElementById('simulatorMargemValue').textContent = `${margem.toFixed(0)}%`;
+                document.getElementById('simulatorLucro').textContent = `R$ ${lucro.toFixed(2)}`;
+                document.getElementById('simulatorPreco').textContent = `R$ ${preco.toFixed(2)}`;
+            };
+            
+            margemSlider.oninput = updateSimulator;
+            updateSimulator();
+            openModal('simulatorModal');
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,56 @@
+# GitHub Pages + Jekyll Configuration
+title: "Sistema de Cozinha Inteligente"
+description: "Sistema completo para gestão de custos e fichas técnicas em estabelecimentos gastronômicos"
+baseurl: "/CozinhaInteligente"
+url: "https://seu-usuario.github.io"
+
+# Build settings
+markdown: kramdown
+highlighter: rouge
+theme: minima
+
+# Exclude files from processing
+exclude:
+  - README.md
+  - FIREBASE_SETUP.md
+  - GITHUB_PAGES_SETUP.md
+  - firebase-config-exemplo.js
+  - .gitignore
+  - .git/
+  - .github/
+  - node_modules/
+  - vendor/
+
+# Include files that start with underscore
+include:
+  - _redirects
+
+# Plugin settings
+plugins:
+  - jekyll-feed
+  - jekyll-sitemap
+  - jekyll-seo-tag
+
+# SEO settings
+lang: pt-BR
+author: "Seu Nome"
+twitter:
+  username: seu-twitter
+facebook:
+  app_id: 1234567890
+  publisher: 1234567890
+  admins: 1234567890
+
+# Social links
+github_username: seu-usuario
+linkedin_username: seu-linkedin
+
+# Google Analytics (opcional)
+# google_analytics: UA-NNNNNNNN-N
+
+# Performance
+sass:
+  style: compressed
+
+# Security
+permalink: pretty
