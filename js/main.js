@@ -2,7 +2,21 @@
 // Firebase Edition - GitHub Pages Ready
 
 // --- FIREBASE E AUTENTICAÇÃO ---
-const { db, auth, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where, signInAnonymously, onAuthStateChanged, onSnapshot } = window.firebaseServices;
+let firebaseServices = null;
+
+// Aguardar Firebase estar pronto
+window.addEventListener('firebaseReady', () => {
+    firebaseServices = window.firebaseServices;
+    if (firebaseServices) {
+        initializeApp();
+    }
+});
+
+// Fallback caso o evento já tenha disparado
+if (window.firebaseServices) {
+    firebaseServices = window.firebaseServices;
+    initializeApp();
+}
 
 // Estado de autenticação
 let currentUser = null;
@@ -16,6 +30,13 @@ let charts = {};
 
 // --- FUNÇÕES DE FIREBASE ---
 async function initializeFirebase() {
+    if (!firebaseServices) {
+        console.log('Firebase services não estão disponíveis ainda');
+        return;
+    }
+    
+    const { db, auth, signInAnonymously, onAuthStateChanged } = firebaseServices;
+    
     try {
         showLoading(true);
         
@@ -40,6 +61,13 @@ async function initializeFirebase() {
 }
 
 async function loadFirebaseData() {
+    if (!firebaseServices) {
+        console.log('Firebase services não disponíveis');
+        return;
+    }
+    
+    const { db, collection, getDocs, query, orderBy } = firebaseServices;
+    
     try {
         // Carregar todas as coleções
         const [insumosSnap, comprasSnap, fichasSnap, pratosSnap, configSnap] = await Promise.all([
@@ -86,10 +114,12 @@ async function loadFirebaseData() {
 }
 
 async function saveToFirebase(collection_name, data, docId = null) {
-    if (!isFirebaseReady) {
+    if (!isFirebaseReady || !firebaseServices) {
         console.warn('Firebase não está pronto, salvando localmente');
         return saveToLocalStorage();
     }
+    
+    const { db, collection, addDoc, doc, updateDoc } = firebaseServices;
     
     try {
         if (docId) {
@@ -108,7 +138,9 @@ async function saveToFirebase(collection_name, data, docId = null) {
 }
 
 async function deleteFromFirebase(collection_name, docId) {
-    if (!isFirebaseReady) return;
+    if (!isFirebaseReady || !firebaseServices) return;
+    
+    const { db, doc, deleteDoc } = firebaseServices;
     
     try {
         await deleteDoc(doc(db, collection_name, docId));
@@ -549,4 +581,23 @@ function showAlert(title, message, type = 'info') {
             alertDiv.remove();
         }
     }, 5000);
+}
+
+// --- INICIALIZAÇÃO DA APLICAÇÃO ---
+function initializeApp() {
+    // Configurar navegação
+    setupNavigation();
+    
+    // Tentar inicializar Firebase
+    initializeFirebase();
+    
+    // Fallback para localStorage se Firebase falhar
+    setTimeout(() => {
+        if (!isFirebaseReady) {
+            console.log('Usando localStorage como fallback');
+            loadFromLocalStorage();
+            updateDashboard();
+            showFirebaseStatus(false);
+        }
+    }, 3000);
 }
