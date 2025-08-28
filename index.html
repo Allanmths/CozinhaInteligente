@@ -64,12 +64,10 @@
     </script>
     
     <style>
-        html.dark { color-scheme: dark; }
         body { font-family: 'Inter', sans-serif; }
         .view { display: none; }
         .view.active { display: block; }
         .sidebar-link.active { background-color: #FFFBEB; color: #D97706; border-right: 3px solid #F97316; }
-        html.dark .sidebar-link.active { background-color: #374151; color: #FBBF24; }
         @media print {
             body * { visibility: hidden; }
             #printableArea, #printableArea * { visibility: visible; }
@@ -100,7 +98,7 @@
         }
     </style>
 </head>
-<body class="bg-gray-50 text-gray-800 dark:bg-gray-900 dark:text-gray-200">
+<body class="bg-gray-50 text-gray-800">
 
     <!-- GitHub Corner -->
     <a href="https://github.com/seu-usuario/CozinhaInteligente" class="github-corner" aria-label="View source on GitHub" target="_blank">
@@ -112,9 +110,9 @@
 
     <!-- Loading Indicator -->
     <div id="loadingIndicator" class="loading-overlay">
-        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg flex items-center space-x-3">
+        <div class="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-3">
             <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
-            <span class="text-gray-800 dark:text-gray-200">Carregando dados...</span>
+            <span class="text-gray-800">Carregando dados...</span>
         </div>
     </div>
 
@@ -137,123 +135,123 @@
 
     <div class="flex min-h-screen">
         <!-- Sidebar -->
-        <aside class="w-64 bg-white dark:bg-gray-800 shadow-md flex-shrink-0 flex flex-col">
-            <div class="p-6 flex items-center space-x-3 border-b border-gray-200 dark:border-gray-700">
+        <aside class="w-64 bg-white shadow-md flex-shrink-0 flex flex-col">
+            <div class="p-6 flex items-center space-x-3 border-b border-gray-200">
                 <i data-lucide="chef-hat" class="h-10 w-10 text-orange-500"></i>
                 <div>
-                    <h1 class="text-xl font-bold text-gray-800 dark:text-white">Cozinha Inteligente</h1>
-                    <p class="text-xs text-gray-500 dark:text-gray-400">v2.0 Firebase Edition</p>
+                    <h1 class="text-xl font-bold text-gray-800">Cozinha Inteligente</h1>
+                    <p class="text-xs text-gray-500">v2.0 Firebase Edition</p>
                 </div>
             </div>
             <nav class="mt-6 flex-grow">
-                <a href="#" onclick="showView('dashboard')" class="sidebar-link active flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <a href="#" onclick="showView('dashboard')" class="sidebar-link active flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
                     <i data-lucide="layout-dashboard" class="h-5 w-5 mr-3"></i><span>Dashboard</span>
                 </a>
-                <a href="#" onclick="showView('relatorios')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <a href="#" onclick="showView('relatorios')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
                     <i data-lucide="line-chart" class="h-5 w-5 mr-3"></i><span>Relatórios</span>
                 </a>
-                <a href="#" onclick="showView('pratos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <a href="#" onclick="showView('pratos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
                     <i data-lucide="utensils-crossed" class="h-5 w-5 mr-3"></i><span>Pratos</span>
                 </a>
-                <a href="#" onclick="showView('fichas')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <a href="#" onclick="showView('fichas')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
                     <i data-lucide="notebook-tabs" class="h-5 w-5 mr-3"></i><span>Fichas Técnicas</span>
                 </a>
-                <a href="#" onclick="showView('insumos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <a href="#" onclick="showView('insumos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
                     <i data-lucide="carrot" class="h-5 w-5 mr-3"></i><span>Insumos</span>
                 </a>
-                <a href="#" onclick="showView('importacao')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+                <a href="#" onclick="showView('importacao')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
                     <i data-lucide="file-up" class="h-5 w-5 mr-3"></i><span>Importação</span>
                 </a>
             </nav>
-            <div class="p-6 border-t border-gray-200 dark:border-gray-700">
-                <a href="#" onclick="showView('configuracoes')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700">
+            <div class="p-6 border-t border-gray-200">
+                <a href="#" onclick="showView('configuracoes')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
                     <i data-lucide="cog" class="h-5 w-5 mr-3"></i><span>Configurações</span>
                 </a>
-                <div class="mt-4 p-3 bg-gray-100 dark:bg-gray-700 rounded-lg text-center">
-                    <div class="flex items-center justify-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
+                <div class="mt-4 p-3 bg-gray-100 rounded-lg text-center">
+                    <div class="flex items-center justify-center space-x-2 text-sm text-gray-600">
                         <i data-lucide="database" class="h-4 w-4"></i>
                         <span>Firebase</span>
                     </div>
-                    <div id="connectionStatus" class="text-xs mt-1 text-green-600 dark:text-green-400">Conectado</div>
+                    <div id="connectionStatus" class="text-xs mt-1 text-green-600">Conectado</div>
                 </div>
             </div>
         </aside>
 
         <!-- Main Content -->
-        <main class="flex-grow p-4 sm:p-6 lg:p-8 bg-gray-100 dark:bg-gray-900">
+        <main class="flex-grow p-4 sm:p-6 lg:p-8 bg-gray-100 
 
             <!-- Dashboard View -->
             <div id="dashboard" class="view active">
                 <div class="flex items-center justify-between mb-6">
-                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Dashboard de Análises</h2>
-                    <div class="flex items-center space-x-2 bg-green-100 dark:bg-green-900/50 px-3 py-2 rounded-lg">
-                        <i data-lucide="globe" class="h-4 w-4 text-green-700 dark:text-green-400"></i>
-                        <span class="text-sm font-medium text-green-700 dark:text-green-400">GitHub Pages</span>
+                    <h2 class="text-3xl font-bold text-gray-900  de Análises</h2>
+                    <div class="flex items-center space-x-2 bg-green-100  px-3 py-2 rounded-lg">
+                        <i data-lucide="globe" class="h-4 w-4 text-green-700 
+                        <span class="text-sm font-medium text-green-700  Pages</span>
                     </div>
                 </div>
                 
                 <!-- Stats Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <div class="bg-white  p-6 rounded-lg shadow-md">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900/50">
-                                <i data-lucide="package" class="h-6 w-6 text-blue-600 dark:text-blue-400"></i>
+                            <div class="p-3 rounded-full bg-blue-100 
+                                <i data-lucide="package" class="h-6 w-6 text-blue-600 
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Insumos</p>
-                                <p id="totalInsumos" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+                                <p class="text-sm font-medium text-gray-600  Insumos</p>
+                                <p id="totalInsumos" class="text-2xl font-bold text-gray-900 
                             </div>
                         </div>
                     </div>
                     
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <div class="bg-white  p-6 rounded-lg shadow-md">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-green-100 dark:bg-green-900/50">
-                                <i data-lucide="notebook-tabs" class="h-6 w-6 text-green-600 dark:text-green-400"></i>
+                            <div class="p-3 rounded-full bg-green-100 
+                                <i data-lucide="notebook-tabs" class="h-6 w-6 text-green-600 
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Fichas Técnicas</p>
-                                <p id="totalFichas" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+                                <p class="text-sm font-medium text-gray-600  Técnicas</p>
+                                <p id="totalFichas" class="text-2xl font-bold text-gray-900 
                             </div>
                         </div>
                     </div>
                     
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <div class="bg-white  p-6 rounded-lg shadow-md">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900/50">
-                                <i data-lucide="utensils-crossed" class="h-6 w-6 text-purple-600 dark:text-purple-400"></i>
+                            <div class="p-3 rounded-full bg-purple-100 
+                                <i data-lucide="utensils-crossed" class="h-6 w-6 text-purple-600 
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Pratos</p>
-                                <p id="totalPratos" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+                                <p class="text-sm font-medium text-gray-600 
+                                <p id="totalPratos" class="text-2xl font-bold text-gray-900 
                             </div>
                         </div>
                     </div>
                     
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                    <div class="bg-white  p-6 rounded-lg shadow-md">
                         <div class="flex items-center">
-                            <div class="p-3 rounded-full bg-orange-100 dark:bg-orange-900/50">
-                                <i data-lucide="shopping-cart" class="h-6 w-6 text-orange-600 dark:text-orange-400"></i>
+                            <div class="p-3 rounded-full bg-orange-100 
+                                <i data-lucide="shopping-cart" class="h-6 w-6 text-orange-600 
                             </div>
                             <div class="ml-4">
-                                <p class="text-sm font-medium text-gray-600 dark:text-gray-400">Compras</p>
-                                <p id="totalCompras" class="text-2xl font-bold text-gray-900 dark:text-white">-</p>
+                                <p class="text-sm font-medium text-gray-600 
+                                <p id="totalCompras" class="text-2xl font-bold text-gray-900 
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100">
+                    <div class="bg-white  p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 
                             <i data-lucide="trending-up" class="h-6 w-6 mr-3 text-orange-500"></i>Fichas com Maiores Variações
                         </h3>
                         <div class="relative h-80">
                             <canvas id="dashboardFichasChart"></canvas>
                         </div>
                     </div>
-                    <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
-                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 dark:text-gray-100">
+                    <div class="bg-white  p-6 rounded-lg shadow-md">
+                        <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 
                             <i data-lucide="bar-chart-3" class="h-6 w-6 mr-3 text-orange-500"></i>Insumos com Maiores Variações
                         </h3>
                         <div class="relative h-80">
@@ -265,36 +263,36 @@
             
             <!-- Outras views continuam iguais... -->
             <div id="insumos" class="view">
-                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Gerenciamento de Insumos</h2>
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900  de Insumos</h2>
+                <div class="bg-white  p-6 rounded-lg shadow-md">
                     <div class="flex flex-col sm:flex-row justify-between items-center mb-4 gap-4">
-                        <h3 class="text-xl font-semibold text-gray-800 dark:text-gray-100">Lista de Insumos</h3>
+                        <h3 class="text-xl font-semibold text-gray-800  de Insumos</h3>
                         <div class="flex items-center gap-2 flex-wrap">
                             <button onclick="exportarInsumosCSV()" class="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-700 flex items-center shadow-sm transition-colors text-sm">
                                 <i data-lucide="download" class="h-4 w-4 mr-2"></i>Exportar CSV
                             </button>
-                            <select id="filterFornecedor" onchange="renderInsumos()" class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg py-2 px-3 text-sm focus:ring-orange-500 focus:border-orange-500">
+                            <select id="filterFornecedor" onchange="renderInsumos()" class="border border-gray-300   rounded-lg py-2 px-3 text-sm focus:ring-orange-500 focus:border-orange-500">
                                 <option value="">Todos os Fornecedores</option>
                             </select>
-                            <select id="filterUnidade" onchange="renderInsumos()" class="border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg py-2 px-3 text-sm focus:ring-orange-500 focus:border-orange-500">
+                            <select id="filterUnidade" onchange="renderInsumos()" class="border border-gray-300   rounded-lg py-2 px-3 text-sm focus:ring-orange-500 focus:border-orange-500">
                                 <option value="">Todas as Unidades</option>
                             </select>
                             <div class="relative">
-                                <input type="text" id="searchInput" onkeyup="renderInsumos()" placeholder="Buscar insumo..." class="pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-lg w-full sm:w-64 focus:ring-orange-500 focus:border-orange-500">
+                                <input type="text" id="searchInput" onkeyup="renderInsumos()" placeholder="Buscar insumo..." class="pl-10 pr-4 py-2 border border-gray-300   rounded-lg w-full sm:w-64 focus:ring-orange-500 focus:border-orange-500">
                                 <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"></i>
                             </div>
                         </div>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left">
-                            <thead class="bg-gray-100 dark:bg-gray-700">
+                            <thead class="bg-gray-100 
                                 <tr>
-                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Nome do Insumo</th>
-                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Unidade Padrão</th>
-                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Último Fornecedor</th>
-                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Último Preço</th>
-                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Data da Compra</th>
-                                    <th class="p-4 font-semibold text-gray-600 dark:text-gray-300">Ações</th>
+                                    <th class="p-4 font-semibold text-gray-600  do Insumo</th>
+                                    <th class="p-4 font-semibold text-gray-600  Padrão</th>
+                                    <th class="p-4 font-semibold text-gray-600  Fornecedor</th>
+                                    <th class="p-4 font-semibold text-gray-600  Preço</th>
+                                    <th class="p-4 font-semibold text-gray-600  da Compra</th>
+                                    <th class="p-4 font-semibold text-gray-600 
                                 </tr>
                             </thead>
                             <tbody id="insumosTableBody"></tbody>
@@ -305,69 +303,60 @@
 
             <!-- Views placeholder para outras seções -->
             <div id="relatorios" class="view">
-                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Relatórios Gerenciais</h2>
-                <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md text-center">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900  Gerenciais</h2>
+                <div class="bg-white  p-8 rounded-lg shadow-md text-center">
                     <i data-lucide="chart-pie" class="h-16 w-16 mx-auto text-gray-400 mb-4"></i>
-                    <h3 class="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">Relatórios em Desenvolvimento</h3>
-                    <p class="text-gray-500 dark:text-gray-500">Esta funcionalidade será implementada em breve.</p>
+                    <h3 class="text-xl font-semibold text-gray-600  mb-2">Relatórios em Desenvolvimento</h3>
+                    <p class="text-gray-500  funcionalidade será implementada em breve.</p>
                 </div>
             </div>
 
             <div id="pratos" class="view">
-                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Pratos Finais</h2>
-                <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md text-center">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900  Finais</h2>
+                <div class="bg-white  p-8 rounded-lg shadow-md text-center">
                     <i data-lucide="utensils-crossed" class="h-16 w-16 mx-auto text-gray-400 mb-4"></i>
-                    <h3 class="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">Gestão de Pratos em Desenvolvimento</h3>
-                    <p class="text-gray-500 dark:text-gray-500">Esta funcionalidade será implementada em breve.</p>
+                    <h3 class="text-xl font-semibold text-gray-600  mb-2">Gestão de Pratos em Desenvolvimento</h3>
+                    <p class="text-gray-500  funcionalidade será implementada em breve.</p>
                 </div>
             </div>
 
             <div id="fichas" class="view">
-                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Fichas Técnicas</h2>
-                <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md text-center">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900  Técnicas</h2>
+                <div class="bg-white  p-8 rounded-lg shadow-md text-center">
                     <i data-lucide="notebook-tabs" class="h-16 w-16 mx-auto text-gray-400 mb-4"></i>
-                    <h3 class="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">Fichas Técnicas em Desenvolvimento</h3>
-                    <p class="text-gray-500 dark:text-gray-500">Esta funcionalidade será implementada em breve.</p>
+                    <h3 class="text-xl font-semibold text-gray-600  mb-2">Fichas Técnicas em Desenvolvimento</h3>
+                    <p class="text-gray-500  funcionalidade será implementada em breve.</p>
                 </div>
             </div>
 
             <div id="importacao" class="view">
-                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Importar XML</h2>
-                <div class="bg-white dark:bg-gray-800 p-8 rounded-lg shadow-md text-center">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900  XML</h2>
+                <div class="bg-white  p-8 rounded-lg shadow-md text-center">
                     <i data-lucide="file-up" class="h-16 w-16 mx-auto text-gray-400 mb-4"></i>
-                    <h3 class="text-xl font-semibold text-gray-600 dark:text-gray-400 mb-2">Importação XML em Desenvolvimento</h3>
-                    <p class="text-gray-500 dark:text-gray-500">Esta funcionalidade será implementada em breve.</p>
+                    <h3 class="text-xl font-semibold text-gray-600  mb-2">Importação XML em Desenvolvimento</h3>
+                    <p class="text-gray-500  funcionalidade será implementada em breve.</p>
                 </div>
             </div>
 
             <div id="configuracoes" class="view">
-                <h2 class="text-3xl font-bold mb-6 text-gray-900 dark:text-white">Configurações</h2>
-                <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md max-w-lg mx-auto">
+                <h2 class="text-3xl font-bold mb-6 text-gray-900 
+                <div class="bg-white  p-6 rounded-lg shadow-md max-w-lg mx-auto">
                     <div class="space-y-6">
                         <div>
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Valores Padrão</h3>
+                            <h3 class="text-lg font-medium text-gray-900  Padrão</h3>
                             <div class="mt-4 space-y-4">
                                 <div>
-                                    <label for="defaultTaxaPerca" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Taxa de Perca Padrão (%)</label>
-                                    <input type="number" id="defaultTaxaPerca" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                                    <label for="defaultTaxaPerca" class="block text-sm font-medium text-gray-700  de Perca Padrão (%)</label>
+                                    <input type="number" id="defaultTaxaPerca" class="mt-1 block w-full border border-gray-300   rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
                                 </div>
                                 <div>
-                                    <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Custo de Finalização Padrão (%)</label>
-                                    <input type="number" id="defaultCustoFinalizacao" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                                    <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700  de Finalização Padrão (%)</label>
+                                    <input type="number" id="defaultCustoFinalizacao" class="mt-1 block w-full border border-gray-300   rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
                                 </div>
                                 <div>
-                                    <label for="defaultMargemLucro" class="block text-sm font-medium text-gray-700 dark:text-gray-300">Margem de Lucro Padrão (%)</label>
-                                    <input type="number" id="defaultMargemLucro" class="mt-1 block w-full border border-gray-300 dark:border-gray-600 dark:bg-gray-700 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                                    <label for="defaultMargemLucro" class="block text-sm font-medium text-gray-700  de Lucro Padrão (%)</label>
+                                    <input type="number" id="defaultMargemLucro" class="mt-1 block w-full border border-gray-300   rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
                                 </div>
-                            </div>
-                        </div>
-                        <div class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                            <h3 class="text-lg font-medium text-gray-900 dark:text-white">Aparência</h3>
-                            <div class="flex items-center justify-between mt-4">
-                                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Modo Escuro</span>
-                                <button onclick="toggleDarkMode()" class="relative inline-flex items-center h-6 rounded-full w-11 transition-colors bg-gray-200 dark:bg-gray-600">
-                                    <span id="darkModeToggle" class="inline-block w-4 h-4 transform bg-white rounded-full transition-transform translate-x-1 dark:translate-x-6"></span>
-                                </button>
                             </div>
                         </div>
                     </div>

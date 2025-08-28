@@ -231,10 +231,10 @@ function updateConnectionStatus(status) {
     if (connectionEl) {
         if (status === 'online') {
             connectionEl.textContent = 'Conectado';
-            connectionEl.className = 'text-xs mt-1 text-green-600 dark:text-green-400';
+            connectionEl.className = 'text-xs mt-1 text-green-600';
         } else {
             connectionEl.textContent = 'Offline';
-            connectionEl.className = 'text-xs mt-1 text-red-600 dark:text-red-400';
+            connectionEl.className = 'text-xs mt-1 text-red-600';
         }
     }
 }
@@ -302,19 +302,6 @@ document.addEventListener('DOMContentLoaded', () => {
         // Se Firebase não carregou, usar localStorage
         console.warn('Firebase não disponível, usando localStorage');
         loadLocalData();
-    }
-    
-    // Dark Mode
-    const darkModeOn = localStorage.getItem('darkMode') === 'true';
-    const toggle = document.getElementById('darkModeToggle');
-    if (darkModeOn) {
-        document.documentElement.classList.add('dark');
-    } else {
-        document.documentElement.classList.remove('dark');
-    }
-    if(toggle) {
-        if(darkModeOn) toggle.classList.add('translate-x-6');
-        else toggle.classList.remove('translate-x-6');
     }
 });
 
@@ -384,11 +371,11 @@ function renderInsumos() {
     
     tbody.innerHTML = filtrados.map(insumo => {
         const uc = getUltimaCompra(insumo.id);
-        return `<tr class="border-b dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700/50">
+        return `<tr class="border-b border-gray-200 hover:bg-gray-50">
             <td class="p-4 font-medium">${insumo.nome}</td>
             <td class="p-4">${insumo.unidade}</td>
             <td class="p-4">${uc ? uc.fornecedor?.nome || 'N/A' : 'N/A'}</td>
-            <td class="p-4 font-semibold text-green-700 dark:text-green-400">${uc ? `R$ ${uc.preco.toFixed(2)}` : 'N/A'}</td>
+            <td class="p-4 font-semibold text-green-700">${uc ? `R$ ${uc.preco.toFixed(2)}` : 'N/A'}</td>
             <td class="p-4">${uc ? new Date(uc.data + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</td>
             <td class="p-4">
                 <div class="flex items-center space-x-4">
@@ -461,30 +448,12 @@ async function salvarConfiguracoes() {
     renderAll();
 }
 
-function toggleDarkMode() {
-    const html = document.documentElement;
-    const isDarkMode = html.classList.toggle('dark');
-    localStorage.setItem('darkMode', isDarkMode);
-    
-    const toggle = document.getElementById('darkModeToggle');
-    if (toggle) {
-        if (isDarkMode) {
-            toggle.classList.add('translate-x-6');
-        } else {
-            toggle.classList.remove('translate-x-6');
-        }
-    }
-    
-    renderAll(); // Rerender charts with new colors
-}
-
 function createChart(canvasId, type, labels, data, label) {
     const ctx = document.getElementById(canvasId);
     if (!ctx) return;
     
-    const isDark = document.documentElement.classList.contains('dark');
-    const gridColor = isDark ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
-    const textColor = isDark ? '#E5E7EB' : '#374151';
+    const gridColor = 'rgba(0, 0, 0, 0.1)';
+    const textColor = '#374151';
 
     if (charts[canvasId]) {
         charts[canvasId].destroy();
@@ -502,7 +471,7 @@ function createChart(canvasId, type, labels, data, label) {
                 label: label,
                 data: data,
                 backgroundColor: chartColors,
-                borderColor: isDark ? '#4B5563' : '#FFFFFF',
+                borderColor: '#FFFFFF',
                 borderWidth: type === 'pie' ? 2 : 0
             }]
         },
@@ -559,12 +528,12 @@ function showAlert(title, message, type = 'info') {
     const alertDiv = document.createElement('div');
     alertDiv.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
     alertDiv.innerHTML = `
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-6 max-w-md mx-4">
+        <div class="bg-white rounded-lg p-6 max-w-md mx-4 shadow-lg">
             <div class="flex items-center mb-4">
                 <i data-lucide="${icon}" class="h-6 w-6 mr-3 text-${type === 'success' ? 'green' : type === 'error' ? 'red' : 'blue'}-500"></i>
-                <h3 class="text-lg font-semibold text-gray-900 dark:text-white">${title}</h3>
+                <h3 class="text-lg font-semibold text-gray-900">${title}</h3>
             </div>
-            <p class="text-gray-600 dark:text-gray-400 mb-6">${message}</p>
+            <p class="text-gray-600 mb-6">${message}</p>
             <div class="text-right">
                 <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
                     OK
