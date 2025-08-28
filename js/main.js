@@ -64,7 +64,7 @@ async function loadFirebaseData() {
         return;
     }
     
-    const { db, collection, getDocs, query, orderBy } = firebaseServices;
+    const { db, collection, addDoc, getDocs, query, orderBy } = firebaseServices;
     
     try {
         // Carregar todas as coleções
@@ -576,7 +576,7 @@ function initializeApp() {
     setTimeout(() => {
         if (!isFirebaseReady) {
             console.log('Usando localStorage como fallback');
-            loadFromLocalStorage();
+            loadLocalData();
             updateDashboard();
             showFirebaseStatus(false);
         }
@@ -602,7 +602,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Carregar dados iniciais se ainda não carregaram
         if (insumosDB.length === 0) {
-            loadFromLocalStorage();
+            loadLocalData();
             updateDashboard();
         }
     }, 200);
