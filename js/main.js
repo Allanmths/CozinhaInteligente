@@ -19,6 +19,23 @@ if (window.firebaseServices) {
 }
 
 // Estado de autenticação
+let curr// --- INICIALIZAÇÃO DA APLICAÇÃO ---
+function initializeApp() {
+    // Tentar inicializar Firebase
+    initializeFirebase();
+    
+    // Fallback para localStorage se Firebase falhar
+    setTimeout(() => {
+        if (!isFirebaseReady) {
+            console.log('Usando localStorage como fallback');
+            loadFromLocalStorage();
+            updateDashboard();
+            showFirebaseStatus(false);
+        }
+    }, 3000);
+}
+
+// Estado de autenticação
 let currentUser = null;
 let isFirebaseReady = false;
 
@@ -35,25 +52,22 @@ async function initializeFirebase() {
         return;
     }
     
-    const { db, auth, signInAnonymously, onAuthStateChanged } = firebaseServices;
+    const { db } = firebaseServices;
     
     try {
         showLoading(true);
         
-        // Autenticação anônima
-        await signInAnonymously(auth);
+        // Conectar diretamente ao Firestore sem autenticação
+        currentUser = { uid: 'anonymous' }; // Mock user
+        isFirebaseReady = true;
         
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                isFirebaseReady = true;
-                console.log('Usuário autenticado:', user.uid);
-                showFirebaseStatus(true);
-                loadFirebaseData();
-            }
-        });
+        console.log('Firebase conectado sem autenticação');
+        showFirebaseStatus(true);
+        loadFirebaseData();
+        
+        showLoading(false);
     } catch (error) {
-        console.error('Erro na autenticação:', error);
+        console.error('Erro ao conectar Firebase:', error);
         showFirebaseStatus(false);
         // Fallback para localStorage se Firebase falhar
         loadLocalData();
@@ -570,3 +584,13 @@ function initializeApp() {
         }
     }, 3000);
 }
+
+ / /   I n i c i a l i z a r   q u a n d o   D O M   e s t i v e r   p r o n t o 
+ d o c u m e n t . a d d E v e n t L i s t e n e r ( ' D O M C o n t e n t L o a d e d ' ,   ( )   = >   { 
+         c o n s o l e . l o g ( ' D O M   c a r r e g a d o ,   i n i c i a l i z a n d o   a p l i c a � � o . . . ' ) ; 
+         / /   A g u a r d a r   u m   p o u c o   p a r a   g a r a n t i r   q u e   o   L u c i d e   c a r r e g o u 
+         s e t T i m e o u t ( ( )   = >   { 
+                 l u c i d e . c r e a t e I c o n s ( ) ; 
+         } ,   1 0 0 ) ; 
+ } ) ;  
+ 
