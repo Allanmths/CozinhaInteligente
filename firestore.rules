@@ -1,0 +1,39 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Permitir acesso completo para o sistema de cozinha
+    // ATENÇÃO: Estas regras são permissivas para desenvolvimento/demonstração
+    // Para produção, considere implementar autenticação adequada
+    
+    // Regras para a coleção de insumos
+    match /insumos/{document} {
+      allow read, write: if true;
+    }
+    
+    // Regras para a coleção de compras
+    match /compras/{document} {
+      allow read, write: if true;
+    }
+    
+    // Regras para a coleção de fichas técnicas
+    match /fichasTecnicas/{document} {
+      allow read, write: if true;
+    }
+    
+    // Regras para a coleção de pratos
+    match /pratos/{document} {
+      allow read, write: if true;
+    }
+    
+    // Regras para a coleção de configurações
+    match /configuracoes/{document} {
+      allow read, write: if true;
+    }
+    
+    // Regra padrão para outras coleções que possam ser criadas
+    match /{document=**} {
+      allow read, write: if true;
+    }
+  }
+}

@@ -89,8 +89,11 @@ open index.html
 ### **3. Configuração Firebase**
 1. Crie um projeto no [Firebase Console](https://console.firebase.google.com/)
 2. Configure Firestore Database
-3. Habilite Authentication (anônimo)
-4. Copie as credenciais para `index.html`
+3. **Configure as Regras de Segurança** (veja `FIREBASE_RULES_SETUP.md`)
+4. Habilite Authentication (anônimo) - opcional
+5. Copie as credenciais para `index.html`
+
+> ⚠️ **Importante**: Para resolver erros de permissão, siga o guia em [`FIREBASE_RULES_SETUP.md`](./FIREBASE_RULES_SETUP.md)
 
 ## 📱 Características
 
