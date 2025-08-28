@@ -1,10 +1,22 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
  <meta charset="UTF-8">
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>Sistema de Ficha Técnica de Cozinha</title>
- <link rel="icon" type="image/x-icon" href="/favicon.ico">
+ <title>Sistema de Ficha TÃ©cnica de Cozinha</title>
+ <link rel="icon" ty <div class="p-3 r <div class="p-3 rounded-full bg-orange-100">
+ <i data-lucide="shopping-cart" class="h-6 w-6 text-orange-600"></i>
+ </div>
+ <div class="ml-4">
+ <p class="text-sm font-medium text-gray-600">Total Compras</p>
+ <p id="totalCompras" class="text-2xl font-bold text-gray-900">0</p>
+ </div>full bg-purple-100">
+ <i data-lucide="utensils-crossed" class="h-6 w-6 text-purple-600"></i>
+ </div>
+ <div class="ml-4">
+ <p class="text-sm font-medium text-gray-600">Total Pratos</p>
+ <p id="totalPratos" class="text-2xl font-bold text-gray-900">0</p>
+ </div>ge/x-icon" href="/favicon.ico">
  <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
  <script>
  tailwind.config = {
@@ -27,7 +39,7 @@
  import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, query, orderBy, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
  import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js';
  
- // Configuração do Firebase
+ // ConfiguraÃ§Ã£o do Firebase
  const firebaseConfig = {
  apiKey: "AIzaSyCvjYUQr1xvTskO1ZZqGHKi1d1SysvGWLc",
  authDomain: "cozinha-inteligente-2b040.firebaseapp.com",
@@ -42,7 +54,7 @@
  const firestore = getFirestore(app);
  const firebaseAuth = getAuth(app);
  
- // Tornar disponível globalmente
+ // Tornar disponÃ­vel globalmente
  window.firebaseServices = { 
  db: firestore, 
  auth: firebaseAuth, 
@@ -149,24 +161,24 @@
  <i data-lucide="layout-dashboard" class="h-5 w-5 mr-3"></i><span>Dashboard</span>
  </a>
  <a href="#" onclick="showView('relatorios')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
- <i data-lucide="line-chart" class="h-5 w-5 mr-3"></i><span>Relatórios</span>
+ <i data-lucide="line-chart" class="h-5 w-5 mr-3"></i><span>RelatÃ³rios</span>
  </a>
  <a href="#" onclick="showView('pratos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
  <i data-lucide="utensils-crossed" class="h-5 w-5 mr-3"></i><span>Pratos</span>
  </a>
  <a href="#" onclick="showView('fichas')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
- <i data-lucide="notebook-tabs" class="h-5 w-5 mr-3"></i><span>Fichas Técnicas</span>
+ <i data-lucide="notebook-tabs" class="h-5 w-5 mr-3"></i><span>Fichas TÃ©cnicas</span>
  </a>
  <a href="#" onclick="showView('insumos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
  <i data-lucide="carrot" class="h-5 w-5 mr-3"></i><span>Insumos</span>
  </a>
  <a href="#" onclick="showView('importacao')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
- <i data-lucide="file-up" class="h-5 w-5 mr-3"></i><span>Importação</span>
+ <i data-lucide="file-up" class="h-5 w-5 mr-3"></i><span>ImportaÃ§Ã£o</span>
  </a>
  </nav>
  <div class="p-6 border-t border-gray-200">
  <a href="#" onclick="showView('configuracoes')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
- <i data-lucide="cog" class="h-5 w-5 mr-3"></i><span>Configurações</span>
+ <i data-lucide="cog" class="h-5 w-5 mr-3"></i><span>ConfiguraÃ§Ãµes</span>
  </a>
  <div class="mt-4 p-3 bg-gray-100 rounded-lg text-center">
  <div class="flex items-center justify-center space-x-2 text-sm text-gray-600">
@@ -184,7 +196,7 @@
  <!-- Dashboard View -->
  <div id="dashboard" class="view active">
  <div class="flex items-center justify-between mb-6">
- <h2 class="text-3xl font-bold text-gray-900">Dashboard de Análises</h2>
+ <h2 class="text-3xl font-bold text-gray-900">Dashboard de AnÃ¡lises</h2>
  <div class="flex items-center space-x-2 bg-green-100 border border-green-400 px-3 py-2 rounded-lg">
  <i data-lucide="globe" class="h-4 w-4 text-green-700"></i>
  <span class="text-sm font-medium text-green-700">GitHub Pages</span>
@@ -199,21 +211,18 @@
  <i data-lucide="package" class="h-6 w-6 text-blue-600"></i>
  </div>
  <div class="ml-4">
- <p class="text-sm font-medium text-gray-600 Insumos</p>
- <p id="totalInsumos" class="text-2xl font-bold text-gray-900 
+ <p class="text-sm font-medium text-gray-600">Total Insumos</p>
+ <p id="totalInsumos" class="text-2xl font-bold text-gray-900">0</p>
  </div>
  </div>
  </div>
  
  <div class="bg-white p-6 rounded-lg shadow-md">
  <div class="flex items-center">
- <div class="p-3 rounded-full bg-green-100 
- <i data-lucide="notebook-tabs" class="h-6 w-6 text-green-600 
- </div>
+ <div class="p-3 rounded-full bg-green-100"><i data-lucide="notebook-tabs" class="h-6 w-6 text-green-600"></i></div>
  <div class="ml-4">
- <p class="text-sm font-medium text-gray-600 Técnicas</p>
- <p id="totalFichas" class="text-2xl font-bold text-gray-900 
- </div>
+ <p class="text-sm font-medium text-gray-600">Fichas Técnicas</p>
+ <p id="totalFichas" class="text-2xl font-bold text-gray-900">0</p></div>
  </div>
  </div>
  
@@ -245,7 +254,7 @@
  <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
  <div class="bg-white p-6 rounded-lg shadow-md">
  <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 
- <i data-lucide="trending-up" class="h-6 w-6 mr-3 text-orange-500"></i>Fichas com Maiores Variações
+ <i data-lucide="trending-up" class="h-6 w-6 mr-3 text-orange-500"></i>Fichas com Maiores VariaÃ§Ãµes
  </h3>
  <div class="relative h-80">
  <canvas id="dashboardFichasChart"></canvas>
@@ -253,7 +262,7 @@
  </div>
  <div class="bg-white p-6 rounded-lg shadow-md">
  <h3 class="text-xl font-semibold mb-4 flex items-center text-gray-800 
- <i data-lucide="bar-chart-3" class="h-6 w-6 mr-3 text-orange-500"></i>Insumos com Maiores Variações
+ <i data-lucide="bar-chart-3" class="h-6 w-6 mr-3 text-orange-500"></i>Insumos com Maiores VariaÃ§Ãµes
  </h3>
  <div class="relative h-80">
  <canvas id="dashboardInsumosChart"></canvas>
@@ -289,9 +298,9 @@
  <thead class="bg-gray-100 
  <tr>
  <th class="p-4 font-semibold text-gray-600 do Insumo</th>
- <th class="p-4 font-semibold text-gray-600 Padrão</th>
+ <th class="p-4 font-semibold text-gray-600 PadrÃ£o</th>
  <th class="p-4 font-semibold text-gray-600 Fornecedor</th>
- <th class="p-4 font-semibold text-gray-600 Preço</th>
+ <th class="p-4 font-semibold text-gray-600 PreÃ§o</th>
  <th class="p-4 font-semibold text-gray-600 da Compra</th>
  <th class="p-4 font-semibold text-gray-600 
  </tr>
@@ -302,13 +311,13 @@
  </div>
  </div>
 
- <!-- Views placeholder para outras seções -->
+ <!-- Views placeholder para outras seÃ§Ãµes -->
  <div id="relatorios" class="view">
  <h2 class="text-3xl font-bold mb-6 text-gray-900 Gerenciais</h2>
  <div class="bg-white p-8 rounded-lg shadow-md text-center">
  <i data-lucide="chart-pie" class="h-16 w-16 mx-auto text-gray-400 mb-4"></i>
- <h3 class="text-xl font-semibold text-gray-600 mb-2">Relatórios em Desenvolvimento</h3>
- <p class="text-gray-500 funcionalidade será implementada em breve.</p>
+ <h3 class="text-xl font-semibold text-gray-600 mb-2">RelatÃ³rios em Desenvolvimento</h3>
+ <p class="text-gray-500 funcionalidade serÃ¡ implementada em breve.</p>
  </div>
  </div>
 
@@ -316,17 +325,17 @@
  <h2 class="text-3xl font-bold mb-6 text-gray-900 Finais</h2>
  <div class="bg-white p-8 rounded-lg shadow-md text-center">
  <i data-lucide="utensils-crossed" class="h-16 w-16 mx-auto text-gray-400 mb-4"></i>
- <h3 class="text-xl font-semibold text-gray-600 mb-2">Gestão de Pratos em Desenvolvimento</h3>
- <p class="text-gray-500 funcionalidade será implementada em breve.</p>
+ <h3 class="text-xl font-semibold text-gray-600 mb-2">GestÃ£o de Pratos em Desenvolvimento</h3>
+ <p class="text-gray-500 funcionalidade serÃ¡ implementada em breve.</p>
  </div>
  </div>
 
  <div id="fichas" class="view">
- <h2 class="text-3xl font-bold mb-6 text-gray-900 Técnicas</h2>
+ <h2 class="text-3xl font-bold mb-6 text-gray-900 TÃ©cnicas</h2>
  <div class="bg-white p-8 rounded-lg shadow-md text-center">
  <i data-lucide="notebook-tabs" class="h-16 w-16 mx-auto text-gray-400 mb-4"></i>
- <h3 class="text-xl font-semibold text-gray-600 mb-2">Fichas Técnicas em Desenvolvimento</h3>
- <p class="text-gray-500 funcionalidade será implementada em breve.</p>
+ <h3 class="text-xl font-semibold text-gray-600 mb-2">Fichas TÃ©cnicas em Desenvolvimento</h3>
+ <p class="text-gray-500 funcionalidade serÃ¡ implementada em breve.</p>
  </div>
  </div>
 
@@ -334,8 +343,8 @@
  <h2 class="text-3xl font-bold mb-6 text-gray-900 XML</h2>
  <div class="bg-white p-8 rounded-lg shadow-md text-center">
  <i data-lucide="file-up" class="h-16 w-16 mx-auto text-gray-400 mb-4"></i>
- <h3 class="text-xl font-semibold text-gray-600 mb-2">Importação XML em Desenvolvimento</h3>
- <p class="text-gray-500 funcionalidade será implementada em breve.</p>
+ <h3 class="text-xl font-semibold text-gray-600 mb-2">ImportaÃ§Ã£o XML em Desenvolvimento</h3>
+ <p class="text-gray-500 funcionalidade serÃ¡ implementada em breve.</p>
  </div>
  </div>
 
@@ -344,18 +353,18 @@
  <div class="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
  <div class="space-y-6">
  <div>
- <h3 class="text-lg font-medium text-gray-900 Padrão</h3>
+ <h3 class="text-lg font-medium text-gray-900 PadrÃ£o</h3>
  <div class="mt-4 space-y-4">
  <div>
- <label for="defaultTaxaPerca" class="block text-sm font-medium text-gray-700 de Perca Padrão (%)</label>
+ <label for="defaultTaxaPerca" class="block text-sm font-medium text-gray-700 de Perca PadrÃ£o (%)</label>
  <input type="number" id="defaultTaxaPerca" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
  </div>
  <div>
- <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700 de Finalização Padrão (%)</label>
+ <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700 de FinalizaÃ§Ã£o PadrÃ£o (%)</label>
  <input type="number" id="defaultCustoFinalizacao" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
  </div>
  <div>
- <label for="defaultMargemLucro" class="block text-sm font-medium text-gray-700 de Lucro Padrão (%)</label>
+ <label for="defaultMargemLucro" class="block text-sm font-medium text-gray-700 de Lucro PadrÃ£o (%)</label>
  <input type="number" id="defaultMargemLucro" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
  </div>
  </div>
@@ -363,7 +372,7 @@
  </div>
  <div class="mt-8 text-right">
  <button onclick="salvarConfiguracoes()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center shadow-sm transition-colors inline-flex">
- <i data-lucide="save" class="h-5 w-5 mr-2"></i>Salvar Configurações
+ <i data-lucide="save" class="h-5 w-5 mr-2"></i>Salvar ConfiguraÃ§Ãµes
  </button>
  </div>
  </div>
@@ -378,3 +387,4 @@
  <script src="js/main.js"></script>
 </body>
 </html>
+

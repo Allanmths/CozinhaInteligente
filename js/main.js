@@ -40,23 +40,21 @@ async function initializeFirebase() {
     try {
         showLoading(true);
         
-        // Autenticação anônima
-        await signInAnonymously(auth);
+        // Conectar diretamente ao Firestore sem autenticação
+        currentUser = { uid: 'anonymous' }; // Mock user
+        isFirebaseReady = true;
         
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                currentUser = user;
-                isFirebaseReady = true;
-                console.log('Usuário autenticado:', user.uid);
-                showFirebaseStatus(true);
-                loadFirebaseData();
-            }
-        });
+        console.log('Firebase conectado sem autenticação');
+        showFirebaseStatus(true);
+        loadFirebaseData();
+        
+        showLoading(false);
     } catch (error) {
-        console.error('Erro na autenticação:', error);
+        console.error('Erro na conexão Firebase:', error);
         showFirebaseStatus(false);
         // Fallback para localStorage se Firebase falhar
         loadLocalData();
+        showLoading(false);
     }
 }
 
@@ -287,11 +285,16 @@ function renderAll() {
 }
 
 function updateStats() {
-    // Atualizar estatísticas do dashboard
-    document.getElementById('totalInsumos').textContent = insumosDB.length;
-    document.getElementById('totalFichas').textContent = fichasTecnicasDB.length;
-    document.getElementById('totalPratos').textContent = pratosDB.length;
-    document.getElementById('totalCompras').textContent = comprasDB.length;
+    // Atualizar estatísticas do dashboard com verificação de existência
+    const totalInsumos = document.getElementById('totalInsumos');
+    const totalFichas = document.getElementById('totalFichas');
+    const totalPratos = document.getElementById('totalPratos');
+    const totalCompras = document.getElementById('totalCompras');
+    
+    if (totalInsumos) totalInsumos.textContent = insumosDB.length;
+    if (totalFichas) totalFichas.textContent = fichasTecnicasDB.length;
+    if (totalPratos) totalPratos.textContent = pratosDB.length;
+    if (totalCompras) totalCompras.textContent = comprasDB.length;
 }
 
 document.addEventListener('DOMContentLoaded', () => { 
@@ -317,8 +320,20 @@ async function saveData() {
 
 // --- NAVEGAÇÃO ---
 function showView(viewId) {
+    // Verificar se os elementos existem antes de tentar acessá-los
+    const targetView = document.getElementById(viewId);
+    if (!targetView) {
+        console.warn(`View com ID '${viewId}' não encontrada`);
+        return;
+    }
+    
+    // Esconder todas as views
     document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
-    document.getElementById(viewId).classList.add('active');
+    
+    // Mostrar a view alvo
+    targetView.classList.add('active');
+    
+    // Atualizar links da sidebar
     document.querySelectorAll('.sidebar-link').forEach(l => {
         l.classList.remove('active');
         if (l.getAttribute('onclick') === `showView('${viewId}')`) {
@@ -554,9 +569,6 @@ function showAlert(title, message, type = 'info') {
 
 // --- INICIALIZAÇÃO DA APLICAÇÃO ---
 function initializeApp() {
-    // Configurar navegação
-    setupNavigation();
-    
     // Tentar inicializar Firebase
     initializeFirebase();
     
@@ -575,13 +587,23 @@ function initializeApp() {
 document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM carregado, inicializando aplicação...');
     
-    // Garantir que os ícones Lucide sejam criados
+    // Aguardar um pouco para garantir que tudo carregou
     setTimeout(() => {
+        // Garantir que os ícones Lucide sejam criados
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
         }
-    }, 100);
-    
-    // Inicializar dashboard por padrão
-    showView('dashboard');
+        
+        // Inicializar dashboard por padrão apenas se o elemento existir
+        const dashboardElement = document.getElementById('dashboard');
+        if (dashboardElement) {
+            showView('dashboard');
+        }
+        
+        // Carregar dados iniciais se ainda não carregaram
+        if (insumosDB.length === 0) {
+            loadFromLocalStorage();
+            updateDashboard();
+        }
+    }, 200);
 });
