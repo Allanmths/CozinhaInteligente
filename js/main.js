@@ -94,7 +94,7 @@ async function loadFirebaseData() {
         
         // Se não há dados, criar dados de exemplo
         if (insumosDB.length === 0) {
-            await createSampleData();
+            await createSampleData({ db, collection, addDoc });
         }
         
         console.log('Dados carregados do Firebase');
@@ -148,7 +148,7 @@ async function deleteFromFirebase(collection_name, docId) {
     }
 }
 
-async function createSampleData() {
+async function createSampleData({ db, collection, addDoc }) {
     try {
         // Dados de exemplo
         const sampleInsumos = [
@@ -577,7 +577,7 @@ function initializeApp() {
         if (!isFirebaseReady) {
             console.log('Usando localStorage como fallback');
             loadLocalData();
-            updateDashboard();
+            renderDashboard();
             showFirebaseStatus(false);
         }
     }, 3000);
@@ -603,7 +603,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Carregar dados iniciais se ainda não carregaram
         if (insumosDB.length === 0) {
             loadLocalData();
-            updateDashboard();
+            renderDashboard();
         }
     }, 200);
 });

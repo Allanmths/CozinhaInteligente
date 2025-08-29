@@ -102,7 +102,7 @@
 <body class="bg-gray-50 text-gray-800">
 
  <!-- GitHub Corner -->
- <a href="https://github.com/seu-usuario/CozinhaInteligente" class="github-corner" aria-label="View source on GitHub" target="_blank">
+ <a href="https://github.com/Allanmths/CozinhaInteligente" class="github-corner" aria-label="View source on GitHub" target="_blank">
  <svg width="80" height="80" viewBox="0 0 250 250" style="fill:#64748b; color:#fff; position: absolute; top: 0; border: 0; right: 0; z-index: 1000;" aria-hidden="true">
  <path d="m0,0 0,250 250,0 z"></path>
  <path d="m127.5,110c-50,0 -87.5,37.5 -87.5,87.5 0,37.5 25,70 60,82.5 v-30c-5,0 -10,-2.5 -12.5,-7.5 -2.5,-5 -5,-12.5 -10,-15 -2.5,-2.5 -2.5,-2.5 0,-2.5 5,0 10,7.5 12.5,12.5 5,7.5 12.5,10 20,10 7.5,0 15,-2.5 17.5,-7.5 2.5,-12.5 10,-20 17.5,-20 -35,-2.5 -55,-20 -55,-45 0,-10 2.5,-20 10,-27.5 -2.5,-7.5 -2.5,-17.5 0,-25 0,0 10,0 25,10 7.5,-2.5 15,-2.5 22.5,-2.5s15,0 22.5,2.5c15,-10 25,-10 25,-10 2.5,7.5 2.5,17.5 0,25 7.5,7.5 10,17.5 10,27.5 0,25 -20,42.5 -55,45 12.5,2.5 20,15 20,30v40c35,-12.5 60,-45 60,-82.5 0,-50 -37.5,-87.5 -87.5,-87.5z" style="fill:currentColor"></path>
@@ -148,20 +148,8 @@
  <a href="#" onclick="showView('dashboard')" class="sidebar-link active flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
  <i data-lucide="layout-dashboard" class="h-5 w-5 mr-3"></i><span>Dashboard</span>
  </a>
- <a href="#" onclick="showView('relatorios')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
- <i data-lucide="line-chart" class="h-5 w-5 mr-3"></i><span>Relatórios</span>
- </a>
- <a href="#" onclick="showView('pratos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
- <i data-lucide="utensils-crossed" class="h-5 w-5 mr-3"></i><span>Pratos</span>
- </a>
- <a href="#" onclick="showView('fichas')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
- <i data-lucide="notebook-tabs" class="h-5 w-5 mr-3"></i><span>Fichas Técnicas</span>
- </a>
  <a href="#" onclick="showView('insumos')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
  <i data-lucide="carrot" class="h-5 w-5 mr-3"></i><span>Insumos</span>
- </a>
- <a href="#" onclick="showView('importacao')" class="sidebar-link flex items-center px-6 py-3 text-gray-600 hover:bg-gray-100">
- <i data-lucide="file-up" class="h-5 w-5 mr-3"></i><span>Importação</span>
  </a>
  </nav>
  <div class="p-6 border-t border-gray-200">
@@ -199,44 +187,44 @@
  <i data-lucide="package" class="h-6 w-6 text-blue-600"></i>
  </div>
  <div class="ml-4">
- <p class="text-sm font-medium text-gray-600 Insumos</p>
- <p id="totalInsumos" class="text-2xl font-bold text-gray-900 
+ <p class="text-sm font-medium text-gray-600">Total de Insumos</p>
+ <p id="totalInsumos" class="text-2xl font-bold text-gray-900">0</p>
  </div>
  </div>
  </div>
  
  <div class="bg-white p-6 rounded-lg shadow-md">
  <div class="flex items-center">
- <div class="p-3 rounded-full bg-green-100 
- <i data-lucide="notebook-tabs" class="h-6 w-6 text-green-600 
+ <div class="p-3 rounded-full bg-green-100">
+ <i data-lucide="notebook-tabs" class="h-6 w-6 text-green-600"></i>
  </div>
  <div class="ml-4">
- <p class="text-sm font-medium text-gray-600 Técnicas</p>
- <p id="totalFichas" class="text-2xl font-bold text-gray-900 
+ <p class="text-sm font-medium text-gray-600">Fichas Técnicas</p>
+ <p id="totalFichas" class="text-2xl font-bold text-gray-900">0</p>
  </div>
  </div>
  </div>
  
  <div class="bg-white p-6 rounded-lg shadow-md">
  <div class="flex items-center">
- <div class="p-3 rounded-full bg-purple-100 
- <i data-lucide="utensils-crossed" class="h-6 w-6 text-purple-600 
+ <div class="p-3 rounded-full bg-purple-100">
+ <i data-lucide="utensils-crossed" class="h-6 w-6 text-purple-600"></i>
  </div>
  <div class="ml-4">
- <p class="text-sm font-medium text-gray-600 
- <p id="totalPratos" class="text-2xl font-bold text-gray-900 
+ <p class="text-sm font-medium text-gray-600">Total de Pratos</p>
+ <p id="totalPratos" class="text-2xl font-bold text-gray-900">0</p>
  </div>
  </div>
  </div>
  
  <div class="bg-white p-6 rounded-lg shadow-md">
  <div class="flex items-center">
- <div class="p-3 rounded-full bg-orange-100 
- <i data-lucide="shopping-cart" class="h-6 w-6 text-orange-600 
+ <div class="p-3 rounded-full bg-orange-100">
+ <i data-lucide="shopping-cart" class="h-6 w-6 text-orange-600"></i>
  </div>
  <div class="ml-4">
- <p class="text-sm font-medium text-gray-600 
- <p id="totalCompras" class="text-2xl font-bold text-gray-900 
+ <p class="text-sm font-medium text-gray-600">Total de Compras</p>
+ <p id="totalCompras" class="text-2xl font-bold text-gray-900">0</p>
  </div>
  </div>
  </div>
