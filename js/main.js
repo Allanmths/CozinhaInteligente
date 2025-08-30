@@ -695,7 +695,8 @@ function calcularCustoPrato(prato) {
 function calcularCustoFichaTecnica(ficha) {
     if (!ficha.ingredientes || ficha.ingredientes.length === 0) return 0;
     
-    return ficha.ingredientes.reduce((total, ingrediente) => {
+    // Calcular custo base dos ingredientes
+    const custoBase = ficha.ingredientes.reduce((total, ingrediente) => {
         const insumo = insumosDB.find(i => i.id === ingrediente.insumoId);
         if (!insumo) return total;
         
@@ -710,6 +711,14 @@ function calcularCustoFichaTecnica(ficha) {
         const custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
         return total + (custoUnitario * ingrediente.quantidade);
     }, 0);
+    
+    // Aplicar taxa de perca (aumenta o custo)
+    const custoComPerca = custoBase * (1 + (ficha.taxaPerca || 0) / 100);
+    
+    // Aplicar custo de finalização (aumenta o custo)
+    const custoFinal = custoComPerca * (1 + (ficha.custoFinalizacao || 0) / 100);
+    
+    return custoFinal;
 }
 
 function filtrarPratos() {
@@ -1087,9 +1096,6 @@ function aplicarConfiguracoesDefaultFicha() {
     if (configuracoesDB.defaultCustoFinalizacao) {
         document.getElementById('fichaCustoFinalizacao').value = configuracoesDB.defaultCustoFinalizacao;
     }
-    if (configuracoesDB.defaultMargemLucro) {
-        document.getElementById('fichaMargemLucro').value = configuracoesDB.defaultMargemLucro;
-    }
 }
 
 // --- FUNÇÕES DE FICHAS TÉCNICAS ---
@@ -1182,7 +1188,6 @@ function saveFicha(event) {
         modoPreparo: document.getElementById('fichaModoPreparo').value,
         taxaPerca: parseFloat(document.getElementById('fichaTaxaPerca').value) || 0,
         custoFinalizacao: parseFloat(document.getElementById('fichaCustoFinalizacao').value) || 0,
-        margemLucro: parseFloat(document.getElementById('fichaMargemLucro').value) || 0,
         status: document.getElementById('fichaStatus').value,
         ingredientes: getIngredientesFichaFromForm(),
         dataAtualizacao: new Date().toISOString().split('T')[0]
@@ -1224,7 +1229,6 @@ function editFicha(id) {
     document.getElementById('fichaModoPreparo').value = ficha.modoPreparo || '';
     document.getElementById('fichaTaxaPerca').value = ficha.taxaPerca || '';
     document.getElementById('fichaCustoFinalizacao').value = ficha.custoFinalizacao || '';
-    document.getElementById('fichaMargemLucro').value = ficha.margemLucro || '';
     document.getElementById('fichaStatus').value = ficha.status || 'ativo';
     
     // Carregar ingredientes
