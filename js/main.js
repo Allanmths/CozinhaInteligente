@@ -150,7 +150,7 @@ async function deleteFromFirebase(collection_name, docId) {
 
 async function createSampleData({ db, collection, addDoc }) {
     try {
-        // Dados de exemplo
+        // Dados de exemplo - Insumos
         const sampleInsumos = [
             { nome: 'Tomate Italiano', unidade: 'kg' },
             { nome: 'Cebola Pera', unidade: 'kg' },
@@ -159,7 +159,11 @@ async function createSampleData({ db, collection, addDoc }) {
             { nome: 'Farinha de Trigo', unidade: 'kg' },
             { nome: 'Ovo de Galinha', unidade: 'unidade' },
             { nome: 'Queijo Parmesão', unidade: 'kg' },
-            { nome: 'Massa de Lasanha', unidade: 'kg' }
+            { nome: 'Massa de Lasanha', unidade: 'kg' },
+            { nome: 'Ricota Fresca', unidade: 'kg' },
+            { nome: 'Sal Refinado', unidade: 'kg' },
+            { nome: 'Pimenta do Reino', unidade: 'kg' },
+            { nome: 'Alho', unidade: 'kg' }
         ];
         
         // Criar insumos
@@ -168,21 +172,142 @@ async function createSampleData({ db, collection, addDoc }) {
             insumosDB.push({ id: docRef.id, ...insumo });
         }
         
-        // Criar algumas compras de exemplo
+        // Criar compras de exemplo
         const sampleCompras = [
-            { insumoMestreId: insumosDB[0].id, data: '2024-07-20', preco: 7.90, perdaPercentual: 0, fornecedor: { nome: 'Hortifruti Frescor' } },
-            { insumoMestreId: insumosDB[0].id, data: '2024-08-15', preco: 8.50, perdaPercentual: 0, fornecedor: { nome: 'Hortifruti Frescor' } },
-            { insumoMestreId: insumosDB[1].id, data: '2024-07-20', preco: 5.50, perdaPercentual: 10, fornecedor: { nome: 'Hortifruti Frescor' } },
-            { insumoMestreId: insumosDB[2].id, data: '2024-07-15', preco: 42.50, perdaPercentual: 0, fornecedor: { nome: 'Importadora Sabor' } },
-            { insumoMestreId: insumosDB[3].id, data: '2024-08-01', preco: 3.80, perdaPercentual: 5, fornecedor: { nome: 'Hortifruti Frescor' } },
-            { insumoMestreId: insumosDB[4].id, data: '2024-07-05', preco: 6.00, perdaPercentual: 0, fornecedor: { nome: 'Distribuidora Grãos' } },
-            { insumoMestreId: insumosDB[5].id, data: '2024-07-18', preco: 0.95, perdaPercentual: 2, fornecedor: { nome: 'Distribuidora Grãos' } },
-            { insumoMestreId: insumosDB[6].id, data: '2024-08-10', preco: 65.00, perdaPercentual: 0, fornecedor: { nome: 'Laticínios Premium' } }
+            { insumoMestreId: insumosDB[0].id, data: '2024-08-20', preco: 8.50, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Hortifruti Frescor' } },
+            { insumoMestreId: insumosDB[1].id, data: '2024-08-20', preco: 5.50, quantidade: 1, perdaPercentual: 10, fornecedor: { nome: 'Hortifruti Frescor' } },
+            { insumoMestreId: insumosDB[2].id, data: '2024-08-15', preco: 42.50, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Importadora Sabor' } },
+            { insumoMestreId: insumosDB[3].id, data: '2024-08-25', preco: 3.80, quantidade: 1, perdaPercentual: 5, fornecedor: { nome: 'Hortifruti Frescor' } },
+            { insumoMestreId: insumosDB[4].id, data: '2024-08-10', preco: 6.00, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Distribuidora Grãos' } },
+            { insumoMestreId: insumosDB[5].id, data: '2024-08-18', preco: 0.95, quantidade: 1, perdaPercentual: 2, fornecedor: { nome: 'Distribuidora Grãos' } },
+            { insumoMestreId: insumosDB[6].id, data: '2024-08-22', preco: 65.00, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Laticínios Premium' } },
+            { insumoMestreId: insumosDB[7].id, data: '2024-08-12', preco: 12.00, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Massas Artesanais' } },
+            { insumoMestreId: insumosDB[8].id, data: '2024-08-23', preco: 18.50, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Laticínios Premium' } },
+            { insumoMestreId: insumosDB[9].id, data: '2024-08-01', preco: 2.50, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Distribuidora Grãos' } },
+            { insumoMestreId: insumosDB[10].id, data: '2024-08-01', preco: 35.00, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Temperos & Especiarias' } },
+            { insumoMestreId: insumosDB[11].id, data: '2024-08-20', preco: 15.00, quantidade: 1, perdaPercentual: 8, fornecedor: { nome: 'Hortifruti Frescor' } }
         ];
         
         for (const compra of sampleCompras) {
             const docRef = await addDoc(collection(db, 'compras'), compra);
             comprasDB.push({ id: docRef.id, ...compra });
+        }
+        
+        // Criar fichas técnicas de exemplo
+        const sampleFichas = [
+            {
+                nome: 'Molho de Tomate Caseiro',
+                tipo: 'molho',
+                rendimento: 500,
+                unidade: 'ml',
+                tempoPreparo: 45,
+                modoPreparo: '1. Refogue a cebola e o alho no azeite\n2. Adicione os tomates picados\n3. Tempere com sal, pimenta e manjericão\n4. Cozinhe em fogo baixo por 30-40 minutos\n5. Ajuste temperos a gosto',
+                taxaPerca: 5,
+                custoFinalizacao: 8,
+                status: 'ativo',
+                ingredientes: [
+                    { insumoId: insumosDB[0].id, quantidade: 0.8 }, // Tomate - 800g
+                    { insumoId: insumosDB[1].id, quantidade: 0.1 }, // Cebola - 100g
+                    { insumoId: insumosDB[2].id, quantidade: 0.05 }, // Azeite - 50ml
+                    { insumoId: insumosDB[3].id, quantidade: 0.2 }, // Manjericão - 0.2 maço
+                    { insumoId: insumosDB[11].id, quantidade: 0.02 }, // Alho - 20g
+                    { insumoId: insumosDB[9].id, quantidade: 0.01 }, // Sal - 10g
+                    { insumoId: insumosDB[10].id, quantidade: 0.002 } // Pimenta - 2g
+                ],
+                dataCriacao: '2024-08-30',
+                dataAtualizacao: '2024-08-30'
+            },
+            {
+                nome: 'Recheio de Ricota e Manjericão',
+                tipo: 'base',
+                rendimento: 600,
+                unidade: 'g',
+                tempoPreparo: 15,
+                modoPreparo: '1. Amasse bem a ricota com um garfo\n2. Misture o manjericão picado finamente\n3. Tempere com sal e pimenta\n4. Adicione o queijo parmesão ralado\n5. Misture até obter consistência homogênea',
+                taxaPerca: 2,
+                custoFinalizacao: 5,
+                status: 'ativo',
+                ingredientes: [
+                    { insumoId: insumosDB[8].id, quantidade: 0.5 }, // Ricota - 500g
+                    { insumoId: insumosDB[3].id, quantidade: 0.3 }, // Manjericão - 0.3 maço
+                    { insumoId: insumosDB[6].id, quantidade: 0.1 }, // Parmesão - 100g
+                    { insumoId: insumosDB[9].id, quantidade: 0.005 }, // Sal - 5g
+                    { insumoId: insumosDB[10].id, quantidade: 0.001 } // Pimenta - 1g
+                ],
+                dataCriacao: '2024-08-30',
+                dataAtualizacao: '2024-08-30'
+            }
+        ];
+        
+        for (const ficha of sampleFichas) {
+            const docRef = await addDoc(collection(db, 'fichasTecnicas'), ficha);
+            fichasTecnicasDB.push({ id: docRef.id, ...ficha });
+        }
+        
+        // Criar pratos de exemplo
+        const samplePratos = [
+            {
+                nome: 'Lasanha de Ricota com Manjericão',
+                categoria: 'prato-principal',
+                descricao: 'Deliciosa lasanha com camadas de massa artesanal, recheio cremoso de ricota e manjericão fresco, coberta com molho de tomate caseiro e queijo parmesão gratinado.',
+                rendimento: 8,
+                unidade: 'porções',
+                tempoPreparo: 90,
+                modoPreparo: '1. Pré-aqueça o forno a 180°C\n2. Cozinhe a massa de lasanha al dente\n3. Prepare uma camada de molho no fundo da forma\n4. Alterne camadas: massa, recheio de ricota, molho\n5. Finalize com queijo parmesão por cima\n6. Leve ao forno por 35-40 minutos\n7. Deixe descansar 10 minutos antes de servir',
+                taxaPerca: 8,
+                custoFinalizacao: 12,
+                margemLucro: 180,
+                status: 'ativo',
+                componentes: [
+                    { 
+                        tipo: 'ficha', 
+                        fichaId: fichasTecnicasDB[0].id, 
+                        quantidade: 1, 
+                        observacoes: 'Molho para todas as camadas' 
+                    },
+                    { 
+                        tipo: 'ficha', 
+                        fichaId: fichasTecnicasDB[1].id, 
+                        quantidade: 1, 
+                        observacoes: 'Recheio principal' 
+                    }
+                ],
+                insumos: [
+                    { insumoId: insumosDB[7].id, quantidade: 0.5 }, // Massa de lasanha - 500g
+                    { insumoId: insumosDB[6].id, quantidade: 0.2 }  // Parmesão para gratinar - 200g
+                ],
+                dataCriacao: '2024-08-30',
+                dataAtualizacao: '2024-08-30'
+            },
+            {
+                nome: 'Bruschetta de Tomate e Manjericão',
+                categoria: 'entrada',
+                descricao: 'Entrada clássica italiana com fatias de pão tostado, cobertas com tomates frescos temperados, manjericão e azeite extra virgem.',
+                rendimento: 4,
+                unidade: 'porções',
+                tempoPreparo: 20,
+                modoPreparo: '1. Corte o pão em fatias de 2cm\n2. Toste as fatias até dourar\n3. Esfregue alho nas fatias quentes\n4. Cubra com a mistura de tomate temperado\n5. Finalize com manjericão fresco e azeite',
+                taxaPerca: 5,
+                custoFinalizacao: 10,
+                margemLucro: 250,
+                status: 'ativo',
+                componentes: [],
+                insumos: [
+                    { insumoId: insumosDB[0].id, quantidade: 0.3 }, // Tomate - 300g
+                    { insumoId: insumosDB[2].id, quantidade: 0.03 }, // Azeite - 30ml
+                    { insumoId: insumosDB[3].id, quantidade: 0.15 }, // Manjericão - 0.15 maço
+                    { insumoId: insumosDB[11].id, quantidade: 0.01 }, // Alho - 10g
+                    { insumoId: insumosDB[9].id, quantidade: 0.003 }, // Sal - 3g
+                    { insumoId: insumosDB[10].id, quantidade: 0.001 } // Pimenta - 1g
+                ],
+                dataCriacao: '2024-08-30',
+                dataAtualizacao: '2024-08-30'
+            }
+        ];
+        
+        for (const prato of samplePratos) {
+            const docRef = await addDoc(collection(db, 'pratos'), prato);
+            pratosDB.push({ id: docRef.id, ...prato });
         }
         
         console.log('Dados de exemplo criados no Firebase');
@@ -245,15 +370,130 @@ function loadLocalData() {
         { id: '3', nome: 'Azeite Extra Virgem', unidade: 'L' },
         { id: '4', nome: 'Manjericão Fresco', unidade: 'maço' },
         { id: '5', nome: 'Farinha de Trigo', unidade: 'kg' },
-        { id: '6', nome: 'Ovo de Galinha', unidade: 'unidade' }
+        { id: '6', nome: 'Ovo de Galinha', unidade: 'unidade' },
+        { id: '7', nome: 'Queijo Parmesão', unidade: 'kg' },
+        { id: '8', nome: 'Massa de Lasanha', unidade: 'kg' },
+        { id: '9', nome: 'Ricota Fresca', unidade: 'kg' },
+        { id: '10', nome: 'Sal Refinado', unidade: 'kg' },
+        { id: '11', nome: 'Pimenta do Reino', unidade: 'kg' },
+        { id: '12', nome: 'Alho', unidade: 'kg' }
     ];
+    
     comprasDB = JSON.parse(localStorage.getItem('comprasDB')) || [
-        { id: '1', insumoMestreId: '1', data: '2024-07-20', preco: 7.90, perdaPercentual: 0, fornecedor: { nome: 'Hortifruti Frescor' } },
-        { id: '2', insumoMestreId: '1', data: '2024-08-15', preco: 8.50, perdaPercentual: 0, fornecedor: { nome: 'Hortifruti Frescor' } }
+        { id: '1', insumoMestreId: '1', data: '2024-08-20', preco: 8.50, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Hortifruti Frescor' } },
+        { id: '2', insumoMestreId: '2', data: '2024-08-20', preco: 5.50, quantidade: 1, perdaPercentual: 10, fornecedor: { nome: 'Hortifruti Frescor' } },
+        { id: '3', insumoMestreId: '3', data: '2024-08-15', preco: 42.50, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Importadora Sabor' } },
+        { id: '4', insumoMestreId: '4', data: '2024-08-25', preco: 3.80, quantidade: 1, perdaPercentual: 5, fornecedor: { nome: 'Hortifruti Frescor' } },
+        { id: '5', insumoMestreId: '5', data: '2024-08-10', preco: 6.00, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Distribuidora Grãos' } },
+        { id: '6', insumoMestreId: '6', data: '2024-08-18', preco: 0.95, quantidade: 1, perdaPercentual: 2, fornecedor: { nome: 'Distribuidora Grãos' } },
+        { id: '7', insumoMestreId: '7', data: '2024-08-22', preco: 65.00, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Laticínios Premium' } },
+        { id: '8', insumoMestreId: '8', data: '2024-08-12', preco: 12.00, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Massas Artesanais' } },
+        { id: '9', insumoMestreId: '9', data: '2024-08-23', preco: 18.50, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Laticínios Premium' } },
+        { id: '10', insumoMestreId: '10', data: '2024-08-01', preco: 2.50, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Distribuidora Grãos' } },
+        { id: '11', insumoMestreId: '11', data: '2024-08-01', preco: 35.00, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Temperos & Especiarias' } },
+        { id: '12', insumoMestreId: '12', data: '2024-08-20', preco: 15.00, quantidade: 1, perdaPercentual: 8, fornecedor: { nome: 'Hortifruti Frescor' } }
     ];
-    fichasTecnicasDB = JSON.parse(localStorage.getItem('fichasTecnicasDB')) || [];
-    pratosDB = JSON.parse(localStorage.getItem('pratosDB')) || [];
-    configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { taxaPerca: 0, custoFinalizacao: 10, margemLucro: 200 };
+    
+    fichasTecnicasDB = JSON.parse(localStorage.getItem('fichasTecnicasDB')) || [
+        {
+            id: 'ficha_1',
+            nome: 'Molho de Tomate Caseiro',
+            tipo: 'molho',
+            rendimento: 500,
+            unidade: 'ml',
+            tempoPreparo: 45,
+            modoPreparo: '1. Refogue a cebola e o alho no azeite\n2. Adicione os tomates picados\n3. Tempere com sal, pimenta e manjericão\n4. Cozinhe em fogo baixo por 30-40 minutos\n5. Ajuste temperos a gosto',
+            taxaPerca: 5,
+            custoFinalizacao: 8,
+            status: 'ativo',
+            ingredientes: [
+                { insumoId: '1', quantidade: 0.8 },
+                { insumoId: '2', quantidade: 0.1 },
+                { insumoId: '3', quantidade: 0.05 },
+                { insumoId: '4', quantidade: 0.2 },
+                { insumoId: '12', quantidade: 0.02 },
+                { insumoId: '10', quantidade: 0.01 },
+                { insumoId: '11', quantidade: 0.002 }
+            ],
+            dataCriacao: '2024-08-30',
+            dataAtualizacao: '2024-08-30'
+        },
+        {
+            id: 'ficha_2',
+            nome: 'Recheio de Ricota e Manjericão',
+            tipo: 'base',
+            rendimento: 600,
+            unidade: 'g',
+            tempoPreparo: 15,
+            modoPreparo: '1. Amasse bem a ricota com um garfo\n2. Misture o manjericão picado finamente\n3. Tempere com sal e pimenta\n4. Adicione o queijo parmesão ralado\n5. Misture até obter consistência homogênea',
+            taxaPerca: 2,
+            custoFinalizacao: 5,
+            status: 'ativo',
+            ingredientes: [
+                { insumoId: '9', quantidade: 0.5 },
+                { insumoId: '4', quantidade: 0.3 },
+                { insumoId: '7', quantidade: 0.1 },
+                { insumoId: '10', quantidade: 0.005 },
+                { insumoId: '11', quantidade: 0.001 }
+            ],
+            dataCriacao: '2024-08-30',
+            dataAtualizacao: '2024-08-30'
+        }
+    ];
+    
+    pratosDB = JSON.parse(localStorage.getItem('pratosDB')) || [
+        {
+            id: 'prato_1',
+            nome: 'Lasanha de Ricota com Manjericão',
+            categoria: 'prato-principal',
+            descricao: 'Deliciosa lasanha com camadas de massa artesanal, recheio cremoso de ricota e manjericão fresco, coberta com molho de tomate caseiro e queijo parmesão gratinado.',
+            rendimento: 8,
+            unidade: 'porções',
+            tempoPreparo: 90,
+            modoPreparo: '1. Pré-aqueça o forno a 180°C\n2. Cozinhe a massa de lasanha al dente\n3. Prepare uma camada de molho no fundo da forma\n4. Alterne camadas: massa, recheio de ricota, molho\n5. Finalize com queijo parmesão por cima\n6. Leve ao forno por 35-40 minutos\n7. Deixe descansar 10 minutos antes de servir',
+            taxaPerca: 8,
+            custoFinalizacao: 12,
+            margemLucro: 180,
+            status: 'ativo',
+            componentes: [
+                { tipo: 'ficha', fichaId: 'ficha_1', quantidade: 1, observacoes: 'Molho para todas as camadas' },
+                { tipo: 'ficha', fichaId: 'ficha_2', quantidade: 1, observacoes: 'Recheio principal' }
+            ],
+            insumos: [
+                { insumoId: '8', quantidade: 0.5 },
+                { insumoId: '7', quantidade: 0.2 }
+            ],
+            dataCriacao: '2024-08-30',
+            dataAtualizacao: '2024-08-30'
+        },
+        {
+            id: 'prato_2',
+            nome: 'Bruschetta de Tomate e Manjericão',
+            categoria: 'entrada',
+            descricao: 'Entrada clássica italiana com fatias de pão tostado, cobertas com tomates frescos temperados, manjericão e azeite extra virgem.',
+            rendimento: 4,
+            unidade: 'porções',
+            tempoPreparo: 20,
+            modoPreparo: '1. Corte o pão em fatias de 2cm\n2. Toste as fatias até dourar\n3. Esfregue alho nas fatias quentes\n4. Cubra com a mistura de tomate temperado\n5. Finalize com manjericão fresco e azeite',
+            taxaPerca: 5,
+            custoFinalizacao: 10,
+            margemLucro: 250,
+            status: 'ativo',
+            componentes: [],
+            insumos: [
+                { insumoId: '1', quantidade: 0.3 },
+                { insumoId: '3', quantidade: 0.03 },
+                { insumoId: '4', quantidade: 0.15 },
+                { insumoId: '12', quantidade: 0.01 },
+                { insumoId: '10', quantidade: 0.003 },
+                { insumoId: '11', quantidade: 0.001 }
+            ],
+            dataCriacao: '2024-08-30',
+            dataAtualizacao: '2024-08-30'
+        }
+    ];
+    
+    configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { taxaPerca: 5, custoFinalizacao: 10, margemLucro: 200 };
     
     console.log('Dados carregados do localStorage (fallback)');
     updateConnectionStatus('offline');
