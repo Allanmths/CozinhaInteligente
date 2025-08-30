@@ -279,6 +279,7 @@ function renderAll() {
     populateFilters();
     renderDashboard();
     renderInsumos();
+    renderPratos();
     renderConfiguracoes();
     updateStats();
     lucide.createIcons();
@@ -311,6 +312,12 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- PERSISTÊNCIA DE DADOS ATUALIZADA ---
 async function saveData() {
     if (isFirebaseReady) {
+        await Promise.all([
+            saveToFirebase('insumos', insumosDB),
+            saveToFirebase('fornecedores', fornecedoresDB),
+            saveToFirebase('compras', comprasDB),
+            saveToFirebase('pratos', pratosDB)
+        ]);
         console.log('Dados sincronizados com Firebase');
     } else {
         // Fallback para localStorage
@@ -590,6 +597,319 @@ function createChart(canvasId, type, labels, data, label) {
     window.chartsInstances[canvasId] = new Chart(ctx, chartConfig);
 }
 
+// --- FUNÇÕES DE PRATOS ---
+function renderPratos() {
+    const tbody = document.getElementById('pratosTableBody');
+    if (!tbody) return;
+    
+    if (pratosDB.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-8 text-gray-500">Nenhum prato cadastrado</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = pratosDB.map(prato => {
+        const custo = calcularCustoPrato(prato);
+        const margem = prato.preco > 0 ? (((prato.preco - custo) / prato.preco) * 100) : 0;
+        const statusClass = prato.status === 'ativo' ? 'bg-green-100 text-green-800' : 
+                           prato.status === 'sazonal' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
+        
+        return `<tr class="hover:bg-gray-50">
+            <td class="px-6 py-4">
+                <div>
+                    <div class="font-medium text-gray-900">${prato.nome}</div>
+                    <div class="text-sm text-gray-500">${prato.categoria || ''}</div>
+                    ${prato.tempoPreparo ? `<div class="text-xs text-gray-400">${prato.tempoPreparo} min</div>` : ''}
+                </div>
+            </td>
+            <td class="px-6 py-4 text-sm text-gray-900 capitalize">${prato.categoria || '-'}</td>
+            <td class="px-6 py-4 text-sm font-semibold text-green-700">R$ ${prato.preco.toFixed(2)}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">R$ ${custo.toFixed(2)}</td>
+            <td class="px-6 py-4 text-sm ${margem >= 30 ? 'text-green-600' : margem >= 15 ? 'text-yellow-600' : 'text-red-600'} font-medium">
+                ${margem.toFixed(1)}%
+            </td>
+            <td class="px-6 py-4">
+                <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">
+                    ${prato.status || 'ativo'}
+                </span>
+            </td>
+            <td class="px-6 py-4 text-sm">
+                <div class="flex space-x-2">
+                    <button onclick="editPrato('${prato.id}')" 
+                        class="text-blue-600 hover:text-blue-800" title="Editar">
+                        <i data-lucide="edit" class="h-4 w-4"></i>
+                    </button>
+                    <button onclick="viewPratoDetails('${prato.id}')" 
+                        class="text-green-600 hover:text-green-800" title="Ver Detalhes">
+                        <i data-lucide="eye" class="h-4 w-4"></i>
+                    </button>
+                    <button onclick="deletePrato('${prato.id}')" 
+                        class="text-red-600 hover:text-red-800" title="Excluir">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    </button>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+    
+    lucide.createIcons();
+}
+
+function calcularCustoPrato(prato) {
+    if (!prato.ingredientes || prato.ingredientes.length === 0) return 0;
+    
+    return prato.ingredientes.reduce((total, ingrediente) => {
+        const insumo = insumosDB.find(i => i.id === ingrediente.insumoId);
+        if (!insumo) return total;
+        
+        // Buscar última compra para obter preço atual
+        const ultimaCompra = comprasDB
+            .filter(c => c.insumoMestreId === insumo.id)
+            .sort((a, b) => new Date(b.data) - new Date(a.data))[0];
+        
+        if (!ultimaCompra) return total;
+        
+        // Calcular custo baseado na quantidade usada
+        const custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
+        return total + (custoUnitario * ingrediente.quantidade);
+    }, 0);
+}
+
+function filtrarPratos() {
+    const filtroTexto = document.getElementById('filtroPrato').value.toLowerCase();
+    const filtroCategoria = document.getElementById('filtroCategoriaPrato').value;
+    const filtroStatus = document.getElementById('filtroStatusPrato').value;
+    
+    const pratosOriginal = [...pratosDB];
+    
+    pratosDB = pratosOriginal.filter(prato => {
+        const matchTexto = !filtroTexto || 
+            prato.nome.toLowerCase().includes(filtroTexto) ||
+            (prato.descricao && prato.descricao.toLowerCase().includes(filtroTexto));
+        
+        const matchCategoria = !filtroCategoria || prato.categoria === filtroCategoria;
+        const matchStatus = !filtroStatus || prato.status === filtroStatus;
+        
+        return matchTexto && matchCategoria && matchStatus;
+    });
+    
+    renderPratos();
+    pratosDB = pratosOriginal; // Restaurar array original
+}
+
+function savePrato(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('pratoId').value;
+    const prato = {
+        nome: document.getElementById('pratoNome').value,
+        categoria: document.getElementById('pratoCategoria').value,
+        preco: parseFloat(document.getElementById('pratoPreco').value),
+        tempoPreparo: parseInt(document.getElementById('pratoTempoPreparo').value) || null,
+        porcoes: parseInt(document.getElementById('pratoPorcoes').value) || 1,
+        descricao: document.getElementById('pratoDescricao').value,
+        status: document.getElementById('pratoStatus').value,
+        ingredientes: getIngredientesFromForm(),
+        dataAtualizacao: new Date().toISOString().split('T')[0]
+    };
+    
+    if (id) {
+        // Editar prato existente
+        const index = pratosDB.findIndex(p => p.id === id);
+        if (index !== -1) {
+            pratosDB[index] = { ...pratosDB[index], ...prato };
+            showAlert('Prato Atualizado', 'Prato atualizado com sucesso!', 'success');
+        }
+    } else {
+        // Adicionar novo prato
+        prato.id = 'prato_' + Date.now();
+        prato.dataCriacao = new Date().toISOString().split('T')[0];
+        pratosDB.push(prato);
+        showAlert('Prato Criado', 'Prato adicionado com sucesso!', 'success');
+    }
+    
+    saveData();
+    renderPratos();
+    updateStats();
+    hideModal('pratoModal');
+    resetPratoForm();
+}
+
+function editPrato(id) {
+    const prato = pratosDB.find(p => p.id === id);
+    if (!prato) return;
+    
+    document.getElementById('pratoModalTitle').textContent = 'Editar Prato';
+    document.getElementById('pratoId').value = prato.id;
+    document.getElementById('pratoNome').value = prato.nome;
+    document.getElementById('pratoCategoria').value = prato.categoria || '';
+    document.getElementById('pratoPreco').value = prato.preco;
+    document.getElementById('pratoTempoPreparo').value = prato.tempoPreparo || '';
+    document.getElementById('pratoPorcoes').value = prato.porcoes || 1;
+    document.getElementById('pratoDescricao').value = prato.descricao || '';
+    document.getElementById('pratoStatus').value = prato.status || 'ativo';
+    
+    // Carregar ingredientes
+    loadIngredientesIntoForm(prato.ingredientes || []);
+    
+    showModal('pratoModal');
+}
+
+function deletePrato(id) {
+    if (confirm('Tem certeza que deseja excluir este prato?')) {
+        pratosDB = pratosDB.filter(p => p.id !== id);
+        saveData();
+        renderPratos();
+        updateStats();
+        showAlert('Prato Excluído', 'Prato removido com sucesso!', 'success');
+    }
+}
+
+function viewPratoDetails(id) {
+    const prato = pratosDB.find(p => p.id === id);
+    if (!prato) return;
+    
+    const custo = calcularCustoPrato(prato);
+    const margem = prato.preco > 0 ? (((prato.preco - custo) / prato.preco) * 100) : 0;
+    
+    let ingredientesHtml = '';
+    if (prato.ingredientes && prato.ingredientes.length > 0) {
+        ingredientesHtml = prato.ingredientes.map(ing => {
+            const insumo = insumosDB.find(i => i.id === ing.insumoId);
+            return `<li class="flex justify-between">
+                <span>${insumo ? insumo.nome : 'Insumo não encontrado'}</span>
+                <span>${ing.quantidade} ${ing.unidade || ''}</span>
+            </li>`;
+        }).join('');
+    } else {
+        ingredientesHtml = '<li class="text-gray-500">Nenhum ingrediente cadastrado</li>';
+    }
+    
+    const detailsHtml = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Nome</label>
+                    <p class="text-gray-900">${prato.nome}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Categoria</label>
+                    <p class="text-gray-900 capitalize">${prato.categoria || '-'}</p>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Preço</label>
+                    <p class="text-lg font-semibold text-green-700">R$ ${prato.preco.toFixed(2)}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Custo</label>
+                    <p class="text-lg font-semibold">R$ ${custo.toFixed(2)}</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-gray-700">Margem</label>
+                    <p class="text-lg font-semibold ${margem >= 30 ? 'text-green-600' : margem >= 15 ? 'text-yellow-600' : 'text-red-600'}">${margem.toFixed(1)}%</p>
+                </div>
+            </div>
+            
+            ${prato.tempoPreparo ? `
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Tempo de Preparo</label>
+                <p class="text-gray-900">${prato.tempoPreparo} minutos</p>
+            </div>
+            ` : ''}
+            
+            ${prato.descricao ? `
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Descrição</label>
+                <p class="text-gray-900">${prato.descricao}</p>
+            </div>
+            ` : ''}
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Ingredientes</label>
+                <ul class="bg-gray-50 rounded-lg p-4 space-y-2">
+                    ${ingredientesHtml}
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    showCustomModal('Detalhes do Prato', detailsHtml);
+}
+
+function addIngrediente() {
+    const container = document.getElementById('ingredientesList');
+    const index = container.children.length;
+    
+    const ingredienteHtml = `
+        <div class="ingrediente-item grid grid-cols-1 md:grid-cols-4 gap-3 p-3 bg-gray-50 rounded-lg">
+            <select class="ingrediente-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <option value="">Selecione um insumo</option>
+                ${insumosDB.map(insumo => `<option value="${insumo.id}">${insumo.nome}</option>`).join('')}
+            </select>
+            <input type="number" class="ingrediente-quantidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                placeholder="Quantidade" step="0.01" min="0">
+            <input type="text" class="ingrediente-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                placeholder="Unidade (kg, g, L, ml...)">
+            <button type="button" onclick="removeIngrediente(this)" 
+                class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
+                <i data-lucide="trash-2" class="h-4 w-4"></i>
+            </button>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', ingredienteHtml);
+    lucide.createIcons();
+}
+
+function removeIngrediente(button) {
+    button.closest('.ingrediente-item').remove();
+}
+
+function getIngredientesFromForm() {
+    const ingredientes = [];
+    const items = document.querySelectorAll('.ingrediente-item');
+    
+    items.forEach(item => {
+        const insumoId = item.querySelector('.ingrediente-insumo').value;
+        const quantidade = parseFloat(item.querySelector('.ingrediente-quantidade').value);
+        const unidade = item.querySelector('.ingrediente-unidade').value;
+        
+        if (insumoId && quantidade > 0) {
+            ingredientes.push({
+                insumoId,
+                quantidade,
+                unidade: unidade || 'un'
+            });
+        }
+    });
+    
+    return ingredientes;
+}
+
+function loadIngredientesIntoForm(ingredientes) {
+    const container = document.getElementById('ingredientesList');
+    container.innerHTML = '';
+    
+    if (ingredientes && ingredientes.length > 0) {
+        ingredientes.forEach(ingrediente => {
+            addIngrediente();
+            const lastItem = container.lastElementChild;
+            lastItem.querySelector('.ingrediente-insumo').value = ingrediente.insumoId;
+            lastItem.querySelector('.ingrediente-quantidade').value = ingrediente.quantidade;
+            lastItem.querySelector('.ingrediente-unidade').value = ingrediente.unidade || '';
+        });
+    }
+}
+
+function resetPratoForm() {
+    document.getElementById('pratoForm').reset();
+    document.getElementById('pratoId').value = '';
+    document.getElementById('pratoModalTitle').textContent = 'Adicionar Prato';
+    document.getElementById('ingredientesList').innerHTML = '';
+}
+
 // --- NAVEGAÇÃO ---
 function showView(viewId) {
     // Verificar se os elementos existem antes de tentar acessá-los
@@ -610,6 +930,13 @@ function showView(viewId) {
         // Aguardar um pouco para garantir que os elementos foram renderizados
         setTimeout(() => {
             gerarRelatorios();
+        }, 100);
+    }
+    
+    // Renderizar pratos quando a aba é aberta
+    if (viewId === 'pratos') {
+        setTimeout(() => {
+            renderPratos();
         }, 100);
     }
     
@@ -860,6 +1187,78 @@ function initializeApp() {
             renderDashboard();
             showFirebaseStatus(false);
         }
+    }, 3000);
+}
+
+// --- FUNÇÕES DE MODAL ---
+function showModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    }
+}
+
+function showCustomModal(title, content) {
+    // Criar modal dinâmico se não existir
+    let customModal = document.getElementById('customModal');
+    if (!customModal) {
+        customModal = document.createElement('div');
+        customModal.id = 'customModal';
+        customModal.className = 'modal';
+        customModal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="customModalTitle" class="text-xl font-semibold"></h3>
+                    <button onclick="hideModal('customModal')" class="text-gray-400 hover:text-gray-600">
+                        <i data-lucide="x" class="h-6 w-6"></i>
+                    </button>
+                </div>
+                <div id="customModalBody" class="modal-body"></div>
+            </div>
+        `;
+        document.body.appendChild(customModal);
+    }
+    
+    document.getElementById('customModalTitle').textContent = title;
+    document.getElementById('customModalBody').innerHTML = content;
+    
+    showModal('customModal');
+    lucide.createIcons();
+}
+
+function showAlert(title, message, type = 'info') {
+    const alertClass = type === 'success' ? 'bg-green-100 border-green-500 text-green-700' :
+                      type === 'error' ? 'bg-red-100 border-red-500 text-red-700' :
+                      'bg-blue-100 border-blue-500 text-blue-700';
+    
+    const alertHtml = `
+        <div class="border-l-4 p-4 ${alertClass}">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <i data-lucide="${type === 'success' ? 'check-circle' : type === 'error' ? 'alert-circle' : 'info'}" class="h-5 w-5"></i>
+                </div>
+                <div class="ml-3">
+                    <p class="text-sm font-medium">${title}</p>
+                    <p class="text-sm mt-1">${message}</p>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    showCustomModal('Notificação', alertHtml);
+    
+    // Auto-fechar após 3 segundos
+    setTimeout(() => {
+        hideModal('customModal');
     }, 3000);
 }
 

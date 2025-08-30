@@ -86,6 +86,37 @@
  align-items: center;
  justify-content: center;
  }
+ .modal {
+ display: none;
+ position: fixed;
+ z-index: 10000;
+ left: 0;
+ top: 0;
+ width: 100%;
+ height: 100%;
+ background-color: rgba(0, 0, 0, 0.5);
+ overflow-y: auto;
+ }
+ .modal-content {
+ background-color: white;
+ margin: 2% auto;
+ border-radius: 8px;
+ box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+ width: 90%;
+ max-width: 800px;
+ max-height: 90vh;
+ overflow-y: auto;
+ }
+ .modal-header {
+ display: flex;
+ justify-content: space-between;
+ align-items: center;
+ padding: 1.5rem 2rem;
+ border-bottom: 1px solid #e5e7eb;
+ }
+ .modal-body {
+ padding: 2rem;
+ }
  </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -412,10 +443,165 @@
 
  <div id="pratos" class="view">
  <h2 class="text-3xl font-bold mb-6 text-gray-900">Pratos Finais</h2>
- <div class="bg-white p-8 rounded-lg shadow-md text-center">
- <i data-lucide="utensils-crossed" class="h-16 w-16 mx-auto text-gray-400 mb-4"></i>
- <h3 class="text-xl font-semibold text-gray-600 mb-2">Gestão de Pratos em Desenvolvimento</h3>
- <p class="text-gray-500">Esta funcionalidade será implementada em breve.</p>
+ 
+ <!-- Botão Adicionar Prato -->
+ <div class="mb-6">
+ <button onclick="showModal('pratoModal')" class="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center">
+ <i data-lucide="plus" class="h-5 w-5 mr-2"></i>
+ Adicionar Prato
+ </button>
+ </div>
+
+ <!-- Filtros -->
+ <div class="bg-white p-6 rounded-lg shadow-md mb-6">
+ <div class="flex flex-wrap gap-4 items-center">
+ <div class="flex-1 min-w-64">
+ <input type="text" id="filtroPrato" placeholder="Buscar pratos..." 
+ class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+ oninput="filtrarPratos()">
+ </div>
+ <div>
+ <select id="filtroCategoriaPrato" onchange="filtrarPratos()" 
+ class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+ <option value="">Todas as categorias</option>
+ <option value="entrada">Entrada</option>
+ <option value="prato-principal">Prato Principal</option>
+ <option value="sobremesa">Sobremesa</option>
+ <option value="bebida">Bebida</option>
+ <option value="acompanhamento">Acompanhamento</option>
+ </select>
+ </div>
+ <div>
+ <select id="filtroStatusPrato" onchange="filtrarPratos()" 
+ class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+ <option value="">Todos os status</option>
+ <option value="ativo">Ativo</option>
+ <option value="inativo">Inativo</option>
+ <option value="sazonal">Sazonal</option>
+ </select>
+ </div>
+ </div>
+ </div>
+
+ <!-- Lista de Pratos -->
+ <div class="bg-white rounded-lg shadow-md">
+ <div class="overflow-x-auto">
+ <table class="w-full">
+ <thead class="bg-gray-50">
+ <tr>
+ <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Prato</th>
+ <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Categoria</th>
+ <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Preço</th>
+ <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Custo</th>
+ <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Margem</th>
+ <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+ <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+ </tr>
+ </thead>
+ <tbody id="pratosTableBody" class="bg-white divide-y divide-gray-200">
+ <!-- Pratos serão inseridos aqui via JavaScript -->
+ </tbody>
+ </table>
+ </div>
+ </div>
+
+ <!-- Modal Adicionar/Editar Prato -->
+ <div id="pratoModal" class="modal">
+ <div class="modal-content">
+ <div class="modal-header">
+ <h3 id="pratoModalTitle" class="text-xl font-semibold">Adicionar Prato</h3>
+ <button onclick="hideModal('pratoModal')" class="text-gray-400 hover:text-gray-600">
+ <i data-lucide="x" class="h-6 w-6"></i>
+ </button>
+ </div>
+ <div class="modal-body">
+ <form id="pratoForm" onsubmit="savePrato(event)">
+ <input type="hidden" id="pratoId">
+ 
+ <!-- Informações Básicas -->
+ <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Prato *</label>
+ <input type="text" id="pratoNome" required 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Categoria *</label>
+ <select id="pratoCategoria" required 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+ <option value="">Selecione uma categoria</option>
+ <option value="entrada">Entrada</option>
+ <option value="prato-principal">Prato Principal</option>
+ <option value="sobremesa">Sobremesa</option>
+ <option value="bebida">Bebida</option>
+ <option value="acompanhamento">Acompanhamento</option>
+ </select>
+ </div>
+ </div>
+
+ <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Preço de Venda (R$) *</label>
+ <input type="number" id="pratoPreco" step="0.01" min="0" required 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Tempo de Preparo (min)</label>
+ <input type="number" id="pratoTempoPreparo" min="0" 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-2">Porções</label>
+ <input type="number" id="pratoPorcoes" min="1" value="1" 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+ </div>
+ </div>
+
+ <div class="mb-6">
+ <label class="block text-sm font-medium text-gray-700 mb-2">Descrição</label>
+ <textarea id="pratoDescricao" rows="3" 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+ placeholder="Descrição do prato..."></textarea>
+ </div>
+
+ <!-- Ingredientes -->
+ <div class="mb-6">
+ <label class="block text-sm font-medium text-gray-700 mb-3">Ingredientes</label>
+ <div id="ingredientesList" class="space-y-3 mb-4">
+ <!-- Ingredientes serão adicionados aqui -->
+ </div>
+ <button type="button" onclick="addIngrediente()" 
+ class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center">
+ <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+ Adicionar Ingrediente
+ </button>
+ </div>
+
+ <!-- Status -->
+ <div class="mb-6">
+ <label class="block text-sm font-medium text-gray-700 mb-2">Status</label>
+ <select id="pratoStatus" 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+ <option value="ativo">Ativo</option>
+ <option value="inativo">Inativo</option>
+ <option value="sazonal">Sazonal</option>
+ </select>
+ </div>
+
+ <!-- Botões -->
+ <div class="flex justify-end space-x-3">
+ <button type="button" onclick="hideModal('pratoModal')" 
+ class="px-4 py-2 text-gray-600 border border-gray-300 rounded-lg hover:bg-gray-50">
+ Cancelar
+ </button>
+ <button type="submit" 
+ class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
+ Salvar Prato
+ </button>
+ </div>
+ </form>
+ </div>
+ </div>
  </div>
  </div>
 
