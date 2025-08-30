@@ -318,6 +318,278 @@ async function saveData() {
     }
 }
 
+// --- FUNÇÕES DE RELATÓRIOS ---
+function gerarRelatorios() {
+    const dataInicio = document.getElementById('dataInicio').value;
+    const dataFim = document.getElementById('dataFim').value;
+    
+    // Se não há datas definidas, usar últimos 30 dias
+    let startDate, endDate;
+    if (!dataInicio || !dataFim) {
+        endDate = new Date();
+        startDate = new Date();
+        startDate.setDate(startDate.getDate() - 30);
+    } else {
+        startDate = new Date(dataInicio);
+        endDate = new Date(dataFim);
+    }
+    
+    // Filtrar compras por período
+    const comprasFiltradas = comprasDB.filter(compra => {
+        const dataCompra = new Date(compra.data);
+        return dataCompra >= startDate && dataCompra <= endDate;
+    });
+    
+    gerarCardsResumo(comprasFiltradas);
+    gerarGraficoFornecedores(comprasFiltradas);
+    gerarGraficoEvolucao(comprasFiltradas);
+    gerarTabelaVariacao();
+    gerarRankingFornecedores(comprasFiltradas);
+    
+    showAlert('Relatórios Gerados', 'Relatórios atualizados com sucesso!', 'success');
+}
+
+function gerarCardsResumo(comprasFiltradas) {
+    // Total de compras
+    const totalCompras = comprasFiltradas.reduce((total, compra) => total + compra.preco, 0);
+    document.getElementById('relatorioTotalCompras').textContent = `R$ ${totalCompras.toFixed(2)}`;
+    
+    // Ticket médio
+    const ticketMedio = comprasFiltradas.length > 0 ? totalCompras / comprasFiltradas.length : 0;
+    document.getElementById('relatorioTicketMedio').textContent = `R$ ${ticketMedio.toFixed(2)}`;
+    
+    // Insumos ativos (com compras no período)
+    const insumosAtivos = new Set(comprasFiltradas.map(c => c.insumoMestreId)).size;
+    document.getElementById('relatorioInsumosAtivos').textContent = insumosAtivos;
+    
+    // Fornecedores únicos
+    const fornecedores = new Set(comprasFiltradas.map(c => c.fornecedor?.nome).filter(Boolean)).size;
+    document.getElementById('relatorioFornecedores').textContent = fornecedores;
+}
+
+function gerarGraficoFornecedores(comprasFiltradas) {
+    // Agrupar por fornecedor
+    const fornecedorData = {};
+    comprasFiltradas.forEach(compra => {
+        const fornecedor = compra.fornecedor?.nome || 'Sem Fornecedor';
+        fornecedorData[fornecedor] = (fornecedorData[fornecedor] || 0) + compra.preco;
+    });
+    
+    const labels = Object.keys(fornecedorData);
+    const data = Object.values(fornecedorData);
+    
+    createChart('relatorioFornecedoresChart', 'pie', labels, data, 'Valor (R$)');
+}
+
+function gerarGraficoEvolucao(comprasFiltradas) {
+    // Agrupar por mês
+    const evolucaoData = {};
+    comprasFiltradas.forEach(compra => {
+        const data = new Date(compra.data);
+        const mesAno = `${data.getMonth() + 1}/${data.getFullYear()}`;
+        evolucaoData[mesAno] = (evolucaoData[mesAno] || 0) + compra.preco;
+    });
+    
+    // Ordenar por data
+    const sortedKeys = Object.keys(evolucaoData).sort((a, b) => {
+        const [mesA, anoA] = a.split('/');
+        const [mesB, anoB] = b.split('/');
+        return new Date(anoA, mesA - 1) - new Date(anoB, mesB - 1);
+    });
+    
+    const labels = sortedKeys;
+    const data = sortedKeys.map(key => evolucaoData[key]);
+    
+    createChart('relatorioEvolucaoChart', 'line', labels, data, 'Gastos (R$)');
+}
+
+function gerarTabelaVariacao() {
+    const tbody = document.getElementById('relatorioVariacaoTableBody');
+    const variacoes = [];
+    
+    // Calcular variações para cada insumo
+    insumosDB.forEach(insumo => {
+        const comprasInsumo = comprasDB.filter(c => c.insumoMestreId === insumo.id)
+            .sort((a, b) => new Date(b.data) - new Date(a.data));
+        
+        if (comprasInsumo.length >= 2) {
+            const precoAtual = comprasInsumo[0].preco;
+            const precoAnterior = comprasInsumo[1].preco;
+            const variacao = precoAtual - precoAnterior;
+            const percentualVariacao = ((variacao / precoAnterior) * 100);
+            
+            variacoes.push({
+                nome: insumo.nome,
+                precoAtual,
+                precoAnterior,
+                variacao,
+                percentualVariacao
+            });
+        }
+    });
+    
+    if (variacoes.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center p-4 text-gray-500">Dados insuficientes para análise de variação</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = variacoes.map(item => {
+        const statusClass = item.variacao > 0 ? 'text-red-600' : item.variacao < 0 ? 'text-green-600' : 'text-gray-600';
+        const statusIcon = item.variacao > 0 ? 'trending-up' : item.variacao < 0 ? 'trending-down' : 'minus';
+        const statusText = item.variacao > 0 ? 'Aumento' : item.variacao < 0 ? 'Redução' : 'Estável';
+        
+        return `<tr class="border-b border-gray-200 hover:bg-gray-50">
+            <td class="p-4 font-medium">${item.nome}</td>
+            <td class="p-4 font-semibold text-green-700">R$ ${item.precoAtual.toFixed(2)}</td>
+            <td class="p-4">R$ ${item.precoAnterior.toFixed(2)}</td>
+            <td class="p-4 font-semibold ${statusClass}">${item.variacao >= 0 ? '+' : ''}R$ ${item.variacao.toFixed(2)}</td>
+            <td class="p-4 font-semibold ${statusClass}">${item.percentualVariacao >= 0 ? '+' : ''}${item.percentualVariacao.toFixed(1)}%</td>
+            <td class="p-4">
+                <div class="flex items-center ${statusClass}">
+                    <i data-lucide="${statusIcon}" class="h-4 w-4 mr-1"></i>
+                    <span class="text-sm font-medium">${statusText}</span>
+                </div>
+            </td>
+        </tr>`;
+    }).join('');
+    
+    lucide.createIcons();
+}
+
+function gerarRankingFornecedores(comprasFiltradas) {
+    const tbody = document.getElementById('relatorioFornecedoresTableBody');
+    
+    // Agrupar dados por fornecedor
+    const fornecedorStats = {};
+    comprasFiltradas.forEach(compra => {
+        const fornecedor = compra.fornecedor?.nome || 'Sem Fornecedor';
+        if (!fornecedorStats[fornecedor]) {
+            fornecedorStats[fornecedor] = {
+                total: 0,
+                quantidade: 0,
+                ultimaCompra: compra.data
+            };
+        }
+        fornecedorStats[fornecedor].total += compra.preco;
+        fornecedorStats[fornecedor].quantidade += 1;
+        
+        // Atualizar última compra se for mais recente
+        if (new Date(compra.data) > new Date(fornecedorStats[fornecedor].ultimaCompra)) {
+            fornecedorStats[fornecedor].ultimaCompra = compra.data;
+        }
+    });
+    
+    // Converter para array e ordenar por total
+    const ranking = Object.entries(fornecedorStats)
+        .map(([nome, stats]) => ({ nome, ...stats }))
+        .sort((a, b) => b.total - a.total);
+    
+    if (ranking.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" class="text-center p-4 text-gray-500">Nenhum fornecedor encontrado no período</td></tr>';
+        return;
+    }
+    
+    tbody.innerHTML = ranking.map((fornecedor, index) => `
+        <tr class="border-b border-gray-200 hover:bg-gray-50">
+            <td class="p-4 font-bold text-orange-600">${index + 1}º</td>
+            <td class="p-4 font-medium">${fornecedor.nome}</td>
+            <td class="p-4 font-semibold text-green-700">R$ ${fornecedor.total.toFixed(2)}</td>
+            <td class="p-4">${fornecedor.quantidade} compras</td>
+            <td class="p-4">${new Date(fornecedor.ultimaCompra + 'T00:00:00').toLocaleDateString('pt-BR')}</td>
+        </tr>
+    `).join('');
+}
+
+function exportarRelatorioCSV() {
+    let csvContent = "data:text/csv;charset=utf-8,";
+    csvContent += "Insumo,Preco Atual,Preco Anterior,Variacao,Percentual Variacao,Status\r\n";
+    
+    insumosDB.forEach(insumo => {
+        const comprasInsumo = comprasDB.filter(c => c.insumoMestreId === insumo.id)
+            .sort((a, b) => new Date(b.data) - new Date(a.data));
+        
+        if (comprasInsumo.length >= 2) {
+            const precoAtual = comprasInsumo[0].preco;
+            const precoAnterior = comprasInsumo[1].preco;
+            const variacao = precoAtual - precoAnterior;
+            const percentualVariacao = ((variacao / precoAnterior) * 100);
+            const status = variacao > 0 ? 'Aumento' : variacao < 0 ? 'Redução' : 'Estável';
+            
+            const row = [
+                insumo.nome,
+                precoAtual.toFixed(2),
+                precoAnterior.toFixed(2),
+                variacao.toFixed(2),
+                percentualVariacao.toFixed(1) + '%',
+                status
+            ].join(",");
+            csvContent += row + "\r\n";
+        }
+    });
+    
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", "relatorio_variacao_precos.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+function createChart(canvasId, type, labels, data, label) {
+    const ctx = document.getElementById(canvasId);
+    
+    // Destruir gráfico anterior se existir
+    if (window.chartsInstances && window.chartsInstances[canvasId]) {
+        window.chartsInstances[canvasId].destroy();
+    }
+    
+    if (!window.chartsInstances) {
+        window.chartsInstances = {};
+    }
+    
+    const colors = [
+        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF',
+        '#FF9F40', '#C9CBCF', '#4BC0C0', '#FF6384', '#36A2EB'
+    ];
+    
+    const chartConfig = {
+        type: type,
+        data: {
+            labels: labels,
+            datasets: [{
+                label: label,
+                data: data,
+                backgroundColor: type === 'pie' ? colors.slice(0, labels.length) : 'rgba(54, 162, 235, 0.2)',
+                borderColor: type === 'pie' ? colors.slice(0, labels.length) : 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                fill: type === 'line' ? false : true
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: type === 'pie' ? 'right' : 'top',
+                }
+            },
+            scales: type === 'pie' ? {} : {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return 'R$ ' + value.toFixed(2);
+                        }
+                    }
+                }
+            }
+        }
+    };
+    
+    window.chartsInstances[canvasId] = new Chart(ctx, chartConfig);
+}
+
 // --- NAVEGAÇÃO ---
 function showView(viewId) {
     // Verificar se os elementos existem antes de tentar acessá-los
@@ -332,6 +604,14 @@ function showView(viewId) {
     
     // Mostrar a view alvo
     targetView.classList.add('active');
+    
+    // Auto-gerar relatórios quando a aba é aberta
+    if (viewId === 'relatoriosView') {
+        // Aguardar um pouco para garantir que os elementos foram renderizados
+        setTimeout(() => {
+            gerarRelatorios();
+        }, 100);
+    }
     
     // Atualizar links da sidebar
     document.querySelectorAll('.sidebar-link').forEach(l => {
