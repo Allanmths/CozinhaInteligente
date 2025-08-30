@@ -117,6 +117,13 @@
  .modal-body {
  padding: 2rem;
  }
+ .tab-content {
+ margin-top: 1rem;
+ }
+ .active-tab {
+ color: #f97316 !important;
+ border-bottom-color: #f97316 !important;
+ }
  </style>
 </head>
 <body class="bg-gray-50 text-gray-800">
@@ -564,17 +571,47 @@
  placeholder="Descrição do prato..."></textarea>
  </div>
 
- <!-- Ingredientes -->
+ <!-- Componentes do Prato -->
  <div class="mb-6">
- <label class="block text-sm font-medium text-gray-700 mb-3">Ingredientes</label>
+ <label class="block text-sm font-medium text-gray-700 mb-3">Componentes do Prato</label>
+ 
+ <!-- Tabs para Fichas Técnicas e Insumos -->
+ <div class="mb-4">
+ <div class="flex border-b border-gray-200">
+ <button type="button" id="tabFichas" onclick="switchTab('fichas')" 
+ class="px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300 active-tab">
+ Fichas Técnicas
+ </button>
+ <button type="button" id="tabInsumos" onclick="switchTab('insumos')" 
+ class="px-4 py-2 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300">
+ Insumos Individuais
+ </button>
+ </div>
+ </div>
+ 
+ <!-- Fichas Técnicas -->
+ <div id="fichasTab" class="tab-content">
+ <div id="fichasList" class="space-y-3 mb-4">
+ <!-- Fichas técnicas serão adicionadas aqui -->
+ </div>
+ <button type="button" onclick="addFichaTecnica()" 
+ class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-200 transition-colors flex items-center">
+ <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
+ Adicionar Ficha Técnica
+ </button>
+ </div>
+ 
+ <!-- Insumos Individuais -->
+ <div id="insumosTab" class="tab-content" style="display: none;">
  <div id="ingredientesList" class="space-y-3 mb-4">
  <!-- Ingredientes serão adicionados aqui -->
  </div>
  <button type="button" onclick="addIngrediente()" 
  class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 transition-colors flex items-center">
  <i data-lucide="plus" class="h-4 w-4 mr-2"></i>
- Adicionar Ingrediente
+ Adicionar Insumo
  </button>
+ </div>
  </div>
 
  <!-- Status -->

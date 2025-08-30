@@ -655,9 +655,46 @@ function renderPratos() {
 }
 
 function calcularCustoPrato(prato) {
-    if (!prato.ingredientes || prato.ingredientes.length === 0) return 0;
+    let custoTotal = 0;
     
-    return prato.ingredientes.reduce((total, ingrediente) => {
+    // Calcular custo dos ingredientes individuais
+    if (prato.ingredientes && prato.ingredientes.length > 0) {
+        custoTotal += prato.ingredientes.reduce((total, ingrediente) => {
+            const insumo = insumosDB.find(i => i.id === ingrediente.insumoId);
+            if (!insumo) return total;
+            
+            // Buscar última compra para obter preço atual
+            const ultimaCompra = comprasDB
+                .filter(c => c.insumoMestreId === insumo.id)
+                .sort((a, b) => new Date(b.data) - new Date(a.data))[0];
+            
+            if (!ultimaCompra) return total;
+            
+            // Calcular custo baseado na quantidade usada
+            const custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
+            return total + (custoUnitario * ingrediente.quantidade);
+        }, 0);
+    }
+    
+    // Calcular custo das fichas técnicas
+    if (prato.fichasTecnicas && prato.fichasTecnicas.length > 0) {
+        custoTotal += prato.fichasTecnicas.reduce((total, fichaItem) => {
+            const ficha = fichasTecnicasDB.find(f => f.id === fichaItem.fichaId);
+            if (!ficha) return total;
+            
+            // Calcular o custo da ficha técnica baseado nos seus ingredientes
+            const custoFicha = calcularCustoFichaTecnica(ficha);
+            return total + (custoFicha * fichaItem.quantidade);
+        }, 0);
+    }
+    
+    return custoTotal;
+}
+
+function calcularCustoFichaTecnica(ficha) {
+    if (!ficha.ingredientes || ficha.ingredientes.length === 0) return 0;
+    
+    return ficha.ingredientes.reduce((total, ingrediente) => {
         const insumo = insumosDB.find(i => i.id === ingrediente.insumoId);
         if (!insumo) return total;
         
@@ -709,6 +746,7 @@ function savePrato(event) {
         descricao: document.getElementById('pratoDescricao').value,
         status: document.getElementById('pratoStatus').value,
         ingredientes: getIngredientesFromForm(),
+        fichasTecnicas: getFichasTecnicasFromForm(),
         dataAtualizacao: new Date().toISOString().split('T')[0]
     };
     
@@ -748,8 +786,9 @@ function editPrato(id) {
     document.getElementById('pratoDescricao').value = prato.descricao || '';
     document.getElementById('pratoStatus').value = prato.status || 'ativo';
     
-    // Carregar ingredientes
+    // Carregar ingredientes e fichas técnicas
     loadIngredientesIntoForm(prato.ingredientes || []);
+    loadFichasTecnicasIntoForm(prato.fichasTecnicas || []);
     
     showModal('pratoModal');
 }
@@ -781,7 +820,21 @@ function viewPratoDetails(id) {
             </li>`;
         }).join('');
     } else {
-        ingredientesHtml = '<li class="text-gray-500">Nenhum ingrediente cadastrado</li>';
+        ingredientesHtml = '<li class="text-gray-500">Nenhum insumo individual cadastrado</li>';
+    }
+    
+    let fichasHtml = '';
+    if (prato.fichasTecnicas && prato.fichasTecnicas.length > 0) {
+        fichasHtml = prato.fichasTecnicas.map(fichaItem => {
+            const ficha = fichasTecnicasDB.find(f => f.id === fichaItem.fichaId);
+            const custoFicha = ficha ? calcularCustoFichaTecnica(ficha) : 0;
+            return `<li class="flex justify-between">
+                <span>${ficha ? ficha.nome : 'Ficha não encontrada'}</span>
+                <span>${fichaItem.quantidade}x (R$ ${custoFicha.toFixed(2)} cada)</span>
+            </li>`;
+        }).join('');
+    } else {
+        fichasHtml = '<li class="text-gray-500">Nenhuma ficha técnica cadastrada</li>';
     }
     
     const detailsHtml = `
@@ -827,7 +880,14 @@ function viewPratoDetails(id) {
             ` : ''}
             
             <div>
-                <label class="block text-sm font-medium text-gray-700 mb-2">Ingredientes</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Fichas Técnicas</label>
+                <ul class="bg-blue-50 rounded-lg p-4 space-y-2 mb-4">
+                    ${fichasHtml}
+                </ul>
+            </div>
+            
+            <div>
+                <label class="block text-sm font-medium text-gray-700 mb-2">Insumos Individuais</label>
                 <ul class="bg-gray-50 rounded-lg p-4 space-y-2">
                     ${ingredientesHtml}
                 </ul>
@@ -863,6 +923,59 @@ function addIngrediente() {
     lucide.createIcons();
 }
 
+function switchTab(tabType) {
+    // Remover classe ativa de todas as tabs
+    document.querySelectorAll('[id^="tab"]').forEach(tab => {
+        tab.classList.remove('active-tab');
+    });
+    
+    // Esconder todo o conteúdo das tabs
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.style.display = 'none';
+    });
+    
+    // Ativar a tab selecionada
+    if (tabType === 'fichas') {
+        document.getElementById('tabFichas').classList.add('active-tab');
+        document.getElementById('fichasTab').style.display = 'block';
+    } else {
+        document.getElementById('tabInsumos').classList.add('active-tab');
+        document.getElementById('insumosTab').style.display = 'block';
+    }
+}
+
+function addFichaTecnica() {
+    const container = document.getElementById('fichasList');
+    
+    // Verificar se existem fichas técnicas disponíveis
+    if (!fichasTecnicasDB || fichasTecnicasDB.length === 0) {
+        showAlert('Aviso', 'Nenhuma ficha técnica encontrada. Cadastre fichas técnicas primeiro.', 'info');
+        return;
+    }
+    
+    const fichaHtml = `
+        <div class="ficha-item grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-blue-50 rounded-lg">
+            <select class="ficha-tecnica px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                <option value="">Selecione uma ficha técnica</option>
+                ${fichasTecnicasDB.map(ficha => `<option value="${ficha.id}">${ficha.nome}</option>`).join('')}
+            </select>
+            <input type="number" class="ficha-quantidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
+                placeholder="Quantidade" step="0.01" min="0" value="1">
+            <button type="button" onclick="removeFichaTecnica(this)" 
+                class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
+                <i data-lucide="trash-2" class="h-4 w-4"></i>
+            </button>
+        </div>
+    `;
+    
+    container.insertAdjacentHTML('beforeend', fichaHtml);
+    lucide.createIcons();
+}
+
+function removeFichaTecnica(button) {
+    button.closest('.ficha-item').remove();
+}
+
 function removeIngrediente(button) {
     button.closest('.ingrediente-item').remove();
 }
@@ -888,6 +1001,25 @@ function getIngredientesFromForm() {
     return ingredientes;
 }
 
+function getFichasTecnicasFromForm() {
+    const fichas = [];
+    const items = document.querySelectorAll('.ficha-item');
+    
+    items.forEach(item => {
+        const fichaId = item.querySelector('.ficha-tecnica').value;
+        const quantidade = parseFloat(item.querySelector('.ficha-quantidade').value);
+        
+        if (fichaId && quantidade > 0) {
+            fichas.push({
+                fichaId,
+                quantidade
+            });
+        }
+    });
+    
+    return fichas;
+}
+
 function loadIngredientesIntoForm(ingredientes) {
     const container = document.getElementById('ingredientesList');
     container.innerHTML = '';
@@ -903,11 +1035,29 @@ function loadIngredientesIntoForm(ingredientes) {
     }
 }
 
+function loadFichasTecnicasIntoForm(fichasTecnicas) {
+    const container = document.getElementById('fichasList');
+    container.innerHTML = '';
+    
+    if (fichasTecnicas && fichasTecnicas.length > 0) {
+        fichasTecnicas.forEach(fichaItem => {
+            addFichaTecnica();
+            const lastItem = container.lastElementChild;
+            lastItem.querySelector('.ficha-tecnica').value = fichaItem.fichaId;
+            lastItem.querySelector('.ficha-quantidade').value = fichaItem.quantidade;
+        });
+    }
+}
+
 function resetPratoForm() {
     document.getElementById('pratoForm').reset();
     document.getElementById('pratoId').value = '';
     document.getElementById('pratoModalTitle').textContent = 'Adicionar Prato';
     document.getElementById('ingredientesList').innerHTML = '';
+    document.getElementById('fichasList').innerHTML = '';
+    
+    // Resetar para a primeira tab (Fichas Técnicas)
+    switchTab('fichas');
 }
 
 // --- NAVEGAÇÃO ---
