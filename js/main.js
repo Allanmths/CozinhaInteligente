@@ -487,6 +487,9 @@ function loadLocalData() {
     
     configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { taxaPerca: 5, custoFinalizacao: 10, margemLucro: 200 };
     
+    // Salvar dados atualizados para garantir consistência
+    saveData();
+    
     console.log('Dados carregados do localStorage (fallback)');
     updateConnectionStatus('offline');
     showLoading(false);
@@ -519,6 +522,9 @@ function renderAll() {
 }
 
 function updateStats() {
+    // Validar e corrigir dados antes de atualizar estatísticas
+    validateAndFixData();
+    
     // Atualizar estatísticas do dashboard com verificação de existência
     const totalInsumos = document.getElementById('totalInsumos');
     const totalFichas = document.getElementById('totalFichas');
@@ -529,6 +535,59 @@ function updateStats() {
     if (totalFichas) totalFichas.textContent = fichasTecnicasDB.length;
     if (totalPratos) totalPratos.textContent = pratosDB.length;
     if (totalCompras) totalCompras.textContent = comprasDB.length;
+}
+
+function validateAndFixData() {
+    // Verificar se todas as fichas técnicas têm insumos válidos
+    fichasTecnicasDB.forEach(ficha => {
+        if (ficha.ingredientes) {
+            ficha.ingredientes = ficha.ingredientes.filter(ingrediente => {
+                const insumoExiste = insumosDB.find(insumo => insumo.id === ingrediente.insumoId);
+                if (!insumoExiste) {
+                    console.warn(`Insumo ${ingrediente.insumoId} não encontrado na ficha ${ficha.nome}`);
+                    return false;
+                }
+                return true;
+            });
+        }
+    });
+    
+    // Verificar se todas as compras têm insumos válidos
+    comprasDB = comprasDB.filter(compra => {
+        const insumoExiste = insumosDB.find(insumo => insumo.id === compra.insumoMestreId);
+        if (!insumoExiste) {
+            console.warn(`Insumo ${compra.insumoMestreId} não encontrado na compra ${compra.id}`);
+            return false;
+        }
+        return true;
+    });
+    
+    // Verificar se todos os pratos têm fichas e insumos válidos
+    pratosDB.forEach(prato => {
+        if (prato.componentes) {
+            prato.componentes = prato.componentes.filter(componente => {
+                if (componente.tipo === 'ficha') {
+                    const fichaExiste = fichasTecnicasDB.find(ficha => ficha.id === componente.fichaId);
+                    if (!fichaExiste) {
+                        console.warn(`Ficha ${componente.fichaId} não encontrada no prato ${prato.nome}`);
+                        return false;
+                    }
+                }
+                return true;
+            });
+        }
+        
+        if (prato.insumos) {
+            prato.insumos = prato.insumos.filter(insumo => {
+                const insumoExiste = insumosDB.find(ins => ins.id === insumo.insumoId);
+                if (!insumoExiste) {
+                    console.warn(`Insumo ${insumo.insumoId} não encontrado no prato ${prato.nome}`);
+                    return false;
+                }
+                return true;
+            });
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => { 
@@ -1736,22 +1795,34 @@ function renderInsumos() {
 
 // --- FUNÇÕES BÁSICAS PARA COMPLETAR O SISTEMA ---
 function renderDashboard() {
-    // Implementação básica dos gráficos
+    // Implementação usando dados reais do sistema
     console.log('Renderizando dashboard...');
     
-    // Dados de exemplo para os gráficos
+    // Usar dados reais das fichas técnicas
     const fichasData = {
-        labels: ['Molho Tomate', 'Massa Fresca', 'Pesto', 'Molho Branco'],
-        data: [2.5, -1.2, 3.8, 0.5]
+        labels: fichasTecnicasDB.slice(0, 4).map(ficha => ficha.nome || 'Sem nome'),
+        data: fichasTecnicasDB.slice(0, 4).map(ficha => {
+            const custo = calcularCustoFichaTecnica(ficha.id);
+            return custo ? parseFloat(custo.toFixed(2)) : 0;
+        })
     };
+    
+    // Usar dados reais dos insumos mais caros
+    const insumosComPreco = insumosDB.map(insumo => {
+        const ultimaCompra = getUltimaCompra(insumo.id);
+        return {
+            nome: insumo.nome,
+            preco: ultimaCompra ? ultimaCompra.preco : 0
+        };
+    }).sort((a, b) => b.preco - a.preco).slice(0, 4);
     
     const insumosData = {
-        labels: ['Tomate', 'Cebola', 'Azeite', 'Manjericão'],
-        data: [0.6, -0.3, 2.5, 0.2]
+        labels: insumosComPreco.map(item => item.nome),
+        data: insumosComPreco.map(item => item.preco)
     };
     
-    createChart('dashboardFichasChart', 'bar', fichasData.labels, fichasData.data, 'Variação (R$)');
-    createChart('dashboardInsumosChart', 'bar', insumosData.labels, insumosData.data, 'Variação (R$)');
+    createChart('dashboardFichasChart', 'bar', fichasData.labels, fichasData.data, 'Custo (R$)');
+    createChart('dashboardInsumosChart', 'bar', insumosData.labels, insumosData.data, 'Preço (R$)');
 }
 
 function renderConfiguracoes() {
