@@ -2059,6 +2059,11 @@ function initializeApp() {
     }, 3000);
 }
 
+// --- FUNÇÕES AUXILIARES ---
+function generateId() {
+    return Date.now().toString() + '_' + Math.random().toString(36).substr(2, 9);
+}
+
 // --- FUNÇÕES DE MODAL ---
 function showModal(modalId) {
     const modal = document.getElementById(modalId);
@@ -2477,6 +2482,7 @@ function abrirVinculacaoInsumo(index) {
     // Preencher campos do novo insumo com dados do item
     document.getElementById('novoInsumoNome').value = item.descricao;
     document.getElementById('novoInsumoUnidade').value = mapearUnidade(item.unidade);
+    document.getElementById('novoInsumoTaxaPerda').value = configuracoesDB.taxaPerca || 0;
     
     showModal('vincularInsumoModal');
 }
@@ -2555,7 +2561,7 @@ function confirmarVinculacao() {
         };
         
         insumosDB.push(novoInsumo);
-        saveLocalData();
+        saveToLocalStorage();
         
         item.status = 'vinculado';
         item.insumoVinculado = novoInsumo;
@@ -2654,7 +2660,7 @@ function criarComprasDoXML(itensVinculados) {
         comprasDB.push(compra);
     });
     
-    saveLocalData();
+    saveToLocalStorage();
 }
 
 function adicionarAoHistorico() {

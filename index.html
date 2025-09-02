@@ -1069,17 +1069,16 @@
 </div>
 
 <!-- Modal Vincular Insumo -->
-<div id="vincularInsumoModal" class="modal hidden">
-    <div class="modal-background"></div>
+<div id="vincularInsumoModal" class="modal">
     <div class="modal-content max-w-2xl">
-        <div class="bg-white rounded-lg p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-xl font-semibold text-gray-900">Vincular Item ao Insumo</h2>
-                <button type="button" onclick="closeVincularInsumoModal()" class="text-gray-400 hover:text-gray-600">
-                    <i data-lucide="x" class="h-6 w-6"></i>
-                </button>
-            </div>
-            
+        <div class="modal-header">
+            <h2 class="text-xl font-semibold text-gray-900">Vincular Item ao Insumo</h2>
+            <button type="button" onclick="closeVincularInsumoModal()" class="text-gray-400 hover:text-gray-600">
+                <i data-lucide="x" class="h-6 w-6"></i>
+            </button>
+        </div>
+        
+        <div class="modal-body">
             <div id="itemInfo" class="mb-6 p-4 bg-gray-50 rounded-lg">
                 <!-- Informações do item serão preenchidas aqui -->
             </div>
