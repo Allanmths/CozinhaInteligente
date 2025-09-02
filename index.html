@@ -291,7 +291,6 @@
  <th class="p-4 font-semibold text-gray-600">Nome do Insumo</th>
  <th class="p-4 font-semibold text-gray-600">Unidade Padrão</th>
  <th class="p-4 font-semibold text-gray-600">Taxa de Perca (%)</th>
- <th class="p-4 font-semibold text-gray-600">Custo Final. (%)</th>
  <th class="p-4 font-semibold text-gray-600">Último Fornecedor</th>
  <th class="p-4 font-semibold text-gray-600">Último Preço</th>
  <th class="p-4 font-semibold text-gray-600">Data da Compra</th>
@@ -581,7 +580,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-3">Configurações de Preparo</label>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Custo de Finalização (%)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Custos de Produção (%)</label>
                             <input type="number" id="pratoCustoFinalizacao" step="0.1" min="0" 
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                                    placeholder="Ex: 10.0">
@@ -800,7 +799,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-3">Configurações de Preparo</label>
                     <div class="grid grid-cols-1 gap-4">
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-2">Custo de Finalização (%)</label>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Custos de Produção (%)</label>
                             <input type="number" id="fichaCustoFinalizacao" step="0.1" min="0" 
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <small class="text-gray-500">Custos adicionais (gás, energia, mão de obra, etc.)</small>
@@ -875,9 +874,9 @@
  <small class="text-gray-500">Valor padrão para taxa de perca ao cadastrar novos insumos</small>
  </div>
  <div>
- <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700">Custo de Finalização Padrão (%)</label>
+ <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700">Custos de Produção Padrão (%)</label>
  <input type="number" id="defaultCustoFinalizacao" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
- <small class="text-gray-500">Valor padrão para custo de finalização ao cadastrar novos insumos</small>
+ <small class="text-gray-500">Valor padrão para custos de produção ao cadastrar novas fichas técnicas e pratos</small>
  </div>
  <div>
                      <label for="defaultMargemLucro" class="block text-sm font-medium text-gray-700">Margem de Lucro Padrão (%) - Apenas para Pratos</label>
@@ -939,20 +938,13 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Taxa de Perca Padrão (%)</label>
                         <input type="number" id="insumoTaxaPerca" step="0.1" min="0" max="100" 
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                                placeholder="Ex: 5.0">
                         <small class="text-gray-500">Taxa de perda típica deste insumo durante o preparo</small>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Custo de Finalização (%)</label>
-                        <input type="number" id="insumoCustoFinalizacao" step="0.1" min="0" max="100" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                               placeholder="Ex: 10.0">
-                        <small class="text-gray-500">Custo adicional de processamento/finalização</small>
                     </div>
                 </div>
 

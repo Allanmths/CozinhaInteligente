@@ -152,18 +152,18 @@ async function createSampleData({ db, collection, addDoc }) {
     try {
         // Dados de exemplo - Insumos
         const sampleInsumos = [
-            { nome: 'Tomate Italiano', unidade: 'kg', taxaPerca: 8, custoFinalizacao: 10, categoria: 'vegetais' },
-            { nome: 'Cebola Pera', unidade: 'kg', taxaPerca: 12, custoFinalizacao: 10, categoria: 'vegetais' },
-            { nome: 'Azeite Extra Virgem', unidade: 'L', taxaPerca: 0, custoFinalizacao: 5, categoria: 'oleos' },
-            { nome: 'Manjericão Fresco', unidade: 'maço', taxaPerca: 15, custoFinalizacao: 8, categoria: 'temperos' },
-            { nome: 'Farinha de Trigo', unidade: 'kg', taxaPerca: 2, custoFinalizacao: 5, categoria: 'graos' },
-            { nome: 'Ovo de Galinha', unidade: 'unidade', taxaPerca: 5, custoFinalizacao: 10, categoria: 'outros' },
-            { nome: 'Queijo Parmesão', unidade: 'kg', taxaPerca: 3, custoFinalizacao: 12, categoria: 'laticinios' },
-            { nome: 'Massa de Lasanha', unidade: 'kg', taxaPerca: 2, custoFinalizacao: 15, categoria: 'massas' },
-            { nome: 'Ricota Fresca', unidade: 'kg', taxaPerca: 5, custoFinalizacao: 8, categoria: 'laticinios' },
-            { nome: 'Sal Refinado', unidade: 'kg', taxaPerca: 0, custoFinalizacao: 0, categoria: 'temperos' },
-            { nome: 'Pimenta do Reino', unidade: 'kg', taxaPerca: 1, custoFinalizacao: 3, categoria: 'temperos' },
-            { nome: 'Alho', unidade: 'kg', taxaPerca: 10, custoFinalizacao: 8, categoria: 'vegetais' }
+            { nome: 'Tomate Italiano', unidade: 'kg', taxaPerca: 8, categoria: 'vegetais' },
+            { nome: 'Cebola Pera', unidade: 'kg', taxaPerca: 12, categoria: 'vegetais' },
+            { nome: 'Azeite Extra Virgem', unidade: 'L', taxaPerca: 0, categoria: 'oleos' },
+            { nome: 'Manjericão Fresco', unidade: 'maço', taxaPerca: 15, categoria: 'temperos' },
+            { nome: 'Farinha de Trigo', unidade: 'kg', taxaPerca: 2, categoria: 'graos' },
+            { nome: 'Ovo de Galinha', unidade: 'unidade', taxaPerca: 5, categoria: 'outros' },
+            { nome: 'Queijo Parmesão', unidade: 'kg', taxaPerca: 3, categoria: 'laticinios' },
+            { nome: 'Massa de Lasanha', unidade: 'kg', taxaPerca: 2, categoria: 'massas' },
+            { nome: 'Ricota Fresca', unidade: 'kg', taxaPerca: 5, categoria: 'laticinios' },
+            { nome: 'Sal Refinado', unidade: 'kg', taxaPerca: 0, categoria: 'temperos' },
+            { nome: 'Pimenta do Reino', unidade: 'kg', taxaPerca: 1, categoria: 'temperos' },
+            { nome: 'Alho', unidade: 'kg', taxaPerca: 10, categoria: 'vegetais' }
         ];
         
         // Criar insumos
@@ -361,18 +361,18 @@ function updateConnectionStatus(status) {
 // Fallback para localStorage
 function loadLocalData() {
     insumosDB = JSON.parse(localStorage.getItem('insumosDB')) || [
-        { id: '1', nome: 'Tomate Italiano', unidade: 'kg', taxaPerca: 8, custoFinalizacao: 10, categoria: 'vegetais' },
-        { id: '2', nome: 'Cebola Pera', unidade: 'kg', taxaPerca: 12, custoFinalizacao: 10, categoria: 'vegetais' },
-        { id: '3', nome: 'Azeite Extra Virgem', unidade: 'L', taxaPerca: 0, custoFinalizacao: 5, categoria: 'oleos' },
-        { id: '4', nome: 'Manjericão Fresco', unidade: 'maço', taxaPerca: 15, custoFinalizacao: 8, categoria: 'temperos' },
-        { id: '5', nome: 'Farinha de Trigo', unidade: 'kg', taxaPerca: 2, custoFinalizacao: 5, categoria: 'graos' },
-        { id: '6', nome: 'Ovo de Galinha', unidade: 'unidade', taxaPerca: 5, custoFinalizacao: 10, categoria: 'outros' },
-        { id: '7', nome: 'Queijo Parmesão', unidade: 'kg', taxaPerca: 3, custoFinalizacao: 12, categoria: 'laticinios' },
-        { id: '8', nome: 'Massa de Lasanha', unidade: 'kg', taxaPerca: 2, custoFinalizacao: 15, categoria: 'massas' },
-        { id: '9', nome: 'Ricota Fresca', unidade: 'kg', taxaPerca: 5, custoFinalizacao: 8, categoria: 'laticinios' },
-        { id: '10', nome: 'Sal Refinado', unidade: 'kg', taxaPerca: 0, custoFinalizacao: 0, categoria: 'temperos' },
-        { id: '11', nome: 'Pimenta do Reino', unidade: 'kg', taxaPerca: 1, custoFinalizacao: 3, categoria: 'temperos' },
-        { id: '12', nome: 'Alho', unidade: 'kg', taxaPerca: 10, custoFinalizacao: 8, categoria: 'vegetais' }
+        { id: '1', nome: 'Tomate Italiano', unidade: 'kg', taxaPerca: 8, categoria: 'vegetais' },
+        { id: '2', nome: 'Cebola Pera', unidade: 'kg', taxaPerca: 12, categoria: 'vegetais' },
+        { id: '3', nome: 'Azeite Extra Virgem', unidade: 'L', taxaPerca: 0, categoria: 'oleos' },
+        { id: '4', nome: 'Manjericão Fresco', unidade: 'maço', taxaPerca: 15, categoria: 'temperos' },
+        { id: '5', nome: 'Farinha de Trigo', unidade: 'kg', taxaPerca: 2, categoria: 'graos' },
+        { id: '6', nome: 'Ovo de Galinha', unidade: 'unidade', taxaPerca: 5, categoria: 'outros' },
+        { id: '7', nome: 'Queijo Parmesão', unidade: 'kg', taxaPerca: 3, categoria: 'laticinios' },
+        { id: '8', nome: 'Massa de Lasanha', unidade: 'kg', taxaPerca: 2, categoria: 'massas' },
+        { id: '9', nome: 'Ricota Fresca', unidade: 'kg', taxaPerca: 5, categoria: 'laticinios' },
+        { id: '10', nome: 'Sal Refinado', unidade: 'kg', taxaPerca: 0, categoria: 'temperos' },
+        { id: '11', nome: 'Pimenta do Reino', unidade: 'kg', taxaPerca: 1, categoria: 'temperos' },
+        { id: '12', nome: 'Alho', unidade: 'kg', taxaPerca: 10, categoria: 'vegetais' }
     ];
     
     comprasDB = JSON.parse(localStorage.getItem('comprasDB')) || [
@@ -1761,20 +1761,18 @@ function renderInsumos() {
     });
     
     if (filtrados.length === 0) { 
-        tbody.innerHTML = `<tr><td colspan="9" class="text-center p-4 text-gray-500">Nenhum insumo encontrado.</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">Nenhum insumo encontrado.</td></tr>`; 
         return; 
     }
     
     tbody.innerHTML = filtrados.map(insumo => {
         const uc = getUltimaCompra(insumo.id);
         const taxaPercaDisplay = insumo.taxaPerca ? `${insumo.taxaPerca}%` : 'N/A';
-        const custoFinalizacaoDisplay = insumo.custoFinalizacao ? `${insumo.custoFinalizacao}%` : 'N/A';
         
         return `<tr class="border-b border-gray-200 hover:bg-gray-50">
             <td class="p-4 font-medium">${insumo.nome}</td>
             <td class="p-4">${insumo.unidade}</td>
             <td class="p-4 text-center">${taxaPercaDisplay}</td>
-            <td class="p-4 text-center">${custoFinalizacaoDisplay}</td>
             <td class="p-4">${uc ? uc.fornecedor?.nome || 'N/A' : 'N/A'}</td>
             <td class="p-4 font-semibold text-green-700">${uc ? `R$ ${uc.preco.toFixed(2)}` : 'N/A'}</td>
             <td class="p-4">${uc ? new Date(uc.data + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</td>
@@ -1971,7 +1969,6 @@ function showAddInsumoModal() {
     // Preencher com valores padrão das configurações
     if (configuracoesDB) {
         document.getElementById('insumoTaxaPerca').value = configuracoesDB.taxaPerca || 0;
-        document.getElementById('insumoCustoFinalizacao').value = configuracoesDB.custoFinalizacao || 10;
     }
     
     showModal('insumoModal');
@@ -1985,7 +1982,6 @@ function saveInsumo(event) {
         nome: document.getElementById('insumoNome').value,
         unidade: document.getElementById('insumoUnidade').value,
         taxaPerca: parseFloat(document.getElementById('insumoTaxaPerca').value) || 0,
-        custoFinalizacao: parseFloat(document.getElementById('insumoCustoFinalizacao').value) || 0,
         categoria: document.getElementById('insumoCategoria').value,
         observacoes: document.getElementById('insumoObservacoes').value
     };
@@ -2018,7 +2014,6 @@ function editInsumo(id) {
     document.getElementById('insumoNome').value = insumo.nome;
     document.getElementById('insumoUnidade').value = insumo.unidade || '';
     document.getElementById('insumoTaxaPerca').value = insumo.taxaPerca || '';
-    document.getElementById('insumoCustoFinalizacao').value = insumo.custoFinalizacao || '';
     document.getElementById('insumoCategoria').value = insumo.categoria || '';
     document.getElementById('insumoObservacoes').value = insumo.observacoes || '';
     
