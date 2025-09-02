@@ -87,7 +87,7 @@ async function loadFirebaseData() {
             configuracoesDB = { id: configSnap.docs[0].id, ...configSnap.docs[0].data() };
         } else {
             // Criar configurações padrão
-            configuracoesDB = { taxaPerca: 0, custoFinalizacao: 10, margemLucro: 200 };
+            configuracoesDB = { taxaPerca: 5, custoFinalizacao: 10, margemLucro: 200 };
             const docRef = await addDoc(collection(db, 'configuracoes'), configuracoesDB);
             configuracoesDB.id = docRef.id;
         }
@@ -152,18 +152,18 @@ async function createSampleData({ db, collection, addDoc }) {
     try {
         // Dados de exemplo - Insumos
         const sampleInsumos = [
-            { nome: 'Tomate Italiano', unidade: 'kg' },
-            { nome: 'Cebola Pera', unidade: 'kg' },
-            { nome: 'Azeite Extra Virgem', unidade: 'L' },
-            { nome: 'Manjericão Fresco', unidade: 'maço' },
-            { nome: 'Farinha de Trigo', unidade: 'kg' },
-            { nome: 'Ovo de Galinha', unidade: 'unidade' },
-            { nome: 'Queijo Parmesão', unidade: 'kg' },
-            { nome: 'Massa de Lasanha', unidade: 'kg' },
-            { nome: 'Ricota Fresca', unidade: 'kg' },
-            { nome: 'Sal Refinado', unidade: 'kg' },
-            { nome: 'Pimenta do Reino', unidade: 'kg' },
-            { nome: 'Alho', unidade: 'kg' }
+            { nome: 'Tomate Italiano', unidade: 'kg', taxaPerca: 8, custoFinalizacao: 10, categoria: 'vegetais' },
+            { nome: 'Cebola Pera', unidade: 'kg', taxaPerca: 12, custoFinalizacao: 10, categoria: 'vegetais' },
+            { nome: 'Azeite Extra Virgem', unidade: 'L', taxaPerca: 0, custoFinalizacao: 5, categoria: 'oleos' },
+            { nome: 'Manjericão Fresco', unidade: 'maço', taxaPerca: 15, custoFinalizacao: 8, categoria: 'temperos' },
+            { nome: 'Farinha de Trigo', unidade: 'kg', taxaPerca: 2, custoFinalizacao: 5, categoria: 'graos' },
+            { nome: 'Ovo de Galinha', unidade: 'unidade', taxaPerca: 5, custoFinalizacao: 10, categoria: 'outros' },
+            { nome: 'Queijo Parmesão', unidade: 'kg', taxaPerca: 3, custoFinalizacao: 12, categoria: 'laticinios' },
+            { nome: 'Massa de Lasanha', unidade: 'kg', taxaPerca: 2, custoFinalizacao: 15, categoria: 'massas' },
+            { nome: 'Ricota Fresca', unidade: 'kg', taxaPerca: 5, custoFinalizacao: 8, categoria: 'laticinios' },
+            { nome: 'Sal Refinado', unidade: 'kg', taxaPerca: 0, custoFinalizacao: 0, categoria: 'temperos' },
+            { nome: 'Pimenta do Reino', unidade: 'kg', taxaPerca: 1, custoFinalizacao: 3, categoria: 'temperos' },
+            { nome: 'Alho', unidade: 'kg', taxaPerca: 10, custoFinalizacao: 8, categoria: 'vegetais' }
         ];
         
         // Criar insumos
@@ -202,7 +202,6 @@ async function createSampleData({ db, collection, addDoc }) {
                 unidade: 'ml',
                 tempoPreparo: 45,
                 modoPreparo: '1. Refogue a cebola e o alho no azeite\n2. Adicione os tomates picados\n3. Tempere com sal, pimenta e manjericão\n4. Cozinhe em fogo baixo por 30-40 minutos\n5. Ajuste temperos a gosto',
-                taxaPerca: 5,
                 custoFinalizacao: 8,
                 status: 'ativo',
                 ingredientes: [
@@ -224,7 +223,6 @@ async function createSampleData({ db, collection, addDoc }) {
                 unidade: 'g',
                 tempoPreparo: 15,
                 modoPreparo: '1. Amasse bem a ricota com um garfo\n2. Misture o manjericão picado finamente\n3. Tempere com sal e pimenta\n4. Adicione o queijo parmesão ralado\n5. Misture até obter consistência homogênea',
-                taxaPerca: 2,
                 custoFinalizacao: 5,
                 status: 'ativo',
                 ingredientes: [
@@ -254,7 +252,6 @@ async function createSampleData({ db, collection, addDoc }) {
                 unidade: 'porções',
                 tempoPreparo: 90,
                 modoPreparo: '1. Pré-aqueça o forno a 180°C\n2. Cozinhe a massa de lasanha al dente\n3. Prepare uma camada de molho no fundo da forma\n4. Alterne camadas: massa, recheio de ricota, molho\n5. Finalize com queijo parmesão por cima\n6. Leve ao forno por 35-40 minutos\n7. Deixe descansar 10 minutos antes de servir',
-                taxaPerca: 8,
                 custoFinalizacao: 12,
                 margemLucro: 180,
                 status: 'ativo',
@@ -287,7 +284,6 @@ async function createSampleData({ db, collection, addDoc }) {
                 unidade: 'porções',
                 tempoPreparo: 20,
                 modoPreparo: '1. Corte o pão em fatias de 2cm\n2. Toste as fatias até dourar\n3. Esfregue alho nas fatias quentes\n4. Cubra com a mistura de tomate temperado\n5. Finalize com manjericão fresco e azeite',
-                taxaPerca: 5,
                 custoFinalizacao: 10,
                 margemLucro: 250,
                 status: 'ativo',
@@ -365,18 +361,18 @@ function updateConnectionStatus(status) {
 // Fallback para localStorage
 function loadLocalData() {
     insumosDB = JSON.parse(localStorage.getItem('insumosDB')) || [
-        { id: '1', nome: 'Tomate Italiano', unidade: 'kg' },
-        { id: '2', nome: 'Cebola Pera', unidade: 'kg' },
-        { id: '3', nome: 'Azeite Extra Virgem', unidade: 'L' },
-        { id: '4', nome: 'Manjericão Fresco', unidade: 'maço' },
-        { id: '5', nome: 'Farinha de Trigo', unidade: 'kg' },
-        { id: '6', nome: 'Ovo de Galinha', unidade: 'unidade' },
-        { id: '7', nome: 'Queijo Parmesão', unidade: 'kg' },
-        { id: '8', nome: 'Massa de Lasanha', unidade: 'kg' },
-        { id: '9', nome: 'Ricota Fresca', unidade: 'kg' },
-        { id: '10', nome: 'Sal Refinado', unidade: 'kg' },
-        { id: '11', nome: 'Pimenta do Reino', unidade: 'kg' },
-        { id: '12', nome: 'Alho', unidade: 'kg' }
+        { id: '1', nome: 'Tomate Italiano', unidade: 'kg', taxaPerca: 8, custoFinalizacao: 10, categoria: 'vegetais' },
+        { id: '2', nome: 'Cebola Pera', unidade: 'kg', taxaPerca: 12, custoFinalizacao: 10, categoria: 'vegetais' },
+        { id: '3', nome: 'Azeite Extra Virgem', unidade: 'L', taxaPerca: 0, custoFinalizacao: 5, categoria: 'oleos' },
+        { id: '4', nome: 'Manjericão Fresco', unidade: 'maço', taxaPerca: 15, custoFinalizacao: 8, categoria: 'temperos' },
+        { id: '5', nome: 'Farinha de Trigo', unidade: 'kg', taxaPerca: 2, custoFinalizacao: 5, categoria: 'graos' },
+        { id: '6', nome: 'Ovo de Galinha', unidade: 'unidade', taxaPerca: 5, custoFinalizacao: 10, categoria: 'outros' },
+        { id: '7', nome: 'Queijo Parmesão', unidade: 'kg', taxaPerca: 3, custoFinalizacao: 12, categoria: 'laticinios' },
+        { id: '8', nome: 'Massa de Lasanha', unidade: 'kg', taxaPerca: 2, custoFinalizacao: 15, categoria: 'massas' },
+        { id: '9', nome: 'Ricota Fresca', unidade: 'kg', taxaPerca: 5, custoFinalizacao: 8, categoria: 'laticinios' },
+        { id: '10', nome: 'Sal Refinado', unidade: 'kg', taxaPerca: 0, custoFinalizacao: 0, categoria: 'temperos' },
+        { id: '11', nome: 'Pimenta do Reino', unidade: 'kg', taxaPerca: 1, custoFinalizacao: 3, categoria: 'temperos' },
+        { id: '12', nome: 'Alho', unidade: 'kg', taxaPerca: 10, custoFinalizacao: 8, categoria: 'vegetais' }
     ];
     
     comprasDB = JSON.parse(localStorage.getItem('comprasDB')) || [
@@ -403,7 +399,6 @@ function loadLocalData() {
             unidade: 'ml',
             tempoPreparo: 45,
             modoPreparo: '1. Refogue a cebola e o alho no azeite\n2. Adicione os tomates picados\n3. Tempere com sal, pimenta e manjericão\n4. Cozinhe em fogo baixo por 30-40 minutos\n5. Ajuste temperos a gosto',
-            taxaPerca: 5,
             custoFinalizacao: 8,
             status: 'ativo',
             ingredientes: [
@@ -426,7 +421,6 @@ function loadLocalData() {
             unidade: 'g',
             tempoPreparo: 15,
             modoPreparo: '1. Amasse bem a ricota com um garfo\n2. Misture o manjericão picado finamente\n3. Tempere com sal e pimenta\n4. Adicione o queijo parmesão ralado\n5. Misture até obter consistência homogênea',
-            taxaPerca: 2,
             custoFinalizacao: 5,
             status: 'ativo',
             ingredientes: [
@@ -451,7 +445,6 @@ function loadLocalData() {
             unidade: 'porções',
             tempoPreparo: 90,
             modoPreparo: '1. Pré-aqueça o forno a 180°C\n2. Cozinhe a massa de lasanha al dente\n3. Prepare uma camada de molho no fundo da forma\n4. Alterne camadas: massa, recheio de ricota, molho\n5. Finalize com queijo parmesão por cima\n6. Leve ao forno por 35-40 minutos\n7. Deixe descansar 10 minutos antes de servir',
-            taxaPerca: 8,
             custoFinalizacao: 12,
             margemLucro: 180,
             status: 'ativo',
@@ -475,7 +468,6 @@ function loadLocalData() {
             unidade: 'porções',
             tempoPreparo: 20,
             modoPreparo: '1. Corte o pão em fatias de 2cm\n2. Toste as fatias até dourar\n3. Esfregue alho nas fatias quentes\n4. Cubra com a mistura de tomate temperado\n5. Finalize com manjericão fresco e azeite',
-            taxaPerca: 5,
             custoFinalizacao: 10,
             margemLucro: 250,
             status: 'ativo',
@@ -935,7 +927,7 @@ function calcularCustoPrato(prato) {
 function calcularCustoFichaTecnica(ficha) {
     if (!ficha.ingredientes || ficha.ingredientes.length === 0) return 0;
     
-    // Calcular custo base dos ingredientes
+    // Calcular custo base dos ingredientes com suas respectivas taxas de perca
     const custoBase = ficha.ingredientes.reduce((total, ingrediente) => {
         const insumo = insumosDB.find(i => i.id === ingrediente.insumoId);
         if (!insumo) return total;
@@ -949,14 +941,16 @@ function calcularCustoFichaTecnica(ficha) {
         
         // Calcular custo baseado na quantidade usada
         const custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
-        return total + (custoUnitario * ingrediente.quantidade);
+        const custoIngrediente = custoUnitario * ingrediente.quantidade;
+        
+        // Aplicar taxa de perca específica do insumo
+        const custoComPerca = custoIngrediente * (1 + (insumo.taxaPerca || 0) / 100);
+        
+        return total + custoComPerca;
     }, 0);
     
-    // Aplicar taxa de perca (aumenta o custo)
-    const custoComPerca = custoBase * (1 + (ficha.taxaPerca || 0) / 100);
-    
     // Aplicar custo de finalização (aumenta o custo)
-    const custoFinal = custoComPerca * (1 + (ficha.custoFinalizacao || 0) / 100);
+    const custoFinal = custoBase * (1 + (ficha.custoFinalizacao || 0) / 100);
     
     return custoFinal;
 }
@@ -994,7 +988,6 @@ function savePrato(event) {
         tempoPreparo: parseInt(document.getElementById('pratoTempoPreparo').value) || null,
         porcoes: parseInt(document.getElementById('pratoPorcoes').value) || 1,
         descricao: document.getElementById('pratoDescricao').value,
-        taxaPerca: parseFloat(document.getElementById('pratoTaxaPerca').value) || 0,
         custoFinalizacao: parseFloat(document.getElementById('pratoCustoFinalizacao').value) || 0,
         margemLucro: parseFloat(document.getElementById('pratoMargemLucro').value) || 0,
         status: document.getElementById('pratoStatus').value,
@@ -1037,7 +1030,6 @@ function editPrato(id) {
     document.getElementById('pratoTempoPreparo').value = prato.tempoPreparo || '';
     document.getElementById('pratoPorcoes').value = prato.porcoes || 1;
     document.getElementById('pratoDescricao').value = prato.descricao || '';
-    document.getElementById('pratoTaxaPerca').value = prato.taxaPerca || '';
     document.getElementById('pratoCustoFinalizacao').value = prato.custoFinalizacao || '';
     document.getElementById('pratoMargemLucro').value = prato.margemLucro || '';
     document.getElementById('pratoStatus').value = prato.status || 'ativo';
@@ -1318,9 +1310,6 @@ function resetPratoForm() {
 
 // --- FUNÇÕES DE CONFIGURAÇÕES PADRÃO ---
 function aplicarConfiguracoesDefault() {
-    if (configuracoesDB.defaultTaxaPerca) {
-        document.getElementById('pratoTaxaPerca').value = configuracoesDB.defaultTaxaPerca;
-    }
     if (configuracoesDB.defaultCustoFinalizacao) {
         document.getElementById('pratoCustoFinalizacao').value = configuracoesDB.defaultCustoFinalizacao;
     }
@@ -1330,9 +1319,6 @@ function aplicarConfiguracoesDefault() {
 }
 
 function aplicarConfiguracoesDefaultFicha() {
-    if (configuracoesDB.defaultTaxaPerca) {
-        document.getElementById('fichaTaxaPerca').value = configuracoesDB.defaultTaxaPerca;
-    }
     if (configuracoesDB.defaultCustoFinalizacao) {
         document.getElementById('fichaCustoFinalizacao').value = configuracoesDB.defaultCustoFinalizacao;
     }
@@ -1716,27 +1702,29 @@ function renderInsumos() {
     });
     
     if (filtrados.length === 0) { 
-        tbody.innerHTML = `<tr><td colspan="6" class="text-center p-4 text-gray-500">Nenhum insumo encontrado.</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="9" class="text-center p-4 text-gray-500">Nenhum insumo encontrado.</td></tr>`; 
         return; 
     }
     
     tbody.innerHTML = filtrados.map(insumo => {
         const uc = getUltimaCompra(insumo.id);
+        const taxaPercaDisplay = insumo.taxaPerca ? `${insumo.taxaPerca}%` : 'N/A';
+        const custoFinalizacaoDisplay = insumo.custoFinalizacao ? `${insumo.custoFinalizacao}%` : 'N/A';
+        
         return `<tr class="border-b border-gray-200 hover:bg-gray-50">
             <td class="p-4 font-medium">${insumo.nome}</td>
             <td class="p-4">${insumo.unidade}</td>
+            <td class="p-4 text-center">${taxaPercaDisplay}</td>
+            <td class="p-4 text-center">${custoFinalizacaoDisplay}</td>
             <td class="p-4">${uc ? uc.fornecedor?.nome || 'N/A' : 'N/A'}</td>
             <td class="p-4 font-semibold text-green-700">${uc ? `R$ ${uc.preco.toFixed(2)}` : 'N/A'}</td>
             <td class="p-4">${uc ? new Date(uc.data + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</td>
             <td class="p-4">
-                <div class="flex items-center space-x-4">
-                    <button onclick="showAlert('Histórico de ${insumo.nome}', 'Funcionalidade em desenvolvimento')" class="text-orange-500 hover:text-orange-700 font-semibold flex items-center text-sm">
-                        <i data-lucide="history" class="h-4 w-4 mr-1"></i>Histórico
-                    </button>
-                    <button onclick="showAlert('Editar ${insumo.nome}', 'Funcionalidade em desenvolvimento')" class="text-blue-500 hover:text-blue-700 font-semibold flex items-center text-sm">
+                <div class="flex items-center space-x-2">
+                    <button onclick="editInsumo('${insumo.id}')" class="text-blue-500 hover:text-blue-700 font-semibold flex items-center text-sm">
                         <i data-lucide="edit-3" class="h-4 w-4 mr-1"></i>Editar
                     </button>
-                    <button onclick="showAlert('Excluir ${insumo.nome}', 'Funcionalidade em desenvolvimento')" class="text-red-500 hover:text-red-700 font-semibold flex items-center text-sm">
+                    <button onclick="deleteInsumo('${insumo.id}')" class="text-red-500 hover:text-red-700 font-semibold flex items-center text-sm">
                         <i data-lucide="trash-2" class="h-4 w-4 mr-1"></i>Excluir
                     </button>
                 </div>
@@ -1772,7 +1760,7 @@ function renderConfiguracoes() {
         const defaultCustoFinalizacao = document.getElementById('defaultCustoFinalizacao');
         const defaultMargemLucro = document.getElementById('defaultMargemLucro');
         
-        if (defaultTaxaPerca) defaultTaxaPerca.value = configuracoesDB.taxaPerca || 0;
+        if (defaultTaxaPerca) defaultTaxaPerca.value = configuracoesDB.taxaPerca || 5;
         if (defaultCustoFinalizacao) defaultCustoFinalizacao.value = configuracoesDB.custoFinalizacao || 10;
         if (defaultMargemLucro) defaultMargemLucro.value = configuracoesDB.margemLucro || 200;
     }
@@ -1901,6 +1889,92 @@ function showAlert(title, message, type = 'info') {
             alertDiv.remove();
         }
     }, 5000);
+}
+
+// --- FUNÇÕES DE INSUMOS ---
+function showAddInsumoModal() {
+    document.getElementById('insumoModalTitle').textContent = 'Adicionar Insumo';
+    document.getElementById('insumoForm').reset();
+    document.getElementById('insumoId').value = '';
+    
+    // Preencher com valores padrão das configurações
+    if (configuracoesDB) {
+        document.getElementById('insumoTaxaPerca').value = configuracoesDB.taxaPerca || 0;
+        document.getElementById('insumoCustoFinalizacao').value = configuracoesDB.custoFinalizacao || 10;
+    }
+    
+    showModal('insumoModal');
+}
+
+function saveInsumo(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('insumoId').value;
+    const insumo = {
+        nome: document.getElementById('insumoNome').value,
+        unidade: document.getElementById('insumoUnidade').value,
+        taxaPerca: parseFloat(document.getElementById('insumoTaxaPerca').value) || 0,
+        custoFinalizacao: parseFloat(document.getElementById('insumoCustoFinalizacao').value) || 0,
+        categoria: document.getElementById('insumoCategoria').value,
+        observacoes: document.getElementById('insumoObservacoes').value
+    };
+    
+    if (id) {
+        // Editar insumo existente
+        const index = insumosDB.findIndex(i => i.id === id);
+        if (index !== -1) {
+            insumosDB[index] = { ...insumosDB[index], ...insumo };
+            showAlert('Insumo Atualizado', 'Insumo atualizado com sucesso!', 'success');
+        }
+    } else {
+        // Adicionar novo insumo
+        insumo.id = 'insumo_' + Date.now();
+        insumosDB.push(insumo);
+        showAlert('Insumo Criado', 'Insumo adicionado com sucesso!', 'success');
+    }
+    
+    saveData();
+    renderInsumos();
+    hideModal('insumoModal');
+}
+
+function editInsumo(id) {
+    const insumo = insumosDB.find(i => i.id === id);
+    if (!insumo) return;
+    
+    document.getElementById('insumoModalTitle').textContent = 'Editar Insumo';
+    document.getElementById('insumoId').value = insumo.id;
+    document.getElementById('insumoNome').value = insumo.nome;
+    document.getElementById('insumoUnidade').value = insumo.unidade || '';
+    document.getElementById('insumoTaxaPerca').value = insumo.taxaPerca || '';
+    document.getElementById('insumoCustoFinalizacao').value = insumo.custoFinalizacao || '';
+    document.getElementById('insumoCategoria').value = insumo.categoria || '';
+    document.getElementById('insumoObservacoes').value = insumo.observacoes || '';
+    
+    showModal('insumoModal');
+}
+
+function deleteInsumo(id) {
+    // Verificar se o insumo está sendo usado em fichas técnicas ou pratos
+    const usedInFichas = fichasTecnicasDB.some(ficha => 
+        ficha.ingredientes && ficha.ingredientes.some(ing => ing.insumoId === id)
+    );
+    
+    const usedInPratos = pratosDB.some(prato => 
+        prato.insumos && prato.insumos.some(ing => ing.insumoId === id)
+    );
+    
+    if (usedInFichas || usedInPratos) {
+        showAlert('Não é possível excluir', 'Este insumo está sendo usado em fichas técnicas ou pratos. Remova-o primeiro desses locais.', 'error');
+        return;
+    }
+    
+    if (confirm('Tem certeza que deseja excluir este insumo?')) {
+        insumosDB = insumosDB.filter(i => i.id !== id);
+        saveData();
+        renderInsumos();
+        showAlert('Insumo Excluído', 'Insumo removido com sucesso!', 'success');
+    }
 }
 
 // --- INICIALIZAÇÃO DA APLICAÇÃO ---
