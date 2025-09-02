@@ -2153,5 +2153,599 @@ document.addEventListener('DOMContentLoaded', () => {
             loadLocalData();
             renderDashboard();
         }
+        
+        // Inicializar eventos de importação XML
+        initializeXMLImport();
     }, 200);
 });
+
+// --- FUNÇÕES DE IMPORTAÇÃO XML ---
+
+let xmlData = null;
+let itemsParaImportar = [];
+let vinculacoesInsumos = new Map(); // Para armazenar vinculações de itens com insumos
+let historicoImportacoes = JSON.parse(localStorage.getItem('historicoImportacoes') || '[]');
+
+function initializeXMLImport() {
+    const xmlFileInput = document.getElementById('xmlFileInput');
+    const uploadArea = document.getElementById('uploadArea');
+    
+    if (!xmlFileInput || !uploadArea) return;
+    
+    // Eventos de drag and drop
+    uploadArea.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        uploadArea.classList.add('border-blue-400');
+    });
+    
+    uploadArea.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('border-blue-400');
+    });
+    
+    uploadArea.addEventListener('drop', (e) => {
+        e.preventDefault();
+        uploadArea.classList.remove('border-blue-400');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleXMLFile(files[0]);
+        }
+    });
+    
+    // Evento de seleção de arquivo
+    xmlFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) {
+            handleXMLFile(e.target.files[0]);
+        }
+    });
+    
+    // Carregar histórico de importações
+    renderHistoricoImportacoes();
+}
+
+function handleXMLFile(file) {
+    if (!file.name.toLowerCase().endsWith('.xml')) {
+        showAlert('Erro', 'Por favor, selecione um arquivo XML válido.', 'error');
+        return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const xmlContent = e.target.result;
+            parseXMLContent(xmlContent);
+        } catch (error) {
+            console.error('Erro ao ler arquivo:', error);
+            showAlert('Erro', 'Erro ao ler o arquivo XML.', 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+function parseXMLContent(xmlContent) {
+    document.getElementById('processingStatus').classList.remove('hidden');
+    
+    try {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlContent, 'text/xml');
+        
+        // Verificar se é um XML válido
+        if (xmlDoc.getElementsByTagName('parsererror').length > 0) {
+            throw new Error('XML inválido');
+        }
+        
+        // Extrair dados da nota fiscal
+        const nfeElement = xmlDoc.getElementsByTagName('infNFe')[0] || xmlDoc.getElementsByTagName('NFe')[0];
+        if (!nfeElement) {
+            throw new Error('Não é um XML de DANF-e válido');
+        }
+        
+        // Informações da nota
+        const numeroNota = getXMLValue(xmlDoc, 'nNF');
+        const serie = getXMLValue(xmlDoc, 'serie');
+        const dataEmissao = getXMLValue(xmlDoc, 'dhEmi');
+        const valorTotal = getXMLValue(xmlDoc, 'vNF');
+        
+        // Informações do emitente (fornecedor)
+        const cnpjFornecedor = getXMLValue(xmlDoc, 'emit CNPJ') || getXMLValue(xmlDoc, 'emit CPF');
+        const nomeFornecedor = getXMLValue(xmlDoc, 'emit xNome');
+        
+        // Extrair itens
+        const items = xmlDoc.getElementsByTagName('det');
+        const itensExtraidos = [];
+        
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+            const codigo = getXMLValue(item, 'cProd');
+            const descricao = getXMLValue(item, 'xProd');
+            const unidade = getXMLValue(item, 'uCom');
+            const quantidade = parseFloat(getXMLValue(item, 'qCom')) || 0;
+            const valorUnitario = parseFloat(getXMLValue(item, 'vUnCom')) || 0;
+            const valorTotal = parseFloat(getXMLValue(item, 'vProd')) || 0;
+            
+            itensExtraidos.push({
+                codigo,
+                descricao,
+                unidade,
+                quantidade,
+                valorUnitario,
+                valorTotal,
+                status: 'pendente', // pendente, vinculado, ignorado
+                insumoVinculado: null
+            });
+        }
+        
+        xmlData = {
+            numeroNota,
+            serie,
+            dataEmissao: formatDate(dataEmissao),
+            valorTotal: parseFloat(valorTotal) || 0,
+            fornecedor: {
+                cnpj: cnpjFornecedor,
+                nome: nomeFornecedor
+            },
+            itens: itensExtraidos
+        };
+        
+        itemsParaImportar = [...itensExtraidos];
+        
+        // Tentar vincular automaticamente itens já conhecidos
+        autoVincularItens();
+        
+        // Mostrar resultados
+        mostrarResultadosImportacao();
+        
+    } catch (error) {
+        console.error('Erro ao processar XML:', error);
+        showAlert('Erro', 'Erro ao processar o arquivo XML: ' + error.message, 'error');
+    } finally {
+        document.getElementById('processingStatus').classList.add('hidden');
+    }
+}
+
+function getXMLValue(xmlDoc, tagPath) {
+    const tags = tagPath.split(' ');
+    let element = xmlDoc;
+    
+    for (const tag of tags) {
+        const found = element.getElementsByTagName(tag)[0];
+        if (!found) return '';
+        element = found;
+    }
+    
+    return element.textContent || '';
+}
+
+function autoVincularItens() {
+    // Buscar vinculações salvas anteriormente para este fornecedor
+    const vinculacoesSalvas = JSON.parse(localStorage.getItem('vinculacoesXML') || '{}');
+    const chaveVinculacao = xmlData.fornecedor.cnpj;
+    
+    if (vinculacoesSalvas[chaveVinculacao]) {
+        const vinculacoesFornecedor = vinculacoesSalvas[chaveVinculacao];
+        
+        itemsParaImportar.forEach(item => {
+            // Tentar encontrar vinculação por código do produto
+            if (vinculacoesFornecedor[item.codigo]) {
+                const insumoId = vinculacoesFornecedor[item.codigo];
+                const insumo = insumosDB.find(i => i.id === insumoId);
+                
+                if (insumo) {
+                    item.status = 'vinculado';
+                    item.insumoVinculado = insumo;
+                    console.log(`Item ${item.codigo} vinculado automaticamente ao insumo ${insumo.nome}`);
+                }
+            }
+            
+            // Se não encontrou por código, tentar por descrição similar
+            if (item.status === 'pendente') {
+                const insumoSimilar = buscarInsumoSimilar(item.descricao);
+                if (insumoSimilar) {
+                    item.status = 'sugestao';
+                    item.insumoVinculado = insumoSimilar;
+                }
+            }
+        });
+    }
+}
+
+function buscarInsumoSimilar(descricao) {
+    const descricaoLimpa = descricao.toLowerCase().trim();
+    
+    // Buscar por nome exato
+    let insumo = insumosDB.find(i => i.nome.toLowerCase() === descricaoLimpa);
+    if (insumo) return insumo;
+    
+    // Buscar por palavras-chave (pelo menos 70% de similaridade)
+    const palavrasDescricao = descricaoLimpa.split(' ').filter(p => p.length > 2);
+    
+    for (const insumo of insumosDB) {
+        const palavrasInsumo = insumo.nome.toLowerCase().split(' ').filter(p => p.length > 2);
+        const palavrasComuns = palavrasDescricao.filter(p => palavrasInsumo.some(pi => pi.includes(p) || p.includes(pi)));
+        
+        const similaridade = palavrasComuns.length / Math.max(palavrasDescricao.length, palavrasInsumo.length);
+        if (similaridade >= 0.7) {
+            return insumo;
+        }
+    }
+    
+    return null;
+}
+
+function mostrarResultadosImportacao() {
+    // Mostrar informações da nota
+    const notaInfo = document.getElementById('notaInfo');
+    notaInfo.innerHTML = `
+        <div><strong>Fornecedor:</strong> ${xmlData.fornecedor.nome} (${xmlData.fornecedor.cnpj})</div>
+        <div><strong>Nota:</strong> ${xmlData.numeroNota} - Série: ${xmlData.serie}</div>
+        <div><strong>Data:</strong> ${xmlData.dataEmissao}</div>
+        <div><strong>Valor Total:</strong> R$ ${xmlData.valorTotal.toFixed(2)}</div>
+    `;
+    
+    // Renderizar itens
+    renderItensImportacao();
+    
+    // Mostrar seção de resultados
+    document.getElementById('importResults').classList.remove('hidden');
+}
+
+function renderItensImportacao() {
+    const tbody = document.getElementById('itensImportacao');
+    tbody.innerHTML = '';
+    
+    itemsParaImportar.forEach((item, index) => {
+        const statusClass = item.status === 'vinculado' ? 'text-green-600' :
+                           item.status === 'sugestao' ? 'text-yellow-600' :
+                           item.status === 'ignorado' ? 'text-gray-500' : 'text-red-600';
+        
+        const statusText = item.status === 'vinculado' ? 'Vinculado' :
+                          item.status === 'sugestao' ? 'Sugestão' :
+                          item.status === 'ignorado' ? 'Ignorado' : 'Pendente';
+        
+        const insumoVinculadoText = item.insumoVinculado ? 
+            `${item.insumoVinculado.nome} (${item.insumoVinculado.unidade})` : '-';
+        
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="px-4 py-3 text-sm text-gray-900">${item.codigo}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">${item.descricao}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">${item.quantidade} ${item.unidade}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">R$ ${item.valorUnitario.toFixed(2)}</td>
+            <td class="px-4 py-3 text-sm ${statusClass}">${statusText}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">${insumoVinculadoText}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">
+                <button type="button" onclick="abrirVinculacaoInsumo(${index})" 
+                        class="text-blue-600 hover:text-blue-800 mr-2">
+                    <i data-lucide="link" class="h-4 w-4"></i>
+                </button>
+                ${item.status !== 'ignorado' ? 
+                    `<button type="button" onclick="ignorarItem(${index})" 
+                             class="text-gray-600 hover:text-gray-800">
+                        <i data-lucide="x" class="h-4 w-4"></i>
+                     </button>` : 
+                    `<button type="button" onclick="reativarItem(${index})" 
+                             class="text-green-600 hover:text-green-800">
+                        <i data-lucide="rotate-ccw" class="h-4 w-4"></i>
+                     </button>`
+                }
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    lucide.createIcons();
+}
+
+let itemIndexParaVincular = null;
+
+function abrirVinculacaoInsumo(index) {
+    itemIndexParaVincular = index;
+    const item = itemsParaImportar[index];
+    
+    // Preencher informações do item
+    document.getElementById('itemInfo').innerHTML = `
+        <h4 class="font-medium text-gray-900 mb-2">Item da Nota Fiscal</h4>
+        <div class="text-sm text-gray-600 space-y-1">
+            <div><strong>Código:</strong> ${item.codigo}</div>
+            <div><strong>Descrição:</strong> ${item.descricao}</div>
+            <div><strong>Quantidade:</strong> ${item.quantidade} ${item.unidade}</div>
+            <div><strong>Valor Unitário:</strong> R$ ${item.valorUnitario.toFixed(2)}</div>
+        </div>
+    `;
+    
+    // Limpar seleções
+    document.querySelectorAll('input[name="vinculacaoOpcao"]').forEach(radio => radio.checked = false);
+    
+    // Preencher select de insumos existentes
+    const select = document.getElementById('insumoExistenteSelect');
+    select.innerHTML = '<option value="">Selecione um insumo...</option>';
+    
+    insumosDB.forEach(insumo => {
+        const option = document.createElement('option');
+        option.value = insumo.id;
+        option.textContent = `${insumo.nome} (${insumo.unidade})`;
+        select.appendChild(option);
+    });
+    
+    // Se há uma sugestão, pré-selecionar
+    if (item.status === 'sugestao' && item.insumoVinculado) {
+        document.querySelector('input[value="existente"]').checked = true;
+        select.value = item.insumoVinculado.id;
+        toggleVinculacaoOpcao();
+    }
+    
+    // Preencher campos do novo insumo com dados do item
+    document.getElementById('novoInsumoNome').value = item.descricao;
+    document.getElementById('novoInsumoUnidade').value = mapearUnidade(item.unidade);
+    
+    showModal('vincularInsumoModal');
+}
+
+function mapearUnidade(unidadeXML) {
+    const mapeamento = {
+        'KG': 'kg',
+        'G': 'g',
+        'GR': 'g',
+        'L': 'l',
+        'LT': 'l',
+        'ML': 'ml',
+        'UN': 'un',
+        'UND': 'un',
+        'PC': 'pc',
+        'PCT': 'pc',
+        'CX': 'cx'
+    };
+    
+    return mapeamento[unidadeXML.toUpperCase()] || 'un';
+}
+
+function toggleVinculacaoOpcao() {
+    const opcaoSelecionada = document.querySelector('input[name="vinculacaoOpcao"]:checked')?.value;
+    
+    document.getElementById('insumoExistenteSection').classList.toggle('hidden', opcaoSelecionada !== 'existente');
+    document.getElementById('novoInsumoSection').classList.toggle('hidden', opcaoSelecionada !== 'novo');
+}
+
+function closeVincularInsumoModal() {
+    hideModal('vincularInsumoModal');
+    itemIndexParaVincular = null;
+}
+
+function confirmarVinculacao() {
+    const opcaoSelecionada = document.querySelector('input[name="vinculacaoOpcao"]:checked')?.value;
+    
+    if (!opcaoSelecionada) {
+        showAlert('Erro', 'Selecione uma opção de vinculação.', 'error');
+        return;
+    }
+    
+    const item = itemsParaImportar[itemIndexParaVincular];
+    
+    if (opcaoSelecionada === 'existente') {
+        const insumoId = document.getElementById('insumoExistenteSelect').value;
+        if (!insumoId) {
+            showAlert('Erro', 'Selecione um insumo existente.', 'error');
+            return;
+        }
+        
+        const insumo = insumosDB.find(i => i.id === insumoId);
+        item.status = 'vinculado';
+        item.insumoVinculado = insumo;
+        
+    } else if (opcaoSelecionada === 'novo') {
+        const nome = document.getElementById('novoInsumoNome').value.trim();
+        const unidade = document.getElementById('novoInsumoUnidade').value;
+        const categoria = document.getElementById('novoInsumoCategoria').value.trim();
+        const taxaPerda = parseFloat(document.getElementById('novoInsumoTaxaPerda').value) || 0;
+        
+        if (!nome) {
+            showAlert('Erro', 'Digite o nome do insumo.', 'error');
+            return;
+        }
+        
+        // Criar novo insumo
+        const novoInsumo = {
+            id: generateId(),
+            nome,
+            unidade,
+            categoria: categoria || 'Importado',
+            taxaPerda,
+            fornecedor: xmlData.fornecedor.nome,
+            dataInclusao: new Date().toISOString()
+        };
+        
+        insumosDB.push(novoInsumo);
+        saveLocalData();
+        
+        item.status = 'vinculado';
+        item.insumoVinculado = novoInsumo;
+        
+        showAlert('Sucesso', 'Novo insumo criado e vinculado com sucesso!', 'success');
+        
+    } else if (opcaoSelecionada === 'ignorar') {
+        item.status = 'ignorado';
+        item.insumoVinculado = null;
+    }
+    
+    renderItensImportacao();
+    closeVincularInsumoModal();
+}
+
+function ignorarItem(index) {
+    itemsParaImportar[index].status = 'ignorado';
+    itemsParaImportar[index].insumoVinculado = null;
+    renderItensImportacao();
+}
+
+function reativarItem(index) {
+    itemsParaImportar[index].status = 'pendente';
+    renderItensImportacao();
+}
+
+function cancelarImportacao() {
+    document.getElementById('importResults').classList.add('hidden');
+    document.getElementById('xmlFileInput').value = '';
+    xmlData = null;
+    itemsParaImportar = [];
+}
+
+function confirmarImportacao() {
+    const itensVinculados = itemsParaImportar.filter(item => item.status === 'vinculado');
+    
+    if (itensVinculados.length === 0) {
+        showAlert('Aviso', 'Nenhum item foi vinculado. Vincule pelo menos um item antes de confirmar.', 'error');
+        return;
+    }
+    
+    // Salvar vinculações para futuras importações
+    salvarVinculacoes();
+    
+    // Criar compras para os itens vinculados
+    criarComprasDoXML(itensVinculados);
+    
+    // Adicionar ao histórico
+    adicionarAoHistorico();
+    
+    // Limpar interface
+    cancelarImportacao();
+    
+    showAlert('Sucesso', `Importação concluída! ${itensVinculados.length} itens foram processados.`, 'success');
+    
+    // Atualizar dashboard
+    renderDashboard();
+}
+
+function salvarVinculacoes() {
+    const vinculacoesSalvas = JSON.parse(localStorage.getItem('vinculacoesXML') || '{}');
+    const chaveVinculacao = xmlData.fornecedor.cnpj;
+    
+    if (!vinculacoesSalvas[chaveVinculacao]) {
+        vinculacoesSalvas[chaveVinculacao] = {};
+    }
+    
+    itemsParaImportar.forEach(item => {
+        if (item.status === 'vinculado' && item.insumoVinculado) {
+            vinculacoesSalvas[chaveVinculacao][item.codigo] = item.insumoVinculado.id;
+        }
+    });
+    
+    localStorage.setItem('vinculacoesXML', JSON.stringify(vinculacoesSalvas));
+}
+
+function criarComprasDoXML(itensVinculados) {
+    itensVinculados.forEach(item => {
+        const compra = {
+            id: generateId(),
+            insumoId: item.insumoVinculado.id,
+            quantidade: item.quantidade,
+            valorUnitario: item.valorUnitario,
+            valorTotal: item.valorTotal,
+            fornecedor: xmlData.fornecedor.nome,
+            dataCompra: xmlData.dataEmissao,
+            notaFiscal: xmlData.numeroNota,
+            origem: 'xml_import',
+            dadosXML: {
+                codigoProduto: item.codigo,
+                descricaoProduto: item.descricao,
+                unidadeXML: item.unidade
+            }
+        };
+        
+        comprasDB.push(compra);
+    });
+    
+    saveLocalData();
+}
+
+function adicionarAoHistorico() {
+    const historico = {
+        id: generateId(),
+        data: new Date().toISOString(),
+        fornecedor: xmlData.fornecedor.nome,
+        cnpjFornecedor: xmlData.fornecedor.cnpj,
+        numeroNota: xmlData.numeroNota,
+        serie: xmlData.serie,
+        dataEmissao: xmlData.dataEmissao,
+        valorTotal: xmlData.valorTotal,
+        totalItens: xmlData.itens.length,
+        itensImportados: itemsParaImportar.filter(i => i.status === 'vinculado').length,
+        itensIgnorados: itemsParaImportar.filter(i => i.status === 'ignorado').length
+    };
+    
+    historicoImportacoes.unshift(historico);
+    
+    // Manter apenas os últimos 50 registros
+    if (historicoImportacoes.length > 50) {
+        historicoImportacoes = historicoImportacoes.slice(0, 50);
+    }
+    
+    localStorage.setItem('historicoImportacoes', JSON.stringify(historicoImportacoes));
+    renderHistoricoImportacoes();
+}
+
+function renderHistoricoImportacoes() {
+    const tbody = document.getElementById('historicoImportacoes');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    historicoImportacoes.forEach(historico => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td class="px-4 py-3 text-sm text-gray-900">${formatDate(historico.data)}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">${historico.fornecedor}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">${historico.numeroNota}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">
+                ${historico.itensImportados}/${historico.totalItens}
+                ${historico.itensIgnorados > 0 ? `<span class="text-gray-500">(${historico.itensIgnorados} ignorados)</span>` : ''}
+            </td>
+            <td class="px-4 py-3 text-sm text-gray-900">R$ ${historico.valorTotal.toFixed(2)}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">
+                <button type="button" onclick="verDetalhesHistorico('${historico.id}')" 
+                        class="text-blue-600 hover:text-blue-800">
+                    <i data-lucide="eye" class="h-4 w-4"></i>
+                </button>
+            </td>
+        `;
+        tbody.appendChild(row);
+    });
+    
+    lucide.createIcons();
+}
+
+function verDetalhesHistorico(historicoId) {
+    const historico = historicoImportacoes.find(h => h.id === historicoId);
+    if (!historico) return;
+    
+    const detalhes = `
+        <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+                <div><strong>Fornecedor:</strong> ${historico.fornecedor}</div>
+                <div><strong>CNPJ:</strong> ${historico.cnpjFornecedor}</div>
+                <div><strong>Nota:</strong> ${historico.numeroNota} - Série: ${historico.serie}</div>
+                <div><strong>Data Emissão:</strong> ${historico.dataEmissao}</div>
+                <div><strong>Data Importação:</strong> ${formatDate(historico.data)}</div>
+                <div><strong>Valor Total:</strong> R$ ${historico.valorTotal.toFixed(2)}</div>
+            </div>
+            <div class="border-t pt-4">
+                <strong>Resumo da Importação:</strong>
+                <ul class="mt-2 space-y-1 text-sm">
+                    <li>• Total de itens na nota: ${historico.totalItens}</li>
+                    <li>• Itens importados: ${historico.itensImportados}</li>
+                    <li>• Itens ignorados: ${historico.itensIgnorados}</li>
+                </ul>
+            </div>
+        </div>
+    `;
+    
+    showCustomModal('Detalhes da Importação', detalhes);
+}
+
+function formatDate(dateString) {
+    if (!dateString) return '';
+    
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    
+    return date.toLocaleDateString('pt-BR');
+}
