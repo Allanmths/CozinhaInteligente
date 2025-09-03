@@ -1144,6 +1144,92 @@
                 </div>
             </div>
             
+            <!-- Conversão de Unidades -->
+            <div id="conversaoUnidadesSection" class="mb-6 bg-blue-50 p-4 rounded-lg">
+                <h4 class="text-md font-medium text-gray-900 mb-3 flex items-center">
+                    <i data-lucide="calculator" class="h-4 w-4 mr-2"></i>
+                    Conversão de Unidades
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade da Nota</label>
+                        <div class="flex">
+                            <input type="number" id="quantidadeOriginal" step="0.001" readonly
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-100 focus:outline-none">
+                            <span id="unidadeOriginal" class="px-3 py-2 bg-gray-200 border border-l-0 border-gray-300 rounded-r-lg text-sm">
+                                kg
+                            </span>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Converter Para</label>
+                        <div class="flex">
+                            <input type="number" id="quantidadeConvertida" step="0.001" 
+                                   class="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                   onchange="calcularConversao()">
+                            <select id="unidadeConvertida" onchange="aplicarConversaoAutomatica()"
+                                    class="px-3 py-2 bg-white border border-l-0 border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                                <option value="kg">kg</option>
+                                <option value="g">g</option>
+                                <option value="l">l</option>
+                                <option value="ml">ml</option>
+                                <option value="un">un</option>
+                                <option value="cx">cx</option>
+                                <option value="pc">pc</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Valor Unitário Ajustado</label>
+                        <div class="flex">
+                            <span class="px-3 py-2 bg-gray-200 border border-gray-300 rounded-l-lg text-sm">R$</span>
+                            <input type="number" id="valorUnitarioConvertido" step="0.01" readonly
+                                   class="flex-1 px-3 py-2 border border-l-0 border-gray-300 rounded-r-lg bg-gray-100 focus:outline-none">
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-3 text-sm text-gray-600">
+                    <p><strong>Fator de Conversão:</strong> <span id="fatorConversao">1</span></p>
+                    <p><strong>Valor Total:</strong> R$ <span id="valorTotalConvertido">0.00</span></p>
+                </div>
+            </div>
+            
+            <!-- Edição de Dados do Insumo Existente -->
+            <div id="edicaoInsumoExistenteSection" class="mb-6 hidden bg-green-50 p-4 rounded-lg">
+                <h4 class="text-md font-medium text-gray-900 mb-3 flex items-center">
+                    <i data-lucide="edit" class="h-4 w-4 mr-2"></i>
+                    Editar Dados do Insumo
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Insumo</label>
+                        <input type="text" id="editarInsumoNome" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                        <input type="text" id="editarInsumoCategoria" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Taxa de Perda (%)</label>
+                        <input type="number" id="editarInsumoTaxaPerda" step="0.01" min="0" max="100" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Fornecedor</label>
+                        <input type="text" id="editarInsumoFornecedor" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500">
+                    </div>
+                </div>
+                <div class="mt-3">
+                    <label class="flex items-center">
+                        <input type="checkbox" id="salvarAlteracoesInsumo" class="mr-2">
+                        <span class="text-sm text-gray-700">Salvar alterações permanentemente no insumo</span>
+                    </label>
+                </div>
+            </div>
+            
             <div class="flex justify-end space-x-3">
                 <button type="button" onclick="closeVincularInsumoModal()" 
                         class="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50">

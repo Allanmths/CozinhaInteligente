@@ -2410,11 +2410,15 @@ function renderItensImportacao() {
         const insumoVinculadoText = item.insumoVinculado ? 
             `${item.insumoVinculado.nome} (${item.insumoVinculado.unidade})` : '-';
         
+        // Mostrar se houve conversão
+        const conversaoInfo = item.conversaoAplicada ? 
+            `<br><small class="text-blue-600">Convertido: ${item.conversaoAplicada.quantidadeOriginal} ${item.conversaoAplicada.unidadeOriginal} → ${item.quantidade} ${item.unidade}</small>` : '';
+        
         const row = document.createElement('tr');
         row.innerHTML = `
             <td class="px-4 py-3 text-sm text-gray-900">${item.codigo}</td>
             <td class="px-4 py-3 text-sm text-gray-900">${item.descricao}</td>
-            <td class="px-4 py-3 text-sm text-gray-900">${item.quantidade} ${item.unidade}</td>
+            <td class="px-4 py-3 text-sm text-gray-900">${item.quantidade} ${item.unidade}${conversaoInfo}</td>
             <td class="px-4 py-3 text-sm text-gray-900">R$ ${item.valorUnitario.toFixed(2)}</td>
             <td class="px-4 py-3 text-sm ${statusClass}">${statusText}</td>
             <td class="px-4 py-3 text-sm text-gray-900">${insumoVinculadoText}</td>
@@ -2484,7 +2488,90 @@ function abrirVinculacaoInsumo(index) {
     document.getElementById('novoInsumoUnidade').value = mapearUnidade(item.unidade);
     document.getElementById('novoInsumoTaxaPerda').value = configuracoesDB.taxaPerca || 0;
     
+    // Inicializar dados de conversão
+    atualizarDadosConversao(item);
+    
     showModal('vincularInsumoModal');
+}
+
+// Funções para conversão de unidades e edição de insumos
+const fatoresConversao = {
+    // Peso
+    'kg-g': 1000,
+    'g-kg': 0.001,
+    // Volume  
+    'l-ml': 1000,
+    'ml-l': 0.001,
+    // Unidades (sem conversão)
+    'un-un': 1,
+    'cx-cx': 1,
+    'pc-pc': 1
+};
+
+function obterFatorConversao(unidadeOrigem, unidadeDestino) {
+    if (unidadeOrigem === unidadeDestino) return 1;
+    
+    const chave = `${unidadeOrigem}-${unidadeDestino}`;
+    return fatoresConversao[chave] || 1;
+}
+
+function atualizarDadosConversao(item) {
+    document.getElementById('quantidadeOriginal').value = item.quantidade;
+    document.getElementById('unidadeOriginal').textContent = item.unidade;
+    document.getElementById('quantidadeConvertida').value = item.quantidade;
+    document.getElementById('unidadeConvertida').value = mapearUnidade(item.unidade);
+    document.getElementById('valorUnitarioConvertido').value = item.valorUnitario.toFixed(2);
+    document.getElementById('fatorConversao').textContent = '1';
+    document.getElementById('valorTotalConvertido').textContent = item.valorTotal.toFixed(2);
+}
+
+function aplicarConversaoAutomatica() {
+    const quantidadeOriginal = parseFloat(document.getElementById('quantidadeOriginal').value) || 0;
+    const unidadeOriginal = document.getElementById('unidadeOriginal').textContent;
+    const unidadeDestino = document.getElementById('unidadeConvertida').value;
+    const valorUnitarioOriginal = parseFloat(document.getElementById('valorUnitarioConvertido').getAttribute('data-original')) || 
+                                 parseFloat(document.getElementById('valorUnitarioConvertido').value) || 0;
+    
+    // Armazenar valor original se ainda não foi feito
+    if (!document.getElementById('valorUnitarioConvertido').getAttribute('data-original')) {
+        document.getElementById('valorUnitarioConvertido').setAttribute('data-original', valorUnitarioOriginal);
+    }
+    
+    const fator = obterFatorConversao(unidadeOriginal, unidadeDestino);
+    const quantidadeConvertida = quantidadeOriginal * fator;
+    const valorUnitarioConvertido = fator !== 0 ? valorUnitarioOriginal / fator : valorUnitarioOriginal;
+    
+    document.getElementById('quantidadeConvertida').value = quantidadeConvertida.toFixed(3);
+    document.getElementById('valorUnitarioConvertido').value = valorUnitarioConvertido.toFixed(2);
+    document.getElementById('fatorConversao').textContent = fator.toFixed(3);
+    document.getElementById('valorTotalConvertido').textContent = (quantidadeConvertida * valorUnitarioConvertido).toFixed(2);
+}
+
+function calcularConversao() {
+    const quantidadeOriginal = parseFloat(document.getElementById('quantidadeOriginal').value) || 0;
+    const quantidadeConvertida = parseFloat(document.getElementById('quantidadeConvertida').value) || 0;
+    const valorUnitarioOriginal = parseFloat(document.getElementById('valorUnitarioConvertido').getAttribute('data-original')) || 
+                                 parseFloat(document.getElementById('valorUnitarioConvertido').value) || 0;
+    
+    if (quantidadeOriginal === 0 || quantidadeConvertida === 0) return;
+    
+    const fator = quantidadeConvertida / quantidadeOriginal;
+    const valorUnitarioConvertido = valorUnitarioOriginal / fator;
+    
+    document.getElementById('valorUnitarioConvertido').value = valorUnitarioConvertido.toFixed(2);
+    document.getElementById('fatorConversao').textContent = fator.toFixed(3);
+    document.getElementById('valorTotalConvertido').textContent = (quantidadeConvertida * valorUnitarioConvertido).toFixed(2);
+}
+
+function carregarDadosInsumoParaEdicao(insumoId) {
+    const insumo = insumosDB.find(i => i.id === insumoId);
+    if (!insumo) return;
+    
+    document.getElementById('editarInsumoNome').value = insumo.nome || '';
+    document.getElementById('editarInsumoCategoria').value = insumo.categoria || '';
+    document.getElementById('editarInsumoTaxaPerda').value = insumo.taxaPerda || 0;
+    document.getElementById('editarInsumoFornecedor').value = insumo.fornecedor || '';
+    document.getElementById('salvarAlteracoesInsumo').checked = false;
 }
 
 function mapearUnidade(unidadeXML) {
@@ -2510,6 +2597,31 @@ function toggleVinculacaoOpcao() {
     
     document.getElementById('insumoExistenteSection').classList.toggle('hidden', opcaoSelecionada !== 'existente');
     document.getElementById('novoInsumoSection').classList.toggle('hidden', opcaoSelecionada !== 'novo');
+    document.getElementById('edicaoInsumoExistenteSection').classList.toggle('hidden', opcaoSelecionada !== 'existente');
+    
+    // Sempre mostrar seção de conversão se não for ignorar
+    document.getElementById('conversaoUnidadesSection').classList.toggle('hidden', opcaoSelecionada === 'ignorar');
+    
+    // Se selecionou insumo existente, carregar dados para edição
+    if (opcaoSelecionada === 'existente') {
+        const select = document.getElementById('insumoExistenteSelect');
+        if (select.value) {
+            carregarDadosInsumoParaEdicao(select.value);
+        }
+        
+        // Adicionar listener para mudanças no select
+        select.onchange = function() {
+            if (this.value) {
+                carregarDadosInsumoParaEdicao(this.value);
+            }
+        };
+    }
+    
+    // Atualizar dados de conversão
+    if (itemIndexParaVincular !== null) {
+        const item = itemsParaImportar[itemIndexParaVincular];
+        atualizarDadosConversao(item);
+    }
 }
 
 function closeVincularInsumoModal() {
@@ -2527,6 +2639,11 @@ function confirmarVinculacao() {
     
     const item = itemsParaImportar[itemIndexParaVincular];
     
+    // Obter dados de conversão
+    const quantidadeConvertida = parseFloat(document.getElementById('quantidadeConvertida').value) || item.quantidade;
+    const unidadeConvertida = document.getElementById('unidadeConvertida').value;
+    const valorUnitarioConvertido = parseFloat(document.getElementById('valorUnitarioConvertido').value) || item.valorUnitario;
+    
     if (opcaoSelecionada === 'existente') {
         const insumoId = document.getElementById('insumoExistenteSelect').value;
         if (!insumoId) {
@@ -2535,8 +2652,44 @@ function confirmarVinculacao() {
         }
         
         const insumo = insumosDB.find(i => i.id === insumoId);
+        let insumoAtualizado = {...insumo};
+        
+        // Verificar se deve salvar alterações no insumo
+        if (document.getElementById('salvarAlteracoesInsumo').checked) {
+            const nome = document.getElementById('editarInsumoNome').value.trim();
+            const categoria = document.getElementById('editarInsumoCategoria').value.trim();
+            const taxaPerda = parseFloat(document.getElementById('editarInsumoTaxaPerda').value) || 0;
+            const fornecedor = document.getElementById('editarInsumoFornecedor').value.trim();
+            
+            if (nome) {
+                insumoAtualizado.nome = nome;
+                insumoAtualizado.categoria = categoria;
+                insumoAtualizado.taxaPerda = taxaPerda;
+                insumoAtualizado.fornecedor = fornecedor;
+                
+                // Atualizar no banco de dados
+                const index = insumosDB.findIndex(i => i.id === insumoId);
+                if (index !== -1) {
+                    insumosDB[index] = insumoAtualizado;
+                    saveToLocalStorage();
+                }
+                
+                showAlert('Sucesso', 'Dados do insumo atualizados com sucesso!', 'success');
+            }
+        }
+        
+        // Aplicar conversão ao item
+        item.quantidade = quantidadeConvertida;
+        item.unidade = unidadeConvertida;
+        item.valorUnitario = valorUnitarioConvertido;
+        item.valorTotal = quantidadeConvertida * valorUnitarioConvertido;
         item.status = 'vinculado';
-        item.insumoVinculado = insumo;
+        item.insumoVinculado = insumoAtualizado;
+        item.conversaoAplicada = {
+            quantidadeOriginal: parseFloat(document.getElementById('quantidadeOriginal').value),
+            unidadeOriginal: document.getElementById('unidadeOriginal').textContent,
+            fatorConversao: parseFloat(document.getElementById('fatorConversao').textContent)
+        };
         
     } else if (opcaoSelecionada === 'novo') {
         const nome = document.getElementById('novoInsumoNome').value.trim();
@@ -2553,7 +2706,7 @@ function confirmarVinculacao() {
         const novoInsumo = {
             id: generateId(),
             nome,
-            unidade,
+            unidade: unidadeConvertida, // Usar unidade convertida
             categoria: categoria || 'Importado',
             taxaPerda,
             fornecedor: xmlData.fornecedor.nome,
@@ -2563,8 +2716,18 @@ function confirmarVinculacao() {
         insumosDB.push(novoInsumo);
         saveToLocalStorage();
         
+        // Aplicar conversão ao item
+        item.quantidade = quantidadeConvertida;
+        item.unidade = unidadeConvertida;
+        item.valorUnitario = valorUnitarioConvertido;
+        item.valorTotal = quantidadeConvertida * valorUnitarioConvertido;
         item.status = 'vinculado';
         item.insumoVinculado = novoInsumo;
+        item.conversaoAplicada = {
+            quantidadeOriginal: parseFloat(document.getElementById('quantidadeOriginal').value),
+            unidadeOriginal: document.getElementById('unidadeOriginal').textContent,
+            fatorConversao: parseFloat(document.getElementById('fatorConversao').textContent)
+        };
         
         showAlert('Sucesso', 'Novo insumo criado e vinculado com sucesso!', 'success');
         
