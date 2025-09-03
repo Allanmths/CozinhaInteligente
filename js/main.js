@@ -23,7 +23,7 @@ let currentUser = null;
 let isFirebaseReady = false;
 
 // --- BANCO DE DADOS ---
-let insumosDB = [], comprasDB = [], fichasTecnicasDB = [], pratosDB = [], configuracoesDB = {};
+let insumosDB = [], comprasDB = [], fichasTecnicasDB = [], pratosDB = [], configuracoesDB = {}, fornecedoresDB = [];
 let insumosParaRevisao = [];
 const conversionFactors = { 'kg': 1000, 'g': 1, 'l': 1000, 'ml': 1 };
 let charts = {};
@@ -486,6 +486,7 @@ function loadLocalData() {
     ];
     
     configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { taxaPerca: 5, custoFinalizacao: 10, margemLucro: 200 };
+    fornecedoresDB = JSON.parse(localStorage.getItem('fornecedoresDB')) || [];
     
     // Salvar dados atualizados para garantir consistência
     saveData();
@@ -502,6 +503,7 @@ function saveToLocalStorage() {
     localStorage.setItem('fichasTecnicasDB', JSON.stringify(fichasTecnicasDB));
     localStorage.setItem('pratosDB', JSON.stringify(pratosDB));
     localStorage.setItem('configuracoesDB', JSON.stringify(configuracoesDB));
+    localStorage.setItem('fornecedoresDB', JSON.stringify(fornecedoresDB));
 }
 
 // --- FUNÇÕES PRINCIPAIS ---
@@ -604,13 +606,49 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- PERSISTÊNCIA DE DADOS ATUALIZADA ---
 async function saveData() {
     if (isFirebaseReady) {
-        await Promise.all([
-            saveToFirebase('insumos', insumosDB),
-            saveToFirebase('fornecedores', fornecedoresDB),
-            saveToFirebase('compras', comprasDB),
-            saveToFirebase('pratos', pratosDB)
-        ]);
-        console.log('Dados sincronizados com Firebase');
+        try {
+            // Salvar cada item individualmente
+            const savePromises = [];
+            
+            // Salvar insumos
+            insumosDB.forEach(insumo => {
+                if (insumo.id) {
+                    savePromises.push(saveToFirebase('insumos', insumo, insumo.id));
+                }
+            });
+            
+            // Salvar compras
+            comprasDB.forEach(compra => {
+                if (compra.id) {
+                    savePromises.push(saveToFirebase('compras', compra, compra.id));
+                }
+            });
+            
+            // Salvar fichas técnicas
+            fichasTecnicasDB.forEach(ficha => {
+                if (ficha.id) {
+                    savePromises.push(saveToFirebase('fichas', ficha, ficha.id));
+                }
+            });
+            
+            // Salvar pratos
+            pratosDB.forEach(prato => {
+                if (prato.id) {
+                    savePromises.push(saveToFirebase('pratos', prato, prato.id));
+                }
+            });
+            
+            // Salvar configurações
+            if (configuracoesDB.id) {
+                savePromises.push(saveToFirebase('configuracoes', configuracoesDB, configuracoesDB.id));
+            }
+            
+            await Promise.all(savePromises);
+            console.log('Dados sincronizados com Firebase');
+        } catch (error) {
+            console.error('Erro ao sincronizar com Firebase:', error);
+            saveToLocalStorage(); // Fallback
+        }
     } else {
         // Fallback para localStorage
         saveToLocalStorage();
@@ -878,7 +916,7 @@ function createChart(canvasId, type, labels, data, label) {
                     beginAtZero: true,
                     ticks: {
                         callback: function(value) {
-                            return 'R$ ' + value.toFixed(2);
+                            return 'R$ ' + (value || 0).toFixed(2);
                         }
                     }
                 }
@@ -901,7 +939,8 @@ function renderPratos() {
     
     tbody.innerHTML = pratosDB.map(prato => {
         const custo = calcularCustoPrato(prato);
-        const margem = prato.preco > 0 ? (((prato.preco - custo) / prato.preco) * 100) : 0;
+        const preco = prato.preco || 0;
+        const margem = preco > 0 ? (((preco - custo) / preco) * 100) : 0;
         const statusClass = prato.status === 'ativo' ? 'bg-green-100 text-green-800' : 
                            prato.status === 'sazonal' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
         
@@ -914,10 +953,10 @@ function renderPratos() {
                 </div>
             </td>
             <td class="px-6 py-4 text-sm text-gray-900 capitalize">${prato.categoria || '-'}</td>
-            <td class="px-6 py-4 text-sm font-semibold text-green-700">R$ ${prato.preco.toFixed(2)}</td>
-            <td class="px-6 py-4 text-sm text-gray-900">R$ ${custo.toFixed(2)}</td>
+            <td class="px-6 py-4 text-sm font-semibold text-green-700">R$ ${(prato.preco || 0).toFixed(2)}</td>
+            <td class="px-6 py-4 text-sm text-gray-900">R$ ${(custo || 0).toFixed(2)}</td>
             <td class="px-6 py-4 text-sm ${margem >= 30 ? 'text-green-600' : margem >= 15 ? 'text-yellow-600' : 'text-red-600'} font-medium">
-                ${margem.toFixed(1)}%
+                ${(margem || 0).toFixed(1)}%
             </td>
             <td class="px-6 py-4">
                 <span class="px-2 py-1 text-xs font-medium rounded-full ${statusClass}">
