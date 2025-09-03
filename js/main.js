@@ -2541,49 +2541,125 @@ const fatoresConversao = {
     // Volume  
     'l-ml': 1000,
     'ml-l': 0.001,
-    // Unidades (sem conversão)
+    // Unidades (sem conversão automática)
     'un-un': 1,
     'cx-cx': 1,
-    'pc-pc': 1
+    'pc-pc': 1,
+    'dz-dz': 1,
+    'sc-sc': 1,
+    'bd-bd': 1,
+    'fr-fr': 1,
+    // Dúzia para unidade
+    'dz-un': 12,
+    'un-dz': 1/12
 };
 
 function obterFatorConversao(unidadeOrigem, unidadeDestino) {
     if (unidadeOrigem === unidadeDestino) return 1;
     
     const chave = `${unidadeOrigem}-${unidadeDestino}`;
-    return fatoresConversao[chave] || 1;
+    return fatoresConversao[chave] || null; // null indica que precisa de conversão personalizada
 }
 
 function atualizarDadosConversao(item) {
     document.getElementById('quantidadeOriginal').value = item.quantidade;
-    document.getElementById('unidadeOriginal').textContent = item.unidade;
+    document.getElementById('unidadeOriginal').value = mapearUnidade(item.unidade);
     document.getElementById('quantidadeConvertida').value = item.quantidade;
     document.getElementById('unidadeConvertida').value = mapearUnidade(item.unidade);
     document.getElementById('valorUnitarioConvertido').value = item.valorUnitario.toFixed(2);
+    document.getElementById('valorUnitarioConvertido').setAttribute('data-original', item.valorUnitario);
     document.getElementById('fatorConversao').textContent = '1';
     document.getElementById('valorTotalConvertido').textContent = item.valorTotal.toFixed(2);
+    document.getElementById('tipoConversao').textContent = 'Sem conversão';
+    
+    // Limpar campos de conversão personalizada
+    document.getElementById('pesoUnidade').value = '';
+    document.getElementById('unidadePeso').value = 'g';
 }
 
 function aplicarConversaoAutomatica() {
     const quantidadeOriginal = parseFloat(document.getElementById('quantidadeOriginal').value) || 0;
-    const unidadeOriginal = document.getElementById('unidadeOriginal').textContent;
+    const unidadeOriginal = document.getElementById('unidadeOriginal').value;
     const unidadeDestino = document.getElementById('unidadeConvertida').value;
     const valorUnitarioOriginal = parseFloat(document.getElementById('valorUnitarioConvertido').getAttribute('data-original')) || 
                                  parseFloat(document.getElementById('valorUnitarioConvertido').value) || 0;
     
-    // Armazenar valor original se ainda não foi feito
-    if (!document.getElementById('valorUnitarioConvertido').getAttribute('data-original')) {
-        document.getElementById('valorUnitarioConvertido').setAttribute('data-original', valorUnitarioOriginal);
+    const fator = obterFatorConversao(unidadeOriginal, unidadeDestino);
+    
+    if (fator !== null) {
+        // Conversão automática disponível
+        const quantidadeConvertida = quantidadeOriginal * fator;
+        const valorUnitarioConvertido = fator !== 0 ? valorUnitarioOriginal / fator : valorUnitarioOriginal;
+        
+        document.getElementById('quantidadeConvertida').value = quantidadeConvertida.toFixed(3);
+        document.getElementById('valorUnitarioConvertido').value = valorUnitarioConvertido.toFixed(2);
+        document.getElementById('fatorConversao').textContent = fator.toFixed(3);
+        document.getElementById('valorTotalConvertido').textContent = (quantidadeConvertida * valorUnitarioConvertido).toFixed(2);
+        document.getElementById('tipoConversao').textContent = 'Automática';
+        
+        // Limpar conversão personalizada
+        document.getElementById('pesoUnidade').value = '';
+    } else {
+        // Conversão personalizada necessária
+        document.getElementById('quantidadeConvertida').value = quantidadeOriginal;
+        document.getElementById('valorUnitarioConvertido').value = valorUnitarioOriginal.toFixed(2);
+        document.getElementById('fatorConversao').textContent = '1';
+        document.getElementById('valorTotalConvertido').textContent = (quantidadeOriginal * valorUnitarioOriginal).toFixed(2);
+        document.getElementById('tipoConversao').textContent = 'Personalizada necessária';
+    }
+}
+
+function aplicarConversaoPersonalizada() {
+    const quantidadeOriginal = parseFloat(document.getElementById('quantidadeOriginal').value) || 0;
+    const unidadeOriginal = document.getElementById('unidadeOriginal').value;
+    const unidadeDestino = document.getElementById('unidadeConvertida').value;
+    const pesoUnidade = parseFloat(document.getElementById('pesoUnidade').value) || 0;
+    const unidadePeso = document.getElementById('unidadePeso').value;
+    const valorUnitarioOriginal = parseFloat(document.getElementById('valorUnitarioConvertido').getAttribute('data-original')) || 
+                                 parseFloat(document.getElementById('valorUnitarioConvertido').value) || 0;
+    
+    if (pesoUnidade === 0) return;
+    
+    let quantidadeConvertida = 0;
+    let fator = 1;
+    
+    // Exemplos de conversão personalizada:
+    // 10 unidades × 500g cada = 5000g = 5kg
+    // 1 dúzia × 60g cada = 720g
+    // 1 caixa × 2kg cada = 2kg
+    
+    if (unidadeOriginal === 'un' || unidadeOriginal === 'dz' || unidadeOriginal === 'cx' || 
+        unidadeOriginal === 'pc' || unidadeOriginal === 'sc' || unidadeOriginal === 'bd' || unidadeOriginal === 'fr') {
+        
+        // Converter o peso por unidade para a unidade de destino
+        let pesoTotalOriginal = pesoUnidade; // peso em unidadePeso
+        
+        // Converter para unidade de destino se necessário
+        const fatorPeso = obterFatorConversao(unidadePeso, unidadeDestino);
+        if (fatorPeso !== null) {
+            pesoTotalOriginal = pesoUnidade * fatorPeso;
+        } else if (unidadePeso !== unidadeDestino) {
+            // Se não conseguir converter automaticamente, avisar
+            document.getElementById('tipoConversao').textContent = 'Erro: Unidades incompatíveis';
+            return;
+        }
+        
+        quantidadeConvertida = quantidadeOriginal * pesoTotalOriginal;
+        fator = quantidadeConvertida / quantidadeOriginal;
+        
+    } else {
+        // Para outras conversões, usar o peso como fator direto
+        quantidadeConvertida = quantidadeOriginal * pesoUnidade;
+        fator = pesoUnidade;
     }
     
-    const fator = obterFatorConversao(unidadeOriginal, unidadeDestino);
-    const quantidadeConvertida = quantidadeOriginal * fator;
     const valorUnitarioConvertido = fator !== 0 ? valorUnitarioOriginal / fator : valorUnitarioOriginal;
     
     document.getElementById('quantidadeConvertida').value = quantidadeConvertida.toFixed(3);
     document.getElementById('valorUnitarioConvertido').value = valorUnitarioConvertido.toFixed(2);
     document.getElementById('fatorConversao').textContent = fator.toFixed(3);
     document.getElementById('valorTotalConvertido').textContent = (quantidadeConvertida * valorUnitarioConvertido).toFixed(2);
+    document.getElementById('tipoConversao').textContent = `Personalizada (${pesoUnidade}${unidadePeso}/${unidadeOriginal})`;
 }
 
 function calcularConversao() {
@@ -2600,6 +2676,7 @@ function calcularConversao() {
     document.getElementById('valorUnitarioConvertido').value = valorUnitarioConvertido.toFixed(2);
     document.getElementById('fatorConversao').textContent = fator.toFixed(3);
     document.getElementById('valorTotalConvertido').textContent = (quantidadeConvertida * valorUnitarioConvertido).toFixed(2);
+    document.getElementById('tipoConversao').textContent = 'Manual';
 }
 
 function carregarDadosInsumoParaEdicao(insumoId) {
@@ -2623,9 +2700,19 @@ function mapearUnidade(unidadeXML) {
         'ML': 'ml',
         'UN': 'un',
         'UND': 'un',
+        'UNID': 'un',
         'PC': 'pc',
         'PCT': 'pc',
-        'CX': 'cx'
+        'CX': 'cx',
+        'CAIXA': 'cx',
+        'DZ': 'dz',
+        'DUZIA': 'dz',
+        'SC': 'sc',
+        'SACO': 'sc',
+        'BD': 'bd',
+        'BANDEJA': 'bd',
+        'FR': 'fr',
+        'FARDO': 'fr'
     };
     
     return mapeamento[unidadeXML.toUpperCase()] || 'un';
