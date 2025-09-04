@@ -676,7 +676,7 @@
  
  <!-- Botão Adicionar Ficha Técnica -->
  <div class="mb-6">
- <button onclick="showModal('fichaModal')" class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors flex items-center">
+ <button onclick="showModal('fichaModal')" class="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center">
  <i data-lucide="plus" class="h-5 w-5 mr-2"></i>
  Adicionar Ficha Técnica
  </button>
@@ -842,7 +842,7 @@
  Cancelar
  </button>
  <button type="submit" 
- class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+ class="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700">
  Salvar Ficha Técnica
  </button>
  </div>
@@ -863,7 +863,7 @@
  <p class="text-gray-500 mb-4">Arraste o arquivo XML aqui ou clique para selecionar</p>
  <input type="file" id="xmlFileInput" accept=".xml" class="hidden">
  <button type="button" onclick="document.getElementById('xmlFileInput').click()" 
- class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700">
+ class="bg-orange-600 text-white px-4 py-2 rounded-md hover:bg-orange-700">
  Selecionar Arquivo
  </button>
  </div>
@@ -939,33 +939,72 @@
 
  <div id="configuracoes" class="view">
  <h2 class="text-3xl font-bold mb-6 text-gray-900">Configurações</h2>
- <div class="bg-white p-6 rounded-lg shadow-md max-w-lg mx-auto">
- <div class="space-y-6">
- <div>
- <h3 class="text-lg font-medium text-gray-900">Configurações Padrão</h3>
- <div class="mt-4 space-y-4">
- <div>
- <label for="defaultTaxaPerca" class="block text-sm font-medium text-gray-700">Taxa de Perca Padrão (%)</label>
- <input type="number" id="defaultTaxaPerca" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
- <small class="text-gray-500">Valor padrão para taxa de perca ao cadastrar novos insumos</small>
- </div>
- <div>
- <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700">Custos de Produção Padrão (%)</label>
- <input type="number" id="defaultCustoFinalizacao" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
- <small class="text-gray-500">Valor padrão para custos de produção ao cadastrar novas fichas técnicas e pratos</small>
- </div>
- <div>
-                     <label for="defaultMargemLucro" class="block text-sm font-medium text-gray-700">Margem de Lucro Padrão (%) - Apenas para Pratos</label>
- <input type="number" id="defaultMargemLucro" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
- </div>
- </div>
- </div>
- </div>
- <div class="mt-8 text-right">
- <button onclick="salvarConfiguracoes()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 flex items-center shadow-sm transition-colors inline-flex">
- <i data-lucide="save" class="h-5 w-5 mr-2"></i>Salvar Configurações
- </button>
- </div>
+ 
+ <!-- Grid para cards -->
+ <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+     
+     <!-- Card Configurações Padrão -->
+     <div class="bg-white p-6 rounded-lg shadow-md">
+         <div class="space-y-6">
+             <div>
+                 <h3 class="text-lg font-medium text-gray-900">Configurações Padrão</h3>
+                 <div class="mt-4 space-y-4">
+                     <div>
+                         <label for="defaultTaxaPerca" class="block text-sm font-medium text-gray-700">Taxa de Perca Padrão (%)</label>
+                         <input type="number" id="defaultTaxaPerca" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                         <small class="text-gray-500">Valor padrão para taxa de perca ao cadastrar novos insumos</small>
+                     </div>
+                     <div>
+                         <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700">Custos de Produção Padrão (%)</label>
+                         <input type="number" id="defaultCustoFinalizacao" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                         <small class="text-gray-500">Valor padrão para custos de produção ao cadastrar novas fichas técnicas e pratos</small>
+                     </div>
+                     <div>
+                         <label for="defaultMargemLucro" class="block text-sm font-medium text-gray-700">Margem de Lucro Padrão (%) - Apenas para Pratos</label>
+                         <input type="number" id="defaultMargemLucro" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                     </div>
+                 </div>
+             </div>
+         </div>
+         <div class="mt-6 text-right">
+             <button onclick="salvarConfiguracoes()" class="bg-orange-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-orange-700 flex items-center shadow-sm transition-colors inline-flex">
+                 <i data-lucide="save" class="h-5 w-5 mr-2"></i>Salvar Configurações
+             </button>
+         </div>
+     </div>
+     
+     <!-- Card Gestão de Categorias -->
+     <div class="bg-white p-6 rounded-lg shadow-md">
+         <div class="space-y-6">
+             <div>
+                 <h3 class="text-lg font-medium text-gray-900 mb-4 flex items-center">
+                     <i data-lucide="tag" class="h-5 w-5 mr-2"></i>
+                     Gestão de Categorias
+                 </h3>
+                 
+                 <!-- Adicionar Nova Categoria -->
+                 <div class="mb-4">
+                     <label for="novaCategoria" class="block text-sm font-medium text-gray-700 mb-2">Nova Categoria</label>
+                     <div class="flex gap-2">
+                         <input type="text" id="novaCategoria" placeholder="Nome da categoria" 
+                                class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                         <button onclick="adicionarCategoria()" class="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 transition-colors">
+                             <i data-lucide="plus" class="h-4 w-4"></i>
+                         </button>
+                     </div>
+                 </div>
+                 
+                 <!-- Lista de Categorias -->
+                 <div>
+                     <label class="block text-sm font-medium text-gray-700 mb-2">Categorias Cadastradas</label>
+                     <div id="listaCategorias" class="max-h-64 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-2">
+                         <!-- Categorias serão inseridas aqui dinamicamente -->
+                     </div>
+                 </div>
+             </div>
+         </div>
+     </div>
+     
  </div>
  </div>
  </main>
@@ -990,11 +1029,19 @@
                 <input type="hidden" id="insumoId">
                 
                 <!-- Informações Básicas -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Nome do Insumo *</label>
                         <input type="text" id="insumoNome" required 
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Categoria</label>
+                        <select id="insumoCategoria" 
+                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                            <option value="">Selecione uma categoria</option>
+                            <!-- Categorias serão carregadas dinamicamente -->
+                        </select>
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Unidade Padrão *</label>
@@ -1019,8 +1066,25 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">Taxa de Perca Padrão (%)</label>
                         <input type="number" id="insumoTaxaPerca" step="0.1" min="0" max="100" 
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                               placeholder="Ex: 5.0">
+                               placeholder="Ex: 5.0" onchange="atualizarValorComPerda()">
                         <small class="text-gray-500">Taxa de perda típica deste insumo durante o preparo</small>
+                    </div>
+                </div>
+
+                <!-- Valores e Custos -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Valor Unitário Base (R$)</label>
+                        <input type="number" id="insumoValorUnitario" step="0.01" min="0" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
+                               placeholder="Ex: 15.50" onchange="atualizarValorComPerda()">
+                        <small class="text-gray-500">Valor de compra por unidade</small>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Valor Final com Perda (R$)</label>
+                        <input type="number" id="insumoValorFinal" step="0.01" min="0" readonly
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none text-center font-medium text-green-700">
+                        <small class="text-gray-500">Valor ajustado considerando a taxa de perda</small>
                     </div>
                 </div>
 
@@ -1262,7 +1326,7 @@
                         Cancelar
                     </button>
                     <button type="button" onclick="confirmarConversao()" 
-                            class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium order-1 sm:order-2">
+                            class="flex-1 px-4 py-2.5 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors font-medium order-1 sm:order-2">
                         Confirmar
                     </button>
                 </div>
@@ -1310,7 +1374,7 @@
                     Cancelar
                 </button>
                 <button type="button" onclick="confirmarVinculacao()" 
-                        class="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
+                        class="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700">
                     Confirmar
                 </button>
             </div>

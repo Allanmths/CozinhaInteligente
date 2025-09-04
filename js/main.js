@@ -24,6 +24,7 @@ let isFirebaseReady = false;
 
 // --- BANCO DE DADOS ---
 let insumosDB = [], comprasDB = [], fichasTecnicasDB = [], pratosDB = [], configuracoesDB = {}, fornecedoresDB = [];
+let categoriasDB = []; // Array para categorias de insumos
 let insumosParaRevisao = [];
 const conversionFactors = { 'kg': 1000, 'g': 1, 'l': 1000, 'ml': 1 };
 let charts = {};
@@ -375,6 +376,8 @@ function loadLocalData() {
         { id: '12', nome: 'Alho', unidade: 'kg', taxaPerca: 10, categoria: 'vegetais' }
     ];
     
+    categoriasDB = JSON.parse(localStorage.getItem('categoriasDB')) || [];
+    
     comprasDB = JSON.parse(localStorage.getItem('comprasDB')) || [
         { id: '1', insumoMestreId: '1', data: '2024-08-20', preco: 8.50, quantidade: 1, perdaPercentual: 0, fornecedor: { nome: 'Hortifruti Frescor' } },
         { id: '2', insumoMestreId: '2', data: '2024-08-20', preco: 5.50, quantidade: 1, perdaPercentual: 10, fornecedor: { nome: 'Hortifruti Frescor' } },
@@ -504,6 +507,12 @@ function saveToLocalStorage() {
     localStorage.setItem('pratosDB', JSON.stringify(pratosDB));
     localStorage.setItem('configuracoesDB', JSON.stringify(configuracoesDB));
     localStorage.setItem('fornecedoresDB', JSON.stringify(fornecedoresDB));
+    localStorage.setItem('categoriasDB', JSON.stringify(categoriasDB));
+}
+
+// Função de atalho para salvar dados
+function salvarDados() {
+    saveToLocalStorage();
 }
 
 // --- FUNÇÕES PRINCIPAIS ---
@@ -2087,6 +2096,9 @@ function initializeApp() {
     // Tentar inicializar Firebase
     initializeFirebase();
     
+    // Carregar categorias
+    carregarCategorias();
+    
     // Fallback para localStorage se Firebase falhar
     setTimeout(() => {
         if (!isFirebaseReady) {
@@ -3119,5 +3131,105 @@ function atualizarResumoItem() {
         `;
         
         resumoElement.innerHTML = html;
+    }
+}
+
+// === GESTÃO DE CATEGORIAS ===
+function carregarCategorias() {
+    const listaCategorias = document.getElementById('listaCategorias');
+    const selectCategoria = document.getElementById('insumoCategoria');
+    
+    if (!listaCategorias || !selectCategoria) return;
+    
+    // Categorias padrão se não existir nenhuma
+    if (categoriasDB.length === 0) {
+        categoriasDB = [
+            'Carnes',
+            'Vegetais',
+            'Frutas',
+            'Laticínios',
+            'Grãos e Cereais',
+            'Temperos e Condimentos',
+            'Bebidas',
+            'Doces e Sobremesas'
+        ];
+        salvarDados();
+    }
+    
+    // Atualizar lista visual
+    listaCategorias.innerHTML = '';
+    categoriasDB.forEach((categoria, index) => {
+        const categoriaElement = document.createElement('div');
+        categoriaElement.className = 'flex items-center justify-between p-2 bg-gray-50 rounded border';
+        categoriaElement.innerHTML = `
+            <span class="text-sm text-gray-700">${categoria}</span>
+            <button onclick="removerCategoria(${index})" class="text-red-500 hover:text-red-700">
+                <i data-lucide="trash-2" class="h-4 w-4"></i>
+            </button>
+        `;
+        listaCategorias.appendChild(categoriaElement);
+    });
+    
+    // Atualizar select do modal
+    selectCategoria.innerHTML = '<option value="">Selecione uma categoria</option>';
+    categoriasDB.forEach(categoria => {
+        const option = document.createElement('option');
+        option.value = categoria;
+        option.textContent = categoria;
+        selectCategoria.appendChild(option);
+    });
+    
+    // Inicializar ícones Lucide
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+function adicionarCategoria() {
+    const input = document.getElementById('novaCategoria');
+    const categoria = input.value.trim();
+    
+    if (!categoria) {
+        showErrorMessage('Digite o nome da categoria');
+        return;
+    }
+    
+    if (categoriasDB.includes(categoria)) {
+        showErrorMessage('Esta categoria já existe');
+        return;
+    }
+    
+    categoriasDB.push(categoria);
+    input.value = '';
+    salvarDados();
+    carregarCategorias();
+    showSuccessMessage('Categoria adicionada com sucesso!');
+}
+
+function removerCategoria(index) {
+    if (confirm('Tem certeza que deseja remover esta categoria?')) {
+        categoriasDB.splice(index, 1);
+        salvarDados();
+        carregarCategorias();
+        showSuccessMessage('Categoria removida com sucesso!');
+    }
+}
+
+// === FUNÇÕES MELHORADAS PARA APLICAR TAXA DE PERDA ===
+function calcularValorComPerda(valorUnitario, taxaPerca) {
+    // Aplicar taxa de perda no valor unitário
+    // Se temos 10% de perda, o valor real deve ser 10% maior
+    const fatorPerda = 1 + (taxaPerca / 100);
+    return valorUnitario * fatorPerda;
+}
+
+function atualizarValorComPerda() {
+    const valorUnitario = parseFloat(document.getElementById('insumoValorUnitario').value) || 0;
+    const taxaPerca = parseFloat(document.getElementById('insumoTaxaPerca').value) || 0;
+    const campoValorFinal = document.getElementById('insumoValorFinal');
+    
+    if (campoValorFinal) {
+        const valorFinal = calcularValorComPerda(valorUnitario, taxaPerca);
+        campoValorFinal.value = valorFinal.toFixed(4);
     }
 }
