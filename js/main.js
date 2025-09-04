@@ -29,6 +29,27 @@ let insumosParaRevisao = [];
 const conversionFactors = { 'kg': 1000, 'g': 1, 'l': 1000, 'ml': 1 };
 let charts = {};
 
+// === TRATAMENTO DE ERROS E LOGS ===
+function logError(message, error = null) {
+    console.warn(`[CozinhaInteligente] ${message}`, error || '');
+}
+
+function suppressExtensionErrors() {
+    // Suprimir erros de extensões do navegador
+    const originalError = window.console.error;
+    window.console.error = function(...args) {
+        const errorStr = args.join(' ').toLowerCase();
+        if (errorStr.includes('extension') || 
+            errorStr.includes('ethereum') || 
+            errorStr.includes('runtime.lasterror') ||
+            errorStr.includes('sender: failed') ||
+            errorStr.includes('evmask')) {
+            return; // Ignorar erros de extensões
+        }
+        originalError.apply(console, args);
+    };
+}
+
 // --- FUNÇÕES DE FIREBASE ---
 async function initializeFirebase() {
     if (!firebaseServices) {
@@ -88,7 +109,7 @@ async function loadFirebaseData() {
             configuracoesDB = { id: configSnap.docs[0].id, ...configSnap.docs[0].data() };
         } else {
             // Criar configurações padrão
-            configuracoesDB = { taxaPerca: 5, custoFinalizacao: 10, margemLucro: 200 };
+            configuracoesDB = { defaultTaxaPerca: 5, custoFinalizacao: 10, margemLucro: 200 };
             const docRef = await addDoc(collection(db, 'configuracoes'), configuracoesDB);
             configuracoesDB.id = docRef.id;
         }
@@ -488,7 +509,7 @@ function loadLocalData() {
         }
     ];
     
-    configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { taxaPerca: 5, custoFinalizacao: 10, margemLucro: 200 };
+    configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { defaultTaxaPerca: 5, custoFinalizacao: 10, margemLucro: 200 };
     fornecedoresDB = JSON.parse(localStorage.getItem('fornecedoresDB')) || [];
     
     // Salvar dados atualizados para garantir consistência
@@ -1877,7 +1898,7 @@ function renderConfiguracoes() {
         const defaultCustoFinalizacao = document.getElementById('defaultCustoFinalizacao');
         const defaultMargemLucro = document.getElementById('defaultMargemLucro');
         
-        if (defaultTaxaPerca) defaultTaxaPerca.value = configuracoesDB.taxaPerca || 5;
+        if (defaultTaxaPerca) defaultTaxaPerca.value = configuracoesDB.defaultTaxaPerca || 5;
         if (defaultCustoFinalizacao) defaultCustoFinalizacao.value = configuracoesDB.custoFinalizacao || 10;
         if (defaultMargemLucro) defaultMargemLucro.value = configuracoesDB.margemLucro || 200;
     }
@@ -1888,7 +1909,7 @@ async function salvarConfiguracoes() {
     const custoFinalizacao = parseFloat(document.getElementById('defaultCustoFinalizacao').value) || 0;
     const margemLucro = parseFloat(document.getElementById('defaultMargemLucro').value) || 0;
     
-    configuracoesDB.taxaPerca = taxaPerca;
+    configuracoesDB.defaultTaxaPerca = taxaPerca;
     configuracoesDB.custoFinalizacao = custoFinalizacao;
     configuracoesDB.margemLucro = margemLucro;
     
@@ -2093,6 +2114,9 @@ function deleteInsumo(id) {
 
 // --- INICIALIZAÇÃO DA APLICAÇÃO ---
 function initializeApp() {
+    // Suprimir erros de extensões do navegador
+    suppressExtensionErrors();
+    
     // Tentar inicializar Firebase
     initializeFirebase();
     
@@ -2102,7 +2126,7 @@ function initializeApp() {
     // Fallback para localStorage se Firebase falhar
     setTimeout(() => {
         if (!isFirebaseReady) {
-            console.log('Usando localStorage como fallback');
+            logError('Firebase não disponível, usando localStorage');
             loadLocalData();
             carregarCategorias(); // Carregar novamente após dados locais
             renderDashboard();
@@ -3025,16 +3049,52 @@ function renderHistoricoImportacoes() {
             </td>
             <td class="px-4 py-3 text-sm text-gray-900">R$ ${historico.valorTotal.toFixed(2)}</td>
             <td class="px-4 py-3 text-sm text-gray-900">
-                <button type="button" onclick="verDetalhesHistorico('${historico.id}')" 
-                        class="text-blue-600 hover:text-blue-800">
-                    <i data-lucide="eye" class="h-4 w-4"></i>
-                </button>
+                <div class="flex gap-2">
+                    <button type="button" onclick="verDetalhesHistorico('${historico.id}')" 
+                            class="text-blue-600 hover:text-blue-800" title="Ver detalhes">
+                        <i data-lucide="eye" class="h-4 w-4"></i>
+                    </button>
+                    <button type="button" onclick="excluirImportacao('${historico.id}')" 
+                            class="text-red-600 hover:text-red-800" title="Excluir importação">
+                        <i data-lucide="trash-2" class="h-4 w-4"></i>
+                    </button>
+                </div>
             </td>
         `;
         tbody.appendChild(row);
     });
     
     lucide.createIcons();
+}
+
+function excluirImportacao(historicoId) {
+    const historico = historicoImportacoes.find(h => h.id === historicoId);
+    if (!historico) return;
+    
+    if (confirm(`Tem certeza que deseja excluir a importação da nota ${historico.numeroNota} do fornecedor ${historico.fornecedor}?\n\nEsta ação não pode ser desfeita.`)) {
+        // Remover do histórico
+        const index = historicoImportacoes.findIndex(h => h.id === historicoId);
+        if (index !== -1) {
+            historicoImportacoes.splice(index, 1);
+            
+            // Salvar no localStorage
+            localStorage.setItem('historicoImportacoes', JSON.stringify(historicoImportacoes));
+            
+            // Remover também do Firebase se estiver conectado
+            if (isFirebaseReady && firebaseServices) {
+                const { db, doc, deleteDoc } = firebaseServices;
+                try {
+                    deleteDoc(doc(db, 'historicoImportacoes', historicoId));
+                } catch (error) {
+                    console.warn('Erro ao excluir do Firebase:', error);
+                }
+            }
+            
+            // Atualizar interface
+            renderHistoricoImportacoes();
+            showSuccessMessage('Importação excluída com sucesso!');
+        }
+    }
 }
 
 function verDetalhesHistorico(historicoId) {
@@ -3304,6 +3364,12 @@ function calcularValorComPerdaVinculacao() {
     
     // Sempre usar a taxa padrão das configurações
     const taxaPerca = parseFloat(configuracoesDB.defaultTaxaPerca) || 0;
+    
+    console.log('DEBUG: calcularValorComPerdaVinculacao', {
+        valorNota,
+        taxaPerca,
+        configuracoesDB: configuracoesDB
+    });
     
     const valorFinal = calcularValorComPerda(valorNota, taxaPerca);
     const fatorPerda = 1 + (taxaPerca / 100);
