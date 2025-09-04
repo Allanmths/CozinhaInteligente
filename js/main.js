@@ -43,11 +43,64 @@ function suppressExtensionErrors() {
             errorStr.includes('ethereum') || 
             errorStr.includes('runtime.lasterror') ||
             errorStr.includes('sender: failed') ||
-            errorStr.includes('evmask')) {
+            errorStr.includes('evmask') ||
+            errorStr.includes('chrome-extension') ||
+            errorStr.includes('moz-extension')) {
             return; // Ignorar erros de extensões
         }
         originalError.apply(console, args);
     };
+}
+
+// Função auxiliar para verificar se elemento existe antes de usar
+function safeGetElement(id, defaultValue = null) {
+    try {
+        const element = document.getElementById(id);
+        if (!element) {
+            console.warn(`Elemento ${id} não encontrado`);
+            return defaultValue;
+        }
+        return element;
+    } catch (error) {
+        console.warn(`Erro ao buscar elemento ${id}:`, error);
+        return defaultValue;
+    }
+}
+
+// Função auxiliar para pegar valor de input com verificação
+function safeGetInputValue(id, defaultValue = '') {
+    const element = safeGetElement(id);
+    return element ? element.value : defaultValue;
+}
+
+// Função auxiliar para pegar valor numérico de input
+function safeGetNumericValue(id, defaultValue = 0) {
+    const element = safeGetElement(id);
+    if (!element) return defaultValue;
+    const value = parseFloat(element.value);
+    return isNaN(value) ? defaultValue : value;
+}
+
+// Verificar integridade da página
+function verificarIntegridadePagina() {
+    const elementosEssenciais = [
+        'dashboard', 'insumos', 'compras', 'fichas', 'pratos', 'importacao'
+    ];
+    
+    const elementosFaltantes = [];
+    elementosEssenciais.forEach(id => {
+        if (!safeGetElement(id)) {
+            elementosFaltantes.push(id);
+        }
+    });
+    
+    if (elementosFaltantes.length > 0) {
+        console.warn('Elementos não encontrados na página:', elementosFaltantes);
+        return false;
+    }
+    
+    console.log('Integridade da página verificada com sucesso');
+    return true;
 }
 
 // --- FUNÇÕES DE FIREBASE ---
@@ -2218,13 +2271,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // Aguardar um pouco para garantir que tudo carregou
     setTimeout(() => {
+        // Verificar integridade da página
+        if (!verificarIntegridadePagina()) {
+            console.error('Página com elementos faltantes - algumas funcionalidades podem não funcionar');
+        }
+        
         // Garantir que os ícones Lucide sejam criados
         if (typeof lucide !== 'undefined') {
             lucide.createIcons();
+        } else {
+            console.warn('Biblioteca Lucide não carregada');
         }
         
         // Inicializar dashboard por padrão apenas se o elemento existir
-        const dashboardElement = document.getElementById('dashboard');
+        const dashboardElement = safeGetElement('dashboard');
         if (dashboardElement) {
             showView('dashboard');
         }
@@ -2236,7 +2296,20 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         
         // Inicializar eventos de importação XML
-        initializeXMLImport();
+        try {
+            initializeXMLImport();
+        } catch (error) {
+            console.warn('Erro ao inicializar XML import:', error);
+        }
+        
+        // Inicializar eventos de vinculação
+        try {
+            inicializarEventosVinculacao();
+        } catch (error) {
+            console.warn('Erro ao inicializar eventos de vinculação:', error);
+        }
+        
+        console.log('Aplicação inicializada com sucesso');
     }, 200);
 });
 
@@ -2245,13 +2318,29 @@ document.addEventListener('DOMContentLoaded', () => {
 let xmlData = null;
 let itemsParaImportar = [];
 let vinculacoesInsumos = new Map(); // Para armazenar vinculações de itens com insumos
-let historicoImportacoes = JSON.parse(localStorage.getItem('historicoImportacoes') || '[]');
+
+// Carregamento seguro do histórico de importações
+let historicoImportacoes = [];
+try {
+    historicoImportacoes = JSON.parse(localStorage.getItem('historicoImportacoes') || '[]');
+    if (!Array.isArray(historicoImportacoes)) {
+        historicoImportacoes = [];
+        localStorage.setItem('historicoImportacoes', '[]');
+    }
+} catch (error) {
+    console.warn('Erro ao carregar histórico de importações:', error);
+    historicoImportacoes = [];
+    localStorage.setItem('historicoImportacoes', '[]');
+}
 
 function initializeXMLImport() {
-    const xmlFileInput = document.getElementById('xmlFileInput');
-    const uploadArea = document.getElementById('uploadArea');
+    const xmlFileInput = safeGetElement('xmlFileInput');
+    const uploadArea = safeGetElement('uploadArea');
     
-    if (!xmlFileInput || !uploadArea) return;
+    if (!xmlFileInput || !uploadArea) {
+        console.warn('Elementos de upload XML não encontrados');
+        return;
+    }
     
     // Eventos de drag and drop
     uploadArea.addEventListener('dragover', (e) => {
@@ -2282,6 +2371,7 @@ function initializeXMLImport() {
     
     // Carregar histórico de importações
     renderHistoricoImportacoes();
+    console.log('XML import inicializado com sucesso');
 }
 
 function handleXMLFile(file) {
@@ -3430,7 +3520,7 @@ function obterCategoriaVinculacao() {
 // === FUNÇÕES DE INICIALIZAÇÃO DE EVENTOS ===
 function inicializarEventosVinculacao() {
     // Adicionar listener para Enter no campo de nova categoria
-    const inputNovaCategoria = document.getElementById('novoInsumoCategoriaInput');
+    const inputNovaCategoria = safeGetElement('novoInsumoCategoriaInput');
     if (inputNovaCategoria) {
         inputNovaCategoria.addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
@@ -3440,13 +3530,18 @@ function inicializarEventosVinculacao() {
                     categoriasDB.push(categoria);
                     salvarDados();
                     carregarCategoriasVinculacao();
-                    document.getElementById('novoInsumoCategoriaSelect').value = categoria;
+                    const selectCategoria = safeGetElement('novoInsumoCategoriaSelect');
+                    if (selectCategoria) {
+                        selectCategoria.value = categoria;
+                    }
                     this.classList.add('hidden');
                     this.value = '';
                     showSuccessMessage('Categoria adicionada: ' + categoria);
                 }
             }
         });
+    } else {
+        console.warn('Campo de nova categoria não encontrado');
     }
 }
 
