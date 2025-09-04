@@ -2104,6 +2104,7 @@ function initializeApp() {
         if (!isFirebaseReady) {
             console.log('Usando localStorage como fallback');
             loadLocalData();
+            carregarCategorias(); // Carregar novamente após dados locais
             renderDashboard();
             showFirebaseStatus(false);
         }
@@ -2537,10 +2538,13 @@ function abrirVinculacaoInsumo(index) {
     // Preencher campos do novo insumo com dados do item
     document.getElementById('novoInsumoNome').value = item.descricao;
     document.getElementById('novoInsumoUnidade').value = mapearUnidade(item.unidade);
-    document.getElementById('novoInsumoTaxaPerda').value = configuracoesDB.taxaPerca || 0;
+    document.getElementById('novoInsumoTaxaPerda').value = configuracoesDB.defaultTaxaPerca || 0;
     
     // Inicializar dados de conversão
     atualizarDadosConversao(item);
+    
+    // Preencher dados específicos para vinculação
+    preencherDadosVinculacao(item);
     
     showModal('vincularInsumoModal');
 }
@@ -2832,8 +2836,10 @@ function confirmarVinculacao() {
     } else if (opcaoSelecionada === 'novo') {
         const nome = document.getElementById('novoInsumoNome').value.trim();
         const unidade = document.getElementById('novoInsumoUnidade').value;
-        const categoria = document.getElementById('novoInsumoCategoria').value.trim();
+        const categoria = obterCategoriaVinculacao();
         const taxaPerda = parseFloat(document.getElementById('novoInsumoTaxaPerda').value) || 0;
+        const valorUnitarioNota = parseFloat(document.getElementById('valorUnitarioNota').value) || 0;
+        const valorFinalComPerda = parseFloat(document.getElementById('valorFinalComPerda').value) || valorUnitarioNota;
         
         if (!nome) {
             showAlert('Erro', 'Digite o nome do insumo.', 'error');
@@ -2847,6 +2853,8 @@ function confirmarVinculacao() {
             unidade: unidadeConvertida, // Usar unidade convertida
             categoria: categoria || 'Importado',
             taxaPerda,
+            valorUnitario: valorUnitarioNota,
+            valorFinalComPerda: valorFinalComPerda,
             fornecedor: xmlData.fornecedor.nome,
             dataInclusao: new Date().toISOString()
         };
@@ -2854,20 +2862,23 @@ function confirmarVinculacao() {
         insumosDB.push(novoInsumo);
         saveToLocalStorage();
         
-        // Aplicar conversão ao item
+        // Aplicar conversão ao item - usar valor com perda se aplicável
         item.quantidade = quantidadeConvertida;
         item.unidade = unidadeConvertida;
-        item.valorUnitario = valorUnitarioConvertido;
-        item.valorTotal = quantidadeConvertida * valorUnitarioConvertido;
+        item.valorUnitario = valorFinalComPerda; // Usar valor ajustado com perda
+        item.valorUnitarioOriginal = valorUnitarioNota; // Manter valor original da nota
+        item.valorTotal = quantidadeConvertida * valorFinalComPerda;
         item.status = 'vinculado';
         item.insumoVinculado = novoInsumo;
         item.conversaoAplicada = {
             quantidadeOriginal: parseFloat(document.getElementById('quantidadeOriginal').value),
             unidadeOriginal: document.getElementById('unidadeOriginal').textContent,
-            fatorConversao: parseFloat(document.getElementById('fatorConversao').textContent)
+            fatorConversao: parseFloat(document.getElementById('fatorConversao').textContent),
+            taxaPerdaAplicada: taxaPerda,
+            valorComPerda: valorFinalComPerda
         };
         
-        showAlert('Sucesso', 'Novo insumo criado e vinculado com sucesso!', 'success');
+        showAlert('Sucesso', `Novo insumo "${nome}" criado e vinculado com taxa de perda de ${taxaPerda}%!`, 'success');
         
     } else if (opcaoSelecionada === 'ignorar') {
         item.status = 'ignorado';
@@ -3233,3 +3244,144 @@ function atualizarValorComPerda() {
         campoValorFinal.value = valorFinal.toFixed(4);
     }
 }
+
+// === FUNÇÕES PARA VINCULAÇÃO COM CATEGORIAS E TAXA DE PERDA ===
+function carregarCategoriasVinculacao() {
+    const select = document.getElementById('novoInsumoCategoriaSelect');
+    if (!select) return;
+    
+    // Limpar opções existentes (exceto as padrões)
+    select.innerHTML = `
+        <option value="">Selecione uma categoria</option>
+        <option value="nova">+ Nova categoria</option>
+    `;
+    
+    // Adicionar categorias existentes
+    categoriasDB.forEach(categoria => {
+        const option = document.createElement('option');
+        option.value = categoria;
+        option.textContent = categoria;
+        select.appendChild(option);
+    });
+}
+
+function alternarCampoNovaCategoria() {
+    const input = document.getElementById('novoInsumoCategoriaInput');
+    const select = document.getElementById('novoInsumoCategoriaSelect');
+    
+    if (input.classList.contains('hidden')) {
+        input.classList.remove('hidden');
+        select.value = 'nova';
+        input.focus();
+    } else {
+        input.classList.add('hidden');
+        input.value = '';
+        select.value = '';
+    }
+}
+
+function selecionarCategoriaVinculacao() {
+    const select = document.getElementById('novoInsumoCategoriaSelect');
+    const input = document.getElementById('novoInsumoCategoriaInput');
+    
+    if (select.value === 'nova') {
+        input.classList.remove('hidden');
+        input.focus();
+    } else {
+        input.classList.add('hidden');
+        input.value = '';
+    }
+}
+
+function calcularValorComPerdaVinculacao() {
+    const valorNota = parseFloat(document.getElementById('valorUnitarioNota').value) || 0;
+    let taxaPerca = parseFloat(document.getElementById('novoInsumoTaxaPerda').value);
+    
+    // Se não informou taxa de perda, usar a padrão das configurações
+    if (isNaN(taxaPerca) || taxaPerca === 0) {
+        taxaPerca = parseFloat(configuracoesDB.defaultTaxaPerca) || 0;
+        document.getElementById('novoInsumoTaxaPerda').value = taxaPerca;
+    }
+    
+    const valorFinal = calcularValorComPerda(valorNota, taxaPerca);
+    const fatorPerda = 1 + (taxaPerca / 100);
+    
+    // Atualizar campos
+    document.getElementById('valorFinalComPerda').value = valorFinal.toFixed(4);
+    document.getElementById('fatorPerdaDisplay').textContent = fatorPerda.toFixed(2);
+    document.getElementById('impactoCustoDisplay').textContent = `+${taxaPerca.toFixed(1)}%`;
+}
+
+function preencherDadosVinculacao(item) {
+    // Preencher dados do item da nota
+    const valorUnitario = item.valorUnitario || 0;
+    document.getElementById('valorUnitarioNota').value = valorUnitario.toFixed(2);
+    
+    // Carregar categorias no select
+    carregarCategoriasVinculacao();
+    
+    // Aplicar taxa de perda padrão se disponível
+    const taxaPadrao = parseFloat(configuracoesDB.defaultTaxaPerca) || 0;
+    if (taxaPadrao > 0) {
+        document.getElementById('novoInsumoTaxaPerda').value = taxaPadrao;
+    }
+    
+    // Calcular valor com perda
+    calcularValorComPerdaVinculacao();
+}
+
+function obterCategoriaVinculacao() {
+    const select = document.getElementById('novoInsumoCategoriaSelect');
+    const input = document.getElementById('novoInsumoCategoriaInput');
+    
+    if (select.value === 'nova' && input.value.trim()) {
+        const novaCategoria = input.value.trim();
+        
+        // Adicionar à lista de categorias se não existir
+        if (!categoriasDB.includes(novaCategoria)) {
+            categoriasDB.push(novaCategoria);
+            salvarDados();
+            carregarCategorias(); // Atualizar todas as listas de categorias
+        }
+        
+        return novaCategoria;
+    } else if (select.value && select.value !== 'nova') {
+        return select.value;
+    }
+    
+    return '';
+}
+
+// === FUNÇÕES DE INICIALIZAÇÃO DE EVENTOS ===
+function inicializarEventosVinculacao() {
+    // Adicionar listener para Enter no campo de nova categoria
+    const inputNovaCategoria = document.getElementById('novoInsumoCategoriaInput');
+    if (inputNovaCategoria) {
+        inputNovaCategoria.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const categoria = this.value.trim();
+                if (categoria && !categoriasDB.includes(categoria)) {
+                    categoriasDB.push(categoria);
+                    salvarDados();
+                    carregarCategoriasVinculacao();
+                    document.getElementById('novoInsumoCategoriaSelect').value = categoria;
+                    this.classList.add('hidden');
+                    this.value = '';
+                    showSuccessMessage('Categoria adicionada: ' + categoria);
+                }
+            }
+        });
+    }
+    
+    // Listener para mudanças no valor unitário da nota
+    const valorNotaField = document.getElementById('valorUnitarioNota');
+    if (valorNotaField) {
+        valorNotaField.addEventListener('change', calcularValorComPerdaVinculacao);
+    }
+}
+
+// Chamar na inicialização da aplicação
+document.addEventListener('DOMContentLoaded', function() {
+    inicializarEventosVinculacao();
+});
