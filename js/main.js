@@ -50,7 +50,9 @@ function suppressExtensionErrors() {
             errorStr.includes('script.bundle.js') ||
             errorStr.includes('content.js') ||
             errorStr.includes('cannot redefine property') ||
-            errorStr.includes('failed to get initial state')) {
+            errorStr.includes('failed to get initial state') ||
+            errorStr.includes('please report this bug') ||
+            errorStr.includes('uncaught typeerror') && errorStr.includes('ethereum')) {
             return; // Ignorar erros de extensões
         }
         originalError.apply(console, args);
@@ -66,6 +68,21 @@ function suppressExtensionErrors() {
             return; // Ignorar logs de extensões
         }
         originalLog.apply(console, args);
+    };
+
+    // Suprimir warnings relacionados ao Tailwind CSS e extensões
+    const originalWarn = window.console.warn;
+    window.console.warn = function(...args) {
+        const warnStr = args.join(' ').toLowerCase();
+        if (warnStr.includes('plugins=forms,typography') ||
+            warnStr.includes('aspect-ratio,line-clamp') ||
+            warnStr.includes('tailwind') ||
+            warnStr.includes('?plugins=') ||
+            warnStr.includes('script.bundle') ||
+            warnStr.includes('extension')) {
+            return; // Ignorar warnings de Tailwind e extensões
+        }
+        originalWarn.apply(console, args);
     };
 }
 

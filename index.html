@@ -5,8 +5,50 @@
  <meta name="viewport" content="width=device-width, initial-scale=1.0">
  <title>Sistema de Ficha Técnica de Cozinha</title>
  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
- <script src="https://cdn.tailwindcss.com?plugins=forms,typography,aspect-ratio,line-clamp"></script>
+ 
+ <!-- Supressão de erros precoce -->
  <script>
+ // Suprimir erros antes do carregamento das bibliotecas
+ (function() {
+   const originalError = window.console.error;
+   const originalWarn = window.console.warn;
+   
+   window.console.error = function(...args) {
+     const errorStr = args.join(' ').toLowerCase();
+     if (errorStr.includes('extension') || 
+         errorStr.includes('ethereum') || 
+         errorStr.includes('script.bundle') ||
+         errorStr.includes('evmask') ||
+         errorStr.includes('sender: failed') ||
+         errorStr.includes('cannot redefine property')) {
+       return;
+     }
+     originalError.apply(console, args);
+   };
+   
+   window.console.warn = function(...args) {
+     const warnStr = args.join(' ').toLowerCase();
+     if (warnStr.includes('plugins=') ||
+         warnStr.includes('tailwind') ||
+         warnStr.includes('aspect-ratio') ||
+         warnStr.includes('line-clamp')) {
+       return;
+     }
+     originalWarn.apply(console, args);
+   };
+ })();
+ </script>
+ 
+ <script src="https://cdn.tailwindcss.com"></script>
+ <script>
+ // Configuração do Tailwind com supressão de warnings
+ window.addEventListener('error', function(e) {
+   if (e.message && e.message.includes('plugins=')) {
+     e.preventDefault();
+     return false;
+   }
+ });
+ 
  tailwind.config = {
  theme: {
  extend: {
