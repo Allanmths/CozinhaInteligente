@@ -12,6 +12,7 @@
  (function() {
    const originalError = window.console.error;
    const originalWarn = window.console.warn;
+   const originalLog = window.console.log;
    
    window.console.error = function(...args) {
      const errorStr = args.join(' ').toLowerCase();
@@ -20,7 +21,10 @@
          errorStr.includes('script.bundle') ||
          errorStr.includes('evmask') ||
          errorStr.includes('sender: failed') ||
-         errorStr.includes('cannot redefine property')) {
+         errorStr.includes('cannot redefine property') ||
+         errorStr.includes('uncaught typeerror') ||
+         errorStr.includes('content.js') ||
+         errorStr.includes('please report this bug')) {
        return;
      }
      originalError.apply(console, args);
@@ -31,10 +35,24 @@
      if (warnStr.includes('plugins=') ||
          warnStr.includes('tailwind') ||
          warnStr.includes('aspect-ratio') ||
-         warnStr.includes('line-clamp')) {
+         warnStr.includes('line-clamp') ||
+         warnStr.includes('could not establish connection') ||
+         warnStr.includes('receiving end does not exist') ||
+         warnStr.includes('port is disconnected') ||
+         warnStr.includes('content.js')) {
        return;
      }
      originalWarn.apply(console, args);
+   };
+
+   window.console.log = function(...args) {
+     const logStr = args.join(' ').toLowerCase();
+     if (logStr.includes('firebase conectado') ||
+         logStr.includes('dom carregado') ||
+         logStr.includes('inicializando aplicação')) {
+       return;
+     }
+     originalLog.apply(console, args);
    };
  })();
  </script>
@@ -144,6 +162,7 @@
  .select-custom-arrow {
  transition: all 0.2s ease-in-out;
  cursor: pointer;
+ min-height: 40px;
  }
  
  .select-custom-arrow:hover {
@@ -157,10 +176,18 @@
  box-shadow: 0 0 0 3px rgba(255, 116, 0, 0.1);
  }
  
+ /* Padronização de altura para campos de conversão */
+ #conversaoUnidadesSection input,
+ #conversaoUnidadesSection select,
+ #conversaoUnidadesSection span.px-2 {
+ min-height: 40px;
+ }
+ 
  /* Responsividade melhorada para campos de conversão */
  @media (max-width: 640px) {
  .select-custom-arrow {
  font-size: 11px;
+ min-height: 36px;
  }
  
  #conversaoUnidadesSection {
@@ -172,8 +199,10 @@
  }
  
  #conversaoUnidadesSection input,
- #conversaoUnidadesSection select {
+ #conversaoUnidadesSection select,
+ #conversaoUnidadesSection span.px-2 {
  padding: 8px 6px;
+ min-height: 36px;
  }
  }
  
@@ -1443,7 +1472,7 @@
                         </label>
                         <div class="flex">
                             <input type="number" id="pesoUnidade" step="0.001" placeholder="Ex: 500"
-                                   class="flex-1 px-2 sm:px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-center text-sm"
+                                   class="flex-1 px-2 sm:px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-center text-xs sm:text-sm"
                                    onchange="aplicarConversaoPersonalizada()">
                             <select id="unidadePeso" onchange="aplicarConversaoPersonalizada()"
                                     class="w-14 sm:w-16 px-1 py-2 bg-white border border-l-0 border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-orange-500 text-xs sm:text-sm appearance-none bg-no-repeat bg-right select-custom-arrow" 
