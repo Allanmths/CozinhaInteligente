@@ -2538,7 +2538,6 @@ function abrirVinculacaoInsumo(index) {
     // Preencher campos do novo insumo com dados do item
     document.getElementById('novoInsumoNome').value = item.descricao;
     document.getElementById('novoInsumoUnidade').value = mapearUnidade(item.unidade);
-    document.getElementById('novoInsumoTaxaPerda').value = configuracoesDB.defaultTaxaPerca || 0;
     
     // Inicializar dados de conversão
     atualizarDadosConversao(item);
@@ -2837,7 +2836,10 @@ function confirmarVinculacao() {
         const nome = document.getElementById('novoInsumoNome').value.trim();
         const unidade = document.getElementById('novoInsumoUnidade').value;
         const categoria = obterCategoriaVinculacao();
-        const taxaPerda = parseFloat(document.getElementById('novoInsumoTaxaPerda').value) || 0;
+        
+        // Sempre usar a taxa padrão das configurações
+        const taxaPerda = parseFloat(configuracoesDB.defaultTaxaPerca) || 0;
+        
         const valorUnitarioNota = parseFloat(document.getElementById('valorUnitarioNota').value) || 0;
         const valorFinalComPerda = parseFloat(document.getElementById('valorFinalComPerda').value) || valorUnitarioNota;
         
@@ -2878,7 +2880,11 @@ function confirmarVinculacao() {
             valorComPerda: valorFinalComPerda
         };
         
-        showAlert('Sucesso', `Novo insumo "${nome}" criado e vinculado com taxa de perda de ${taxaPerda}%!`, 'success');
+        const mensagem = taxaPerda > 0 
+            ? `Novo insumo "${nome}" criado e vinculado com taxa de perda de ${taxaPerda}%!`
+            : `Novo insumo "${nome}" criado e vinculado com sucesso!`;
+        
+        showAlert('Sucesso', mensagem, 'success');
         
     } else if (opcaoSelecionada === 'ignorar') {
         item.status = 'ignorado';
@@ -3295,13 +3301,9 @@ function selecionarCategoriaVinculacao() {
 
 function calcularValorComPerdaVinculacao() {
     const valorNota = parseFloat(document.getElementById('valorUnitarioNota').value) || 0;
-    let taxaPerca = parseFloat(document.getElementById('novoInsumoTaxaPerda').value);
     
-    // Se não informou taxa de perda, usar a padrão das configurações
-    if (isNaN(taxaPerca) || taxaPerca === 0) {
-        taxaPerca = parseFloat(configuracoesDB.defaultTaxaPerca) || 0;
-        document.getElementById('novoInsumoTaxaPerda').value = taxaPerca;
-    }
+    // Sempre usar a taxa padrão das configurações
+    const taxaPerca = parseFloat(configuracoesDB.defaultTaxaPerca) || 0;
     
     const valorFinal = calcularValorComPerda(valorNota, taxaPerca);
     const fatorPerda = 1 + (taxaPerca / 100);
@@ -3310,6 +3312,12 @@ function calcularValorComPerdaVinculacao() {
     document.getElementById('valorFinalComPerda').value = valorFinal.toFixed(4);
     document.getElementById('fatorPerdaDisplay').textContent = fatorPerda.toFixed(2);
     document.getElementById('impactoCustoDisplay').textContent = `+${taxaPerca.toFixed(1)}%`;
+    
+    // Atualizar display da taxa padrão
+    const taxaPadraoDisplay = document.getElementById('taxaPerdaPadrao');
+    if (taxaPadraoDisplay) {
+        taxaPadraoDisplay.textContent = `${taxaPerca.toFixed(1)}%`;
+    }
 }
 
 function preencherDadosVinculacao(item) {
@@ -3320,10 +3328,11 @@ function preencherDadosVinculacao(item) {
     // Carregar categorias no select
     carregarCategoriasVinculacao();
     
-    // Aplicar taxa de perda padrão se disponível
+    // Mostrar taxa padrão das configurações
     const taxaPadrao = parseFloat(configuracoesDB.defaultTaxaPerca) || 0;
-    if (taxaPadrao > 0) {
-        document.getElementById('novoInsumoTaxaPerda').value = taxaPadrao;
+    const taxaPadraoDisplay = document.getElementById('taxaPerdaPadrao');
+    if (taxaPadraoDisplay) {
+        taxaPadraoDisplay.textContent = `${taxaPadrao.toFixed(1)}%`;
     }
     
     // Calcular valor com perda
@@ -3372,12 +3381,6 @@ function inicializarEventosVinculacao() {
                 }
             }
         });
-    }
-    
-    // Listener para mudanças no valor unitário da nota
-    const valorNotaField = document.getElementById('valorUnitarioNota');
-    if (valorNotaField) {
-        valorNotaField.addEventListener('change', calcularValorComPerdaVinculacao);
     }
 }
 
