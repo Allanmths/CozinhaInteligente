@@ -3044,3 +3044,80 @@ function formatDate(dateString) {
     
     return date.toLocaleDateString('pt-BR');
 }
+
+// === FUNÇÕES DOS BOTÕES DE CONVERSÃO ===
+function cancelarConversao() {
+    // Limpar campos de conversão
+    document.getElementById('quantidadeConvertida').value = '';
+    document.getElementById('pesoUnidade').value = '';
+    document.getElementById('valorUnitarioConvertido').value = '';
+    document.getElementById('fatorConversao').textContent = '1';
+    document.getElementById('valorTotalConvertido').textContent = '0.00';
+    document.getElementById('tipoConversao').textContent = 'Sem conversão';
+    
+    // Resetar unidades para os valores originais
+    const unidadeOriginal = document.getElementById('unidadeOriginal').value;
+    document.getElementById('unidadeConvertida').value = unidadeOriginal;
+    document.getElementById('quantidadeConvertida').value = document.getElementById('quantidadeOriginal').value;
+    
+    // Esconder seção de conversão se necessário
+    document.getElementById('conversaoUnidadesSection').style.display = 'none';
+}
+
+function confirmarConversao() {
+    const quantidadeConvertida = parseFloat(document.getElementById('quantidadeConvertida').value) || 0;
+    const valorUnitarioConvertido = parseFloat(document.getElementById('valorUnitarioConvertido').value) || 0;
+    const unidadeConvertida = document.getElementById('unidadeConvertida').value;
+    const fatorConversao = parseFloat(document.getElementById('fatorConversao').textContent) || 1;
+    
+    // Aplicar conversão aos dados do item atual
+    if (window.currentImportItem) {
+        window.currentImportItem.quantidadeConvertida = quantidadeConvertida;
+        window.currentImportItem.unidadeConvertida = unidadeConvertida;
+        window.currentImportItem.valorUnitarioConvertido = valorUnitarioConvertido;
+        window.currentImportItem.fatorConversao = fatorConversao;
+        window.currentImportItem.valorTotalConvertido = quantidadeConvertida * valorUnitarioConvertido;
+        
+        // Atualizar interface
+        showSuccessMessage('Conversão aplicada com sucesso!');
+        
+        // Esconder seção de conversão
+        document.getElementById('conversaoUnidadesSection').style.display = 'none';
+        
+        // Atualizar resumo do item se existir
+        atualizarResumoItem();
+    } else {
+        showErrorMessage('Erro: Nenhum item selecionado para conversão');
+    }
+}
+
+function atualizarResumoItem() {
+    if (!window.currentImportItem) return;
+    
+    const item = window.currentImportItem;
+    const resumoElement = document.getElementById('resumoItemAtual');
+    
+    if (resumoElement) {
+        let html = `
+            <div class="bg-blue-50 p-4 rounded-lg">
+                <h5 class="font-medium text-gray-900 mb-2">Item: ${item.descricao}</h5>
+                <div class="grid grid-cols-2 gap-2 text-sm">
+                    <div>Quantidade Original: ${item.quantidade} ${item.unidade}</div>
+                    <div>Valor Original: R$ ${item.valorUnitario.toFixed(2)}</div>
+        `;
+        
+        if (item.quantidadeConvertida && item.quantidadeConvertida !== item.quantidade) {
+            html += `
+                    <div class="text-green-600">Quantidade Convertida: ${item.quantidadeConvertida} ${item.unidadeConvertida}</div>
+                    <div class="text-green-600">Valor Convertido: R$ ${item.valorUnitarioConvertido.toFixed(2)}</div>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+        
+        resumoElement.innerHTML = html;
+    }
+}

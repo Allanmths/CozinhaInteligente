@@ -1156,14 +1156,15 @@
                 </h4>
                 
                 <!-- Primeira linha: Dados originais e conversão básica -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Quantidade da Nota Fiscal</label>
                         <div class="flex">
                             <input type="number" id="quantidadeOriginal" step="0.001" readonly
                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg bg-gray-100 focus:outline-none text-center">
                             <select id="unidadeOriginal" onchange="aplicarConversaoAutomatica()"
-                                    class="w-20 px-2 py-2 bg-white border border-l-0 border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                    class="w-24 px-2 py-2 bg-white border border-l-0 border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none bg-no-repeat bg-right" 
+                                    style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDFMNiA2TDExIDEiIHN0cm9rZT0iIzZCNzI4MCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K'); background-position: right 8px center; padding-right: 24px;">
                                 <option value="kg">kg</option>
                                 <option value="g">g</option>
                                 <option value="l">l</option>
@@ -1186,7 +1187,8 @@
                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                                    onchange="calcularConversao()">
                             <select id="unidadeConvertida" onchange="aplicarConversaoAutomatica()"
-                                    class="w-20 px-2 py-2 bg-white border border-l-0 border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                    class="w-24 px-2 py-2 bg-white border border-l-0 border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none bg-no-repeat bg-right" 
+                                    style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDFMNiA2TDExIDEiIHN0cm9rZT0iIzZCNzI4MCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K'); background-position: right 8px center; padding-right: 24px;">
                                 <option value="kg">kg</option>
                                 <option value="g">g</option>
                                 <option value="l">l</option>
@@ -1204,7 +1206,7 @@
                 </div>
                 
                 <!-- Segunda linha: Conversão personalizada e valor ajustado -->
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-4">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Peso/Volume por Unidade 
@@ -1215,7 +1217,8 @@
                                    class="flex-1 px-3 py-2 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-center"
                                    onchange="aplicarConversaoPersonalizada()">
                             <select id="unidadePeso" onchange="aplicarConversaoPersonalizada()"
-                                    class="w-16 px-1 py-2 bg-white border border-l-0 border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">
+                                    class="w-20 px-2 py-2 bg-white border border-l-0 border-gray-300 rounded-r-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm appearance-none bg-no-repeat bg-right" 
+                                    style="background-image: url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOCIgdmlld0JveD0iMCAwIDEyIDgiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+CjxwYXRoIGQ9Ik0xIDFMNiA2TDExIDEiIHN0cm9rZT0iIzZCNzI4MCIgc3Ryb2tlLXdpZHRoPSIxLjUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCIvPgo8L3N2Zz4K'); background-position: right 6px center; padding-right: 20px;">
                                 <option value="g">g</option>
                                 <option value="kg">kg</option>
                                 <option value="ml">ml</option>
@@ -1227,7 +1230,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Valor Unitário Ajustado</label>
                         <div class="flex">
-                            <span class="px-3 py-2 bg-gray-200 border border-gray-300 rounded-l-lg text-sm font-medium">R$</span>
+                            <span class="px-3 py-2 bg-gray-200 border border-gray-300 rounded-l-lg text-sm font-medium flex items-center">R$</span>
                             <input type="number" id="valorUnitarioConvertido" step="0.01" readonly
                                    class="flex-1 px-3 py-2 border border-l-0 border-gray-300 rounded-r-lg bg-gray-100 focus:outline-none text-center font-medium text-green-700">
                         </div>
@@ -1235,21 +1238,33 @@
                 </div>
                 
                 <!-- Terceira linha: Informações de resultado -->
-                <div class="bg-white rounded-lg p-3 border border-gray-200">
+                <div class="bg-white rounded-lg p-4 border border-gray-200">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
                         <div class="text-center">
-                            <div class="text-gray-500">Fator de Conversão</div>
-                            <div class="font-bold text-blue-600" id="fatorConversao">1</div>
+                            <div class="text-gray-500 mb-1">Fator de Conversão</div>
+                            <div class="font-bold text-blue-600 text-lg" id="fatorConversao">1</div>
                         </div>
                         <div class="text-center">
-                            <div class="text-gray-500">Valor Total</div>
-                            <div class="font-bold text-green-600">R$ <span id="valorTotalConvertido">0.00</span></div>
+                            <div class="text-gray-500 mb-1">Valor Total</div>
+                            <div class="font-bold text-green-600 text-lg">R$ <span id="valorTotalConvertido">0.00</span></div>
                         </div>
                         <div class="text-center">
-                            <div class="text-gray-500">Tipo de Conversão</div>
+                            <div class="text-gray-500 mb-1">Tipo de Conversão</div>
                             <div class="font-medium text-gray-700" id="tipoConversao">Sem conversão</div>
                         </div>
                     </div>
+                </div>
+                
+                <!-- Botões de Ação -->
+                <div class="flex flex-col sm:flex-row gap-3 mt-4">
+                    <button type="button" onclick="cancelarConversao()" 
+                            class="flex-1 px-4 py-2.5 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400 transition-colors font-medium order-2 sm:order-1">
+                        Cancelar
+                    </button>
+                    <button type="button" onclick="confirmarConversao()" 
+                            class="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium order-1 sm:order-2">
+                        Confirmar
+                    </button>
                 </div>
             </div>
             
