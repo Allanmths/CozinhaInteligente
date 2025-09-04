@@ -186,7 +186,8 @@
  transform: translateY(-1px);
  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
  }
- </style>
+ 
+ /* Estilos dos modais */
  .modal-content {
  background-color: white;
  margin: 2% auto;
@@ -196,7 +197,17 @@
  max-width: 800px;
  max-height: 90vh;
  overflow-y: auto;
+ position: relative;
  }
+ 
+ @media (max-width: 640px) {
+ .modal-content {
+ margin: 5% auto;
+ width: 95%;
+ max-height: 85vh;
+ }
+ }
+ 
  .modal-header {
  display: flex;
  justify-content: space-between;
@@ -204,12 +215,27 @@
  padding: 1.5rem 2rem;
  border-bottom: 1px solid #e5e7eb;
  }
+ 
+ @media (max-width: 640px) {
+ .modal-header {
+ padding: 1rem 1.5rem;
+ }
+ }
+ 
  .modal-body {
  padding: 2rem;
  }
+ 
+ @media (max-width: 640px) {
+ .modal-body {
+ padding: 1.5rem;
+ }
+ }
+ 
  .tab-content {
  margin-top: 1rem;
  }
+ 
  .active-tab {
  color: #f97316 !important;
  border-bottom-color: #f97316 !important;
@@ -1224,7 +1250,7 @@
 
 <!-- Modal Vincular Insumo -->
 <div id="vincularInsumoModal" class="modal">
-    <div class="modal-content max-w-2xl">
+    <div class="modal-content">
         <div class="modal-header">
             <h2 class="text-xl font-semibold text-gray-900">Vincular Item ao Insumo</h2>
             <button type="button" onclick="closeVincularInsumoModal()" class="text-gray-400 hover:text-gray-600">
