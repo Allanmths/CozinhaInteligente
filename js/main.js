@@ -1906,9 +1906,6 @@ function getUltimaCompra(insumoId) {
 }
 
 function renderInsumos() {
-    // Debug: verificar quantos insumos existem ao renderizar
-    console.log('Renderizando insumos. Total no banco:', insumosDB.length);
-    
     const s = document.getElementById('searchInput')?.value?.toLowerCase() || '';
     const f = document.getElementById('filterFornecedor')?.value || '';
     const u = document.getElementById('filterUnidade')?.value || '';
@@ -2774,6 +2771,10 @@ function aplicarConversaoAutomatica() {
         
         // Limpar conversão personalizada
         document.getElementById('pesoUnidade').value = '';
+        
+        // Aplicar conversão automaticamente aos dados do item
+        aplicarConversaoAoItem();
+        
     } else {
         // Conversão personalizada necessária
         document.getElementById('quantidadeConvertida').value = quantidadeOriginal;
@@ -2835,6 +2836,30 @@ function aplicarConversaoPersonalizada() {
     document.getElementById('fatorConversao').textContent = fator.toFixed(3);
     document.getElementById('valorTotalConvertido').textContent = (quantidadeConvertida * valorUnitarioConvertido).toFixed(2);
     document.getElementById('tipoConversao').textContent = `Personalizada (${pesoUnidade}${unidadePeso}/${unidadeOriginal})`;
+    
+    // Aplicar conversão automaticamente aos dados do item
+    aplicarConversaoAoItem();
+}
+
+function aplicarConversaoAoItem() {
+    // Aplicar conversão automaticamente aos dados do item atual
+    if (itemIndexParaVincular !== null && itemsParaImportar[itemIndexParaVincular]) {
+        const item = itemsParaImportar[itemIndexParaVincular];
+        const quantidadeConvertida = parseFloat(document.getElementById('quantidadeConvertida').value) || 0;
+        const valorUnitarioConvertido = parseFloat(document.getElementById('valorUnitarioConvertido').value) || 0;
+        const unidadeConvertida = document.getElementById('unidadeConvertida').value;
+        const fatorConversao = parseFloat(document.getElementById('fatorConversao').textContent) || 1;
+        
+        // Armazenar dados convertidos temporariamente no item
+        item.quantidadeConvertida = quantidadeConvertida;
+        item.unidadeConvertida = unidadeConvertida;
+        item.valorUnitarioConvertido = valorUnitarioConvertido;
+        item.fatorConversao = fatorConversao;
+        item.valorTotalConvertido = quantidadeConvertida * valorUnitarioConvertido;
+        
+        // Atualizar resumo do item se existir
+        atualizarResumoItem();
+    }
 }
 
 function calcularConversao() {
@@ -2940,10 +2965,10 @@ function confirmarVinculacao() {
     
     const item = itemsParaImportar[itemIndexParaVincular];
     
-    // Obter dados de conversão
-    const quantidadeConvertida = parseFloat(document.getElementById('quantidadeConvertida').value) || item.quantidade;
-    const unidadeConvertida = document.getElementById('unidadeConvertida').value;
-    const valorUnitarioConvertido = parseFloat(document.getElementById('valorUnitarioConvertido').value) || item.valorUnitario;
+    // Obter dados de conversão (já aplicados automaticamente)
+    const quantidadeConvertida = item.quantidadeConvertida || item.quantidade;
+    const unidadeConvertida = item.unidadeConvertida || document.getElementById('unidadeConvertida').value;
+    const valorUnitarioConvertido = item.valorUnitarioConvertido || item.valorUnitario;
     
     if (opcaoSelecionada === 'existente') {
         const insumoId = document.getElementById('insumoExistenteSelect').value;
@@ -3026,10 +3051,6 @@ function confirmarVinculacao() {
         
         insumosDB.push(novoInsumo);
         saveToLocalStorage();
-        
-        // Debug: verificar se o insumo foi realmente salvo
-        console.log('Novo insumo criado via XML:', novoInsumo);
-        console.log('Total de insumos após criação:', insumosDB.length);
         
         // Aplicar conversão ao item - usar valor com perda se aplicável
         item.quantidade = quantidadeConvertida;
@@ -3281,51 +3302,9 @@ function formatDate(dateString) {
     return date.toLocaleDateString('pt-BR');
 }
 
-// === FUNÇÕES DOS BOTÕES DE CONVERSÃO ===
-function cancelarConversao() {
-    // Limpar campos de conversão
-    document.getElementById('quantidadeConvertida').value = '';
-    document.getElementById('pesoUnidade').value = '';
-    document.getElementById('valorUnitarioConvertido').value = '';
-    document.getElementById('fatorConversao').textContent = '1';
-    document.getElementById('valorTotalConvertido').textContent = '0.00';
-    document.getElementById('tipoConversao').textContent = 'Sem conversão';
-    
-    // Resetar unidades para os valores originais
-    const unidadeOriginal = document.getElementById('unidadeOriginal').value;
-    document.getElementById('unidadeConvertida').value = unidadeOriginal;
-    document.getElementById('quantidadeConvertida').value = document.getElementById('quantidadeOriginal').value;
-    
-    // Esconder seção de conversão se necessário
-    document.getElementById('conversaoUnidadesSection').style.display = 'none';
-}
-
-function confirmarConversao() {
-    const quantidadeConvertida = parseFloat(document.getElementById('quantidadeConvertida').value) || 0;
-    const valorUnitarioConvertido = parseFloat(document.getElementById('valorUnitarioConvertido').value) || 0;
-    const unidadeConvertida = document.getElementById('unidadeConvertida').value;
-    const fatorConversao = parseFloat(document.getElementById('fatorConversao').textContent) || 1;
-    
-    // Aplicar conversão aos dados do item atual
-    if (window.currentImportItem) {
-        window.currentImportItem.quantidadeConvertida = quantidadeConvertida;
-        window.currentImportItem.unidadeConvertida = unidadeConvertida;
-        window.currentImportItem.valorUnitarioConvertido = valorUnitarioConvertido;
-        window.currentImportItem.fatorConversao = fatorConversao;
-        window.currentImportItem.valorTotalConvertido = quantidadeConvertida * valorUnitarioConvertido;
-        
-        // Atualizar interface
-        showSuccessMessage('Conversão aplicada com sucesso!');
-        
-        // Esconder seção de conversão
-        document.getElementById('conversaoUnidadesSection').style.display = 'none';
-        
-        // Atualizar resumo do item se existir
-        atualizarResumoItem();
-    } else {
-        showErrorMessage('Erro: Nenhum item selecionado para conversão');
-    }
-}
+// === FUNÇÕES DOS BOTÕES DE CONVERSÃO (REMOVIDAS - CONVERSÃO AUTOMÁTICA) ===
+// As funções cancelarConversao() e confirmarConversao() foram removidas
+// A conversão agora acontece automaticamente quando a unidade é alterada
 
 function atualizarResumoItem() {
     if (!window.currentImportItem) return;
