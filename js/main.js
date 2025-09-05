@@ -3016,7 +3016,7 @@ function confirmarVinculacao() {
         item.insumoVinculado = insumoAtualizado;
         item.conversaoAplicada = {
             quantidadeOriginal: parseFloat(document.getElementById('quantidadeOriginal').value),
-            unidadeOriginal: document.getElementById('unidadeOriginal').textContent,
+            unidadeOriginal: document.getElementById('unidadeOriginal').value,
             fatorConversao: parseFloat(document.getElementById('fatorConversao').textContent)
         };
         
@@ -3062,7 +3062,7 @@ function confirmarVinculacao() {
         item.insumoVinculado = novoInsumo;
         item.conversaoAplicada = {
             quantidadeOriginal: parseFloat(document.getElementById('quantidadeOriginal').value),
-            unidadeOriginal: document.getElementById('unidadeOriginal').textContent,
+            unidadeOriginal: document.getElementById('unidadeOriginal').value,
             fatorConversao: parseFloat(document.getElementById('fatorConversao').textContent),
             taxaPerdaAplicada: taxaPerda,
             valorComPerda: valorFinalComPerda
