@@ -1906,6 +1906,9 @@ function getUltimaCompra(insumoId) {
 }
 
 function renderInsumos() {
+    // Debug: verificar quantos insumos existem ao renderizar
+    console.log('Renderizando insumos. Total no banco:', insumosDB.length);
+    
     const s = document.getElementById('searchInput')?.value?.toLowerCase() || '';
     const f = document.getElementById('filterFornecedor')?.value || '';
     const u = document.getElementById('filterUnidade')?.value || '';
@@ -2973,6 +2976,9 @@ function confirmarVinculacao() {
                 }
                 
                 showAlert('Sucesso', 'Dados do insumo atualizados com sucesso!', 'success');
+                
+                // Atualizar a aba de insumos para mostrar as alterações
+                renderInsumos();
             }
         }
         
@@ -3021,6 +3027,10 @@ function confirmarVinculacao() {
         insumosDB.push(novoInsumo);
         saveToLocalStorage();
         
+        // Debug: verificar se o insumo foi realmente salvo
+        console.log('Novo insumo criado via XML:', novoInsumo);
+        console.log('Total de insumos após criação:', insumosDB.length);
+        
         // Aplicar conversão ao item - usar valor com perda se aplicável
         item.quantidade = quantidadeConvertida;
         item.unidade = unidadeConvertida;
@@ -3042,6 +3052,9 @@ function confirmarVinculacao() {
             : `Novo insumo "${nome}" criado e vinculado com sucesso!`;
         
         showAlert('Sucesso', mensagem, 'success');
+        
+        // Atualizar a aba de insumos para mostrar o novo insumo criado
+        renderInsumos();
         
     } else if (opcaoSelecionada === 'ignorar') {
         item.status = 'ignorado';
@@ -3092,7 +3105,8 @@ function confirmarImportacao() {
     
     showAlert('Sucesso', `Importação concluída! ${itensVinculados.length} itens foram processados.`, 'success');
     
-    // Atualizar dashboard
+    // Atualizar todas as views que podem ter sido afetadas
+    renderInsumos();
     renderDashboard();
 }
 
