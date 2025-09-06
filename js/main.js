@@ -600,7 +600,7 @@ function loadLocalData() {
         }
     ];
     
-    configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { defaultTaxaPerca: 5, custoFinalizacao: 10, margemLucro: 200 };
+    configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { defaultTaxaCorrecao: 5, custoFinalizacao: 10, margemLucro: 200 };
     fornecedoresDB = JSON.parse(localStorage.getItem('fornecedoresDB')) || [];
     
     // Salvar dados atualizados para garantir consistência
@@ -1146,7 +1146,7 @@ function calcularCustoPrato(prato) {
 function calcularCustoFichaTecnica(ficha) {
     if (!ficha.ingredientes || ficha.ingredientes.length === 0) return 0;
     
-    // Calcular custo base dos ingredientes com suas respectivas taxas de perca
+    // Calcular custo base dos ingredientes
     const custoBase = ficha.ingredientes.reduce((total, ingrediente) => {
         const insumo = insumosDB.find(i => i.id === ingrediente.insumoId);
         if (!insumo) return total;
@@ -1162,14 +1162,24 @@ function calcularCustoFichaTecnica(ficha) {
         const custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
         const custoIngrediente = custoUnitario * ingrediente.quantidade;
         
-        // Aplicar taxa de perca específica do insumo
-        const custoComPerca = custoIngrediente * (1 + (insumo.taxaPerca || 0) / 100);
-        
-        return total + custoComPerca;
+        return total + custoIngrediente;
     }, 0);
     
+    // Aplicar taxa de correção (se houver)
+    let custoComCorrecao = custoBase;
+    if (ficha.taxaCorrecao && ficha.taxaCorrecao > 0) {
+        const fatorCorrecao = ficha.taxaCorrecao / 100;
+        if (ficha.tipoCorrecao === 'incremento') {
+            // Incremento aumenta o custo (para perdas)
+            custoComCorrecao = custoBase * (1 + fatorCorrecao);
+        } else if (ficha.tipoCorrecao === 'decremento') {
+            // Decremento diminui o custo (para maior aproveitamento)
+            custoComCorrecao = custoBase * (1 - fatorCorrecao);
+        }
+    }
+    
     // Aplicar custo de finalização (aumenta o custo)
-    const custoFinal = custoBase * (1 + (ficha.custoFinalizacao || 0) / 100);
+    const custoFinal = custoComCorrecao * (1 + (ficha.custoFinalizacao || 0) / 100);
     
     return custoFinal;
 }
@@ -1541,6 +1551,9 @@ function aplicarConfiguracoesDefaultFicha() {
     if (configuracoesDB.defaultCustoFinalizacao) {
         document.getElementById('fichaCustoFinalizacao').value = configuracoesDB.defaultCustoFinalizacao;
     }
+    if (configuracoesDB.defaultTaxaCorrecao) {
+        document.getElementById('fichaTaxaCorrecao').value = configuracoesDB.defaultTaxaCorrecao;
+    }
 }
 
 // --- FUNÇÕES DE FICHAS TÉCNICAS ---
@@ -1631,7 +1644,8 @@ function saveFicha(event) {
         unidade: document.getElementById('fichaUnidade').value,
         tempoPreparo: parseInt(document.getElementById('fichaTempoPreparo').value) || null,
         modoPreparo: document.getElementById('fichaModoPreparo').value,
-        taxaPerca: parseFloat(document.getElementById('fichaTaxaPerca').value) || 0,
+        tipoCorrecao: document.getElementById('fichaTipoCorrecao').value,
+        taxaCorrecao: parseFloat(document.getElementById('fichaTaxaCorrecao').value) || 0,
         custoFinalizacao: parseFloat(document.getElementById('fichaCustoFinalizacao').value) || 0,
         status: document.getElementById('fichaStatus').value,
         ingredientes: getIngredientesFichaFromForm(),
@@ -1672,7 +1686,8 @@ function editFicha(id) {
     document.getElementById('fichaUnidade').value = ficha.unidade || '';
     document.getElementById('fichaTempoPreparo').value = ficha.tempoPreparo || '';
     document.getElementById('fichaModoPreparo').value = ficha.modoPreparo || '';
-    document.getElementById('fichaTaxaPerca').value = ficha.taxaPerca || '';
+    document.getElementById('fichaTipoCorrecao').value = ficha.tipoCorrecao || 'incremento';
+    document.getElementById('fichaTaxaCorrecao').value = ficha.taxaCorrecao || '';
     document.getElementById('fichaCustoFinalizacao').value = ficha.custoFinalizacao || '';
     document.getElementById('fichaStatus').value = ficha.status || 'ativo';
     
@@ -1835,6 +1850,9 @@ function resetFichaForm() {
     document.getElementById('fichaId').value = '';
     document.getElementById('fichaModalTitle').textContent = 'Adicionar Ficha Técnica';
     document.getElementById('fichaIngredientesList').innerHTML = '';
+    
+    // Definir valores padrão
+    document.getElementById('fichaTipoCorrecao').value = 'incremento';
 }
 
 // --- NAVEGAÇÃO ---
@@ -1927,12 +1945,10 @@ function renderInsumos() {
     
     tbody.innerHTML = filtrados.map(insumo => {
         const uc = getUltimaCompra(insumo.id);
-        const taxaPercaDisplay = insumo.taxaPerca ? `${insumo.taxaPerca}%` : 'N/A';
         
         return `<tr class="border-b border-gray-200 hover:bg-gray-50">
             <td class="p-4 font-medium">${insumo.nome}</td>
             <td class="p-4">${insumo.unidade}</td>
-            <td class="p-4 text-center">${taxaPercaDisplay}</td>
             <td class="p-4">${uc ? uc.fornecedor?.nome || 'N/A' : 'N/A'}</td>
             <td class="p-4 font-semibold text-green-700">${uc ? `R$ ${uc.preco.toFixed(2)}` : 'N/A'}</td>
             <td class="p-4">${uc ? new Date(uc.data + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</td>
@@ -1985,27 +2001,27 @@ function renderDashboard() {
 
 function renderConfiguracoes() {
     if (configuracoesDB) {
-        const defaultTaxaPerca = document.getElementById('defaultTaxaPerca');
+        const defaultTaxaCorrecao = document.getElementById('defaultTaxaCorrecao');
         const defaultCustoFinalizacao = document.getElementById('defaultCustoFinalizacao');
         const defaultMargemLucro = document.getElementById('defaultMargemLucro');
         
-        if (defaultTaxaPerca) defaultTaxaPerca.value = configuracoesDB.defaultTaxaPerca || 5;
+        if (defaultTaxaCorrecao) defaultTaxaCorrecao.value = configuracoesDB.defaultTaxaCorrecao || 5;
         if (defaultCustoFinalizacao) defaultCustoFinalizacao.value = configuracoesDB.custoFinalizacao || 10;
         if (defaultMargemLucro) defaultMargemLucro.value = configuracoesDB.margemLucro || 200;
     }
 }
 
 async function salvarConfiguracoes() {
-    const taxaPerca = parseFloat(document.getElementById('defaultTaxaPerca').value) || 0;
+    const taxaCorrecao = parseFloat(document.getElementById('defaultTaxaCorrecao').value) || 0;
     const custoFinalizacao = parseFloat(document.getElementById('defaultCustoFinalizacao').value) || 0;
     const margemLucro = parseFloat(document.getElementById('defaultMargemLucro').value) || 0;
     
-    configuracoesDB.defaultTaxaPerca = taxaPerca;
+    configuracoesDB.defaultTaxaCorrecao = taxaCorrecao;
     configuracoesDB.custoFinalizacao = custoFinalizacao;
     configuracoesDB.margemLucro = margemLucro;
     
     try {
-        await saveToFirebase('configuracoes', { taxaPerca, custoFinalizacao, margemLucro }, configuracoesDB.id);
+        await saveToFirebase('configuracoes', { taxaCorrecao, custoFinalizacao, margemLucro }, configuracoesDB.id);
         showAlert('Sucesso', 'Configurações salvas com sucesso!', 'success');
     } catch (error) {
         console.error('Erro ao salvar configurações:', error);
@@ -2126,11 +2142,6 @@ function showAddInsumoModal() {
     document.getElementById('insumoForm').reset();
     document.getElementById('insumoId').value = '';
     
-    // Preencher com valores padrão das configurações
-    if (configuracoesDB) {
-        document.getElementById('insumoTaxaPerca').value = configuracoesDB.taxaPerca || 0;
-    }
-    
     showModal('insumoModal');
 }
 
@@ -2141,7 +2152,6 @@ function saveInsumo(event) {
     const insumo = {
         nome: document.getElementById('insumoNome').value,
         unidade: document.getElementById('insumoUnidade').value,
-        taxaPerca: parseFloat(document.getElementById('insumoTaxaPerca').value) || 0,
         categoria: document.getElementById('insumoCategoria').value,
         observacoes: document.getElementById('insumoObservacoes').value
     };

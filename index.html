@@ -464,7 +464,6 @@
  <tr>
  <th class="p-4 font-semibold text-gray-600">Nome do Insumo</th>
  <th class="p-4 font-semibold text-gray-600">Unidade Padrão</th>
- <th class="p-4 font-semibold text-gray-600">Taxa de Perca (%)</th>
  <th class="p-4 font-semibold text-gray-600">Último Fornecedor</th>
  <th class="p-4 font-semibold text-gray-600">Último Preço</th>
  <th class="p-4 font-semibold text-gray-600">Data da Compra</th>
@@ -971,12 +970,27 @@
                 <!-- Configurações de Preparo -->
                 <div class="mb-6">
                     <label class="block text-sm font-medium text-gray-700 mb-3">Configurações de Preparo</label>
-                    <div class="grid grid-cols-1 gap-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-sm font-medium text-gray-700 mb-2">Custos de Produção (%)</label>
                             <input type="number" id="fichaCustoFinalizacao" step="0.1" min="0" 
                                    class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
                             <small class="text-gray-500">Custos adicionais (gás, energia, mão de obra, etc.)</small>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">Taxa de Correção (%)</label>
+                            <div class="flex items-center space-x-2">
+                                <select id="fichaTipoCorrecao" 
+                                        class="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                        style="width: 120px;">
+                                    <option value="incremento">Incremento</option>
+                                    <option value="decremento">Decremento</option>
+                                </select>
+                                <input type="number" id="fichaTaxaCorrecao" step="0.1" min="0" max="100" 
+                                       class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                       placeholder="Ex: 5.0">
+                            </div>
+                            <small class="text-gray-500">Ajuste para perdas/aproveitamento durante o preparo</small>
                         </div>
                     </div>
                     <div class="mt-2">
@@ -1124,9 +1138,9 @@
                  <h3 class="text-lg font-medium text-gray-900">Configurações Padrão</h3>
                  <div class="mt-4 space-y-4">
                      <div>
-                         <label for="defaultTaxaPerca" class="block text-sm font-medium text-gray-700">Taxa de Perca Padrão (%)</label>
-                         <input type="number" id="defaultTaxaPerca" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
-                         <small class="text-gray-500">Valor padrão para taxa de perca ao cadastrar novos insumos</small>
+                         <label for="defaultTaxaCorrecao" class="block text-sm font-medium text-gray-700">Taxa de Correção Padrão (%)</label>
+                         <input type="number" id="defaultTaxaCorrecao" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                         <small class="text-gray-500">Valor padrão para taxa de correção em fichas técnicas</small>
                      </div>
                      <div>
                          <label for="defaultCustoFinalizacao" class="block text-sm font-medium text-gray-700">Custos de Produção Padrão (%)</label>
@@ -1235,30 +1249,14 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Taxa de Perca Padrão (%)</label>
-                        <input type="number" id="insumoTaxaPerca" step="0.1" min="0" max="100" 
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                               placeholder="Ex: 5.0" onchange="atualizarValorComPerda()">
-                        <small class="text-gray-500">Taxa de perda típica deste insumo durante o preparo</small>
-                    </div>
-                </div>
-
                 <!-- Valores e Custos -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div class="grid grid-cols-1 md:grid-cols-1 gap-4 mb-6">
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-2">Valor Unitário Base (R$)</label>
                         <input type="number" id="insumoValorUnitario" step="0.01" min="0" 
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
-                               placeholder="Ex: 15.50" onchange="atualizarValorComPerda()">
+                               placeholder="Ex: 15.50">
                         <small class="text-gray-500">Valor de compra por unidade</small>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Valor Final com Perda (R$)</label>
-                        <input type="number" id="insumoValorFinal" step="0.01" min="0" readonly
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 focus:outline-none text-center font-medium text-green-700">
-                        <small class="text-gray-500">Valor ajustado considerando a taxa de perda</small>
                     </div>
                 </div>
 
