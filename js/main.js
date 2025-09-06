@@ -2163,7 +2163,6 @@ function editInsumo(id) {
     document.getElementById('insumoId').value = insumo.id;
     document.getElementById('insumoNome').value = insumo.nome;
     document.getElementById('insumoUnidade').value = insumo.unidade || '';
-    document.getElementById('insumoTaxaPerca').value = insumo.taxaPerca || '';
     document.getElementById('insumoCategoria').value = insumo.categoria || '';
     document.getElementById('insumoObservacoes').value = insumo.observacoes || '';
     
