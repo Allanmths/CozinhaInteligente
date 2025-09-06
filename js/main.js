@@ -1272,7 +1272,16 @@ function editPrato(id) {
 
 function deletePrato(id) {
     if (confirm('Tem certeza que deseja excluir este prato?')) {
+        // Remover do array local
         pratosDB = pratosDB.filter(p => p.id !== id);
+        
+        // Deletar do Firebase se estiver conectado
+        if (isFirebaseReady) {
+            deleteFromFirebase('pratos', id).catch(error => {
+                console.error('Erro ao deletar prato do Firebase:', error);
+            });
+        }
+        
         saveData();
         renderPratos();
         updateStats();
@@ -1690,7 +1699,16 @@ function editFicha(id) {
 
 function deleteFicha(id) {
     if (confirm('Tem certeza que deseja excluir esta ficha técnica?')) {
+        // Remover do array local
         fichasTecnicasDB = fichasTecnicasDB.filter(f => f.id !== id);
+        
+        // Deletar do Firebase se estiver conectado
+        if (isFirebaseReady) {
+            deleteFromFirebase('fichas', id).catch(error => {
+                console.error('Erro ao deletar ficha do Firebase:', error);
+            });
+        }
+        
         saveData();
         renderFichas();
         updateStats();
@@ -2178,7 +2196,16 @@ function deleteInsumo(id) {
     }
     
     if (confirm('Tem certeza que deseja excluir este insumo?')) {
+        // Remover do array local
         insumosDB = insumosDB.filter(i => i.id !== id);
+        
+        // Deletar do Firebase se estiver conectado
+        if (isFirebaseReady) {
+            deleteFromFirebase('insumos', id).catch(error => {
+                console.error('Erro ao deletar insumo do Firebase:', error);
+            });
+        }
+        
         saveData();
         renderInsumos();
         showAlert('Insumo Excluído', 'Insumo removido com sucesso!', 'success');
