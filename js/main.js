@@ -1577,7 +1577,6 @@ function renderFichas() {
                 <div>
                     <div class="font-medium text-gray-900">${ficha.nome}</div>
                     <div class="text-sm text-gray-500">${ficha.tipo || ''}</div>
-                    ${ficha.tempoPreparo ? `<div class="text-xs text-gray-400">${ficha.tempoPreparo} min</div>` : ''}
                 </div>
             </td>
             <td class="px-6 py-4 text-sm text-gray-900 capitalize">${ficha.tipo || '-'}</td>
@@ -1620,8 +1619,7 @@ function filtrarFichas() {
     
     fichasTecnicasDB = fichasOriginal.filter(ficha => {
         const matchTexto = !filtroTexto || 
-            ficha.nome.toLowerCase().includes(filtroTexto) ||
-            (ficha.modoPreparo && ficha.modoPreparo.toLowerCase().includes(filtroTexto));
+            ficha.nome.toLowerCase().includes(filtroTexto);
         
         const matchTipo = !filtroTipo || ficha.tipo === filtroTipo;
         const matchStatus = !filtroStatus || ficha.status === filtroStatus;
@@ -1642,8 +1640,6 @@ function saveFicha(event) {
         tipo: document.getElementById('fichaTipo').value,
         rendimento: parseFloat(document.getElementById('fichaRendimento').value),
         unidade: document.getElementById('fichaUnidade').value,
-        tempoPreparo: parseInt(document.getElementById('fichaTempoPreparo').value) || null,
-        modoPreparo: document.getElementById('fichaModoPreparo').value,
         tipoCorrecao: document.getElementById('fichaTipoCorrecao').value,
         taxaCorrecao: parseFloat(document.getElementById('fichaTaxaCorrecao').value) || 0,
         custoFinalizacao: parseFloat(document.getElementById('fichaCustoFinalizacao').value) || 0,
@@ -1684,8 +1680,6 @@ function editFicha(id) {
     document.getElementById('fichaTipo').value = ficha.tipo || '';
     document.getElementById('fichaRendimento').value = ficha.rendimento;
     document.getElementById('fichaUnidade').value = ficha.unidade || '';
-    document.getElementById('fichaTempoPreparo').value = ficha.tempoPreparo || '';
-    document.getElementById('fichaModoPreparo').value = ficha.modoPreparo || '';
     document.getElementById('fichaTipoCorrecao').value = ficha.tipoCorrecao || 'incremento';
     document.getElementById('fichaTaxaCorrecao').value = ficha.taxaCorrecao || '';
     document.getElementById('fichaCustoFinalizacao').value = ficha.custoFinalizacao || '';
@@ -1754,20 +1748,6 @@ function viewFichaDetails(id) {
                     <p class="text-lg font-semibold">R$ ${custoPorcao.toFixed(2)}</p>
                 </div>
             </div>
-            
-            ${ficha.tempoPreparo ? `
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Tempo de Preparo</label>
-                <p class="text-gray-900">${ficha.tempoPreparo} minutos</p>
-            </div>
-            ` : ''}
-            
-            ${ficha.modoPreparo ? `
-            <div>
-                <label class="block text-sm font-medium text-gray-700">Modo de Preparo</label>
-                <p class="text-gray-900 whitespace-pre-line">${ficha.modoPreparo}</p>
-            </div>
-            ` : ''}
             
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Ingredientes</label>
