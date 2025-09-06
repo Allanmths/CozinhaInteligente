@@ -600,7 +600,7 @@ function loadLocalData() {
         }
     ];
     
-    configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { defaultTaxaCorrecao: 5, custoFinalizacao: 10, margemLucro: 200 };
+    configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { custoFinalizacao: 10, margemLucro: 200 };
     fornecedoresDB = JSON.parse(localStorage.getItem('fornecedoresDB')) || [];
     
     // Salvar dados atualizados para garantir consistência
@@ -1551,9 +1551,6 @@ function aplicarConfiguracoesDefaultFicha() {
     if (configuracoesDB.defaultCustoFinalizacao) {
         document.getElementById('fichaCustoFinalizacao').value = configuracoesDB.defaultCustoFinalizacao;
     }
-    if (configuracoesDB.defaultTaxaCorrecao) {
-        document.getElementById('fichaTaxaCorrecao').value = configuracoesDB.defaultTaxaCorrecao;
-    }
 }
 
 // --- FUNÇÕES DE FICHAS TÉCNICAS ---
@@ -1981,27 +1978,23 @@ function renderDashboard() {
 
 function renderConfiguracoes() {
     if (configuracoesDB) {
-        const defaultTaxaCorrecao = document.getElementById('defaultTaxaCorrecao');
         const defaultCustoFinalizacao = document.getElementById('defaultCustoFinalizacao');
         const defaultMargemLucro = document.getElementById('defaultMargemLucro');
         
-        if (defaultTaxaCorrecao) defaultTaxaCorrecao.value = configuracoesDB.defaultTaxaCorrecao || 5;
         if (defaultCustoFinalizacao) defaultCustoFinalizacao.value = configuracoesDB.custoFinalizacao || 10;
         if (defaultMargemLucro) defaultMargemLucro.value = configuracoesDB.margemLucro || 200;
     }
 }
 
 async function salvarConfiguracoes() {
-    const taxaCorrecao = parseFloat(document.getElementById('defaultTaxaCorrecao').value) || 0;
     const custoFinalizacao = parseFloat(document.getElementById('defaultCustoFinalizacao').value) || 0;
     const margemLucro = parseFloat(document.getElementById('defaultMargemLucro').value) || 0;
     
-    configuracoesDB.defaultTaxaCorrecao = taxaCorrecao;
     configuracoesDB.custoFinalizacao = custoFinalizacao;
     configuracoesDB.margemLucro = margemLucro;
     
     try {
-        await saveToFirebase('configuracoes', { taxaCorrecao, custoFinalizacao, margemLucro }, configuracoesDB.id);
+        await saveToFirebase('configuracoes', { custoFinalizacao, margemLucro }, configuracoesDB.id);
         showAlert('Sucesso', 'Configurações salvas com sucesso!', 'success');
     } catch (error) {
         console.error('Erro ao salvar configurações:', error);
