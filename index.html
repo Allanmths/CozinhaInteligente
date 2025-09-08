@@ -2,99 +2,60 @@
 <html lang="pt-BR">
 <head>
  <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Sistema de Ficha Técnica de Cozinha</title>
+ <link rel="icon" href="./favicon.svg" type="image/svg+xml">
  
- <!-- Supressão máxima de erros de extensões de carteira -->
+ <!-- Supressão de erros precoce -->
  <script>
+ // Suprimir erros antes do carregamento das bibliotecas
  (function() {
-   'use strict';
+   const originalError = window.console.error;
+   const originalWarn = window.console.warn;
+   const originalLog = window.console.log;
    
-   // Interceptar imediatamente todos os erros
-   const suppressedErrors = [
-     'cannot redefine property',
-     'ethereum', 'evmask', 'sender', 'wallet', 'metamask',
-     'script.bundle', 'contentscript', 'inject',
-     'failed to get initial state', 'please report this bug',
-     'no account exist', 'provider', 'wallet-provider'
-   ];
-   
-   // Suprimir console.error
-   const originalError = console.error;
-   console.error = function(...args) {
-     const errorStr = String(args.join(' ')).toLowerCase();
-     if (suppressedErrors.some(term => errorStr.includes(term))) {
+   window.console.error = function(...args) {
+     const errorStr = args.join(' ').toLowerCase();
+     if (errorStr.includes('extension') || 
+         errorStr.includes('ethereum') || 
+         errorStr.includes('script.bundle') ||
+         errorStr.includes('evmask') ||
+         errorStr.includes('sender: failed') ||
+         errorStr.includes('cannot redefine property') ||
+         errorStr.includes('uncaught typeerror') ||
+         errorStr.includes('content.js') ||
+         errorStr.includes('please report this bug')) {
        return;
      }
      originalError.apply(console, args);
    };
    
-   // Suprimir console.warn
-   const originalWarn = console.warn;
-   console.warn = function(...args) {
-     const warnStr = String(args.join(' ')).toLowerCase();
-     if (suppressedErrors.some(term => warnStr.includes(term))) {
+   window.console.warn = function(...args) {
+     const warnStr = args.join(' ').toLowerCase();
+     if (warnStr.includes('plugins=') ||
+         warnStr.includes('tailwind') ||
+         warnStr.includes('aspect-ratio') ||
+         warnStr.includes('line-clamp') ||
+         warnStr.includes('could not establish connection') ||
+         warnStr.includes('receiving end does not exist') ||
+         warnStr.includes('port is disconnected') ||
+         warnStr.includes('content.js')) {
        return;
      }
      originalWarn.apply(console, args);
    };
-   
-   // Interceptar erros globais
-   window.addEventListener('error', function(event) {
-     const errorMsg = String(event.message || event.error || '').toLowerCase();
-     if (suppressedErrors.some(term => errorMsg.includes(term))) {
-       event.preventDefault();
-       event.stopPropagation();
-       event.stopImmediatePropagation();
-       return false;
+
+   window.console.log = function(...args) {
+     const logStr = args.join(' ').toLowerCase();
+     if (logStr.includes('firebase conectado') ||
+         logStr.includes('dom carregado') ||
+         logStr.includes('inicializando aplicação')) {
+       return;
      }
-   }, true);
-   
-   // Interceptar erros de promise rejeitada
-   window.addEventListener('unhandledrejection', function(event) {
-     const errorMsg = String(event.reason || '').toLowerCase();
-     if (suppressedErrors.some(term => errorMsg.includes(term))) {
-       event.preventDefault();
-       return false;
-     }
-   });
-   
-   // Proteção contra redefinição da propriedade ethereum
-   let ethereumDescriptor = null;
-   try {
-     ethereumDescriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
-   } catch (e) {}
-   
-   if (ethereumDescriptor && !ethereumDescriptor.configurable) {
-     // Se já existe e não é configurável, não tentar redefinir
-   } else {
-     // Definir uma propriedade ethereum vazia para prevenir conflitos
-     try {
-       Object.defineProperty(window, 'ethereum', {
-         get: function() { return undefined; },
-         set: function() { /* Ignorar tentativas de set */ },
-         configurable: false,
-         enumerable: false
-       });
-     } catch (e) {
-       // Ignorar se falhar
-     }
-   }
-   
-   // Monkey-patch Object.defineProperty para interceptar redefinições de ethereum
-   const originalDefineProperty = Object.defineProperty;
-   Object.defineProperty = function(obj, prop, descriptor) {
-     if (obj === window && prop === 'ethereum') {
-       // Silenciosamente ignorar tentativas de redefinir ethereum
-       return obj;
-     }
-     return originalDefineProperty.call(this, obj, prop, descriptor);
+     originalLog.apply(console, args);
    };
-   
  })();
  </script>
- 
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>Sistema de Ficha Técnica de Cozinha</title>
- <link rel="icon" href="./favicon.svg" type="image/svg+xml">
  
  <script src="https://cdn.tailwindcss.com"></script>
  <script>
@@ -497,10 +458,29 @@
  </div>
  </div>
  </div>
+ 
+ <!-- Botões de ação para seleção múltipla -->
+ <div id="multiSelectActions" class="hidden mb-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+     <div class="flex items-center justify-between">
+         <span id="selectedCount" class="text-blue-700 font-medium">0 itens selecionados</span>
+         <div class="flex space-x-2">
+             <button onclick="clearSelection()" class="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600">
+                 Limpar Seleção
+             </button>
+             <button onclick="deleteSelectedInsumos()" class="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">
+                 Excluir Selecionados
+             </button>
+         </div>
+     </div>
+ </div>
+ 
  <div class="overflow-x-auto">
  <table class="w-full text-left">
  <thead class="bg-gray-100">
  <tr>
+ <th class="p-4 font-semibold text-gray-600">
+     <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="rounded">
+ </th>
  <th class="p-4 font-semibold text-gray-600">Nome do Insumo</th>
  <th class="p-4 font-semibold text-gray-600">Unidade Padrão</th>
  <th class="p-4 font-semibold text-gray-600">Último Fornecedor</th>

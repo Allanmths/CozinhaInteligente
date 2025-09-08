@@ -1943,6 +1943,9 @@ function renderInsumos() {
         const uc = getUltimaCompra(insumo.id);
         
         return `<tr class="border-b border-gray-200 hover:bg-gray-50">
+            <td class="p-4">
+                <input type="checkbox" class="item-checkbox rounded" value="${insumo.id}" onchange="updateSelectionCount()">
+            </td>
             <td class="p-4 font-medium">${insumo.nome}</td>
             <td class="p-4">${insumo.unidade}</td>
             <td class="p-4">${uc ? uc.fornecedor?.nome || 'N/A' : 'N/A'}</td>
@@ -2120,12 +2123,12 @@ function showAlert(title, message, type = 'info') {
     document.body.appendChild(alertDiv);
     lucide.createIcons();
     
-    // Auto remove após 5 segundos
+    // Auto remove após 2 segundos
     setTimeout(() => {
         if (alertDiv.parentNode) {
             alertDiv.remove();
         }
-    }, 5000);
+    }, 2000);
 }
 
 // --- FUNÇÕES DE INSUMOS ---
@@ -2320,10 +2323,10 @@ function showAlert(title, message, type = 'info') {
     
     showCustomModal('Notificação', alertHtml);
     
-    // Auto-fechar após 3 segundos
+    // Auto-fechar após 2 segundos
     setTimeout(() => {
         hideModal('customModal');
-    }, 3000);
+    }, 2000);
 }
 
 // Inicializar quando DOM estiver pronto
@@ -3602,6 +3605,124 @@ function inicializarEventosVinculacao() {
     } else {
         // Log silencioso - elementos podem não estar na página atual
         // console.warn('Campo de nova categoria não encontrado');
+    }
+}
+
+// --- FUNÇÕES DE SELEÇÃO MÚLTIPLA ---
+function toggleSelectAll() {
+    const selectAll = document.getElementById('selectAll');
+    const checkboxes = document.querySelectorAll('.item-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+    
+    updateSelectionCount();
+}
+
+function updateSelectionCount() {
+    const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+    const count = checkboxes.length;
+    const selectAll = document.getElementById('selectAll');
+    const multiSelectActions = document.getElementById('multiSelectActions');
+    const selectedCount = document.getElementById('selectedCount');
+    
+    if (selectedCount) {
+        selectedCount.textContent = `${count} itens selecionados`;
+    }
+    
+    if (multiSelectActions) {
+        if (count > 0) {
+            multiSelectActions.classList.remove('hidden');
+        } else {
+            multiSelectActions.classList.add('hidden');
+        }
+    }
+    
+    // Atualizar estado do checkbox "selecionar todos"
+    if (selectAll) {
+        const allCheckboxes = document.querySelectorAll('.item-checkbox');
+        if (count === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (count === allCheckboxes.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        }
+    }
+}
+
+function clearSelection() {
+    document.querySelectorAll('.item-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    document.getElementById('selectAll').checked = false;
+    updateSelectionCount();
+}
+
+function deleteSelectedInsumos() {
+    const selected = Array.from(document.querySelectorAll('.item-checkbox:checked')).map(cb => cb.value);
+    
+    if (selected.length === 0) {
+        showAlert('Nenhum item selecionado', 'Selecione pelo menos um insumo para excluir.', 'warning');
+        return;
+    }
+    
+    // Verificar se algum dos insumos selecionados está em uso
+    const insumosEmUso = [];
+    selected.forEach(id => {
+        const usedInFichas = fichasTecnicasDB.filter(ficha => 
+            ficha.ingredientes && ficha.ingredientes.some(ing => ing.insumoId === id)
+        );
+        
+        const usedInPratos = pratosDB.filter(prato => 
+            prato.insumos && prato.insumos.some(ing => ing.insumoId === id)
+        );
+        
+        if (usedInFichas.length > 0 || usedInPratos.length > 0) {
+            const insumo = insumosDB.find(i => i.id === id);
+            insumosEmUso.push({
+                insumo: insumo,
+                fichas: usedInFichas,
+                pratos: usedInPratos
+            });
+        }
+    });
+    
+    let message = `Tem certeza que deseja excluir ${selected.length} insumo(s) selecionado(s)?`;
+    
+    if (insumosEmUso.length > 0) {
+        message += '\n\nATENÇÃO: Os seguintes insumos estão sendo usados:\n\n';
+        insumosEmUso.forEach(item => {
+            message += `• ${item.insumo.nome}\n`;
+            if (item.fichas.length > 0) {
+                message += `  Fichas: ${item.fichas.map(f => f.nome).join(', ')}\n`;
+            }
+            if (item.pratos.length > 0) {
+                message += `  Pratos: ${item.pratos.map(p => p.nome).join(', ')}\n`;
+            }
+        });
+        message += '\nEstes itens ficarão com ingredientes incompletos.';
+    }
+    
+    if (confirm(message)) {
+        // Excluir todos os insumos selecionados
+        selected.forEach(id => {
+            insumosDB = insumosDB.filter(i => i.id !== id);
+            
+            // Deletar do Firebase se estiver conectado
+            if (isFirebaseReady) {
+                deleteFromFirebase('insumos', id);
+            }
+        });
+        
+        saveData();
+        renderInsumos();
+        clearSelection();
+        showAlert('Insumos Excluídos', `${selected.length} insumo(s) removido(s) com sucesso!`, 'success');
     }
 }
 
