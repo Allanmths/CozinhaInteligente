@@ -2,74 +2,99 @@
 <html lang="pt-BR">
 <head>
  <meta charset="UTF-8">
- <meta name="viewport" content="width=device-width, initial-scale=1.0">
- <title>Sistema de Ficha Técnica de Cozinha</title>
- <link rel="icon" href="./favicon.svg" type="image/svg+xml">
  
- <!-- Supressão de erros precoce -->
+ <!-- Supressão máxima de erros de extensões de carteira -->
  <script>
- // Suprimir erros antes do carregamento das bibliotecas
  (function() {
-   const originalError = window.console.error;
-   const originalWarn = window.console.warn;
-   const originalLog = window.console.log;
+   'use strict';
    
-   window.console.error = function(...args) {
-     const errorStr = args.join(' ').toLowerCase();
-     if (errorStr.includes('extension') || 
-         errorStr.includes('ethereum') || 
-         errorStr.includes('sender') ||
-         errorStr.includes('wallet') ||
-         errorStr.includes('metamask') ||
-         errorStr.includes('cannot redefine property') ||
-         errorStr.includes('evmask') ||
-         errorStr.includes('providerresult') ||
-         errorStr.includes('no account exist')) {
-       return; // Suprimir esses erros
+   // Interceptar imediatamente todos os erros
+   const suppressedErrors = [
+     'cannot redefine property',
+     'ethereum', 'evmask', 'sender', 'wallet', 'metamask',
+     'script.bundle', 'contentscript', 'inject',
+     'failed to get initial state', 'please report this bug',
+     'no account exist', 'provider', 'wallet-provider'
+   ];
+   
+   // Suprimir console.error
+   const originalError = console.error;
+   console.error = function(...args) {
+     const errorStr = String(args.join(' ')).toLowerCase();
+     if (suppressedErrors.some(term => errorStr.includes(term))) {
+       return;
      }
      originalError.apply(console, args);
    };
    
-   window.console.warn = function(...args) {
-     const warnStr = args.join(' ').toLowerCase();
-     if (warnStr.includes('extension') || 
-         warnStr.includes('ethereum') || 
-         warnStr.includes('sender') ||
-         warnStr.includes('wallet') ||
-         warnStr.includes('metamask')) {
-       return; // Suprimir esses warnings
+   // Suprimir console.warn
+   const originalWarn = console.warn;
+   console.warn = function(...args) {
+     const warnStr = String(args.join(' ')).toLowerCase();
+     if (suppressedErrors.some(term => warnStr.includes(term))) {
+       return;
      }
      originalWarn.apply(console, args);
    };
    
-   // Prevenir redefinição de propriedade ethereum
-   if (window.ethereum) {
-     try {
-       Object.defineProperty(window, 'ethereum', {
-         value: window.ethereum,
-         writable: false,
-         configurable: false
-       });
-     } catch (e) {
-       // Ignorar erro se já foi definido
-     }
-   }
-   
-   // Interceptar erros globais de extensões
+   // Interceptar erros globais
    window.addEventListener('error', function(event) {
-     const errorMsg = event.message.toLowerCase();
-     if (errorMsg.includes('ethereum') || 
-         errorMsg.includes('sender') ||
-         errorMsg.includes('wallet') ||
-         errorMsg.includes('evmask') ||
-         errorMsg.includes('cannot redefine property')) {
+     const errorMsg = String(event.message || event.error || '').toLowerCase();
+     if (suppressedErrors.some(term => errorMsg.includes(term))) {
        event.preventDefault();
        event.stopPropagation();
+       event.stopImmediatePropagation();
+       return false;
+     }
+   }, true);
+   
+   // Interceptar erros de promise rejeitada
+   window.addEventListener('unhandledrejection', function(event) {
+     const errorMsg = String(event.reason || '').toLowerCase();
+     if (suppressedErrors.some(term => errorMsg.includes(term))) {
+       event.preventDefault();
        return false;
      }
    });
+   
+   // Proteção contra redefinição da propriedade ethereum
+   let ethereumDescriptor = null;
+   try {
+     ethereumDescriptor = Object.getOwnPropertyDescriptor(window, 'ethereum');
+   } catch (e) {}
+   
+   if (ethereumDescriptor && !ethereumDescriptor.configurable) {
+     // Se já existe e não é configurável, não tentar redefinir
+   } else {
+     // Definir uma propriedade ethereum vazia para prevenir conflitos
+     try {
+       Object.defineProperty(window, 'ethereum', {
+         get: function() { return undefined; },
+         set: function() { /* Ignorar tentativas de set */ },
+         configurable: false,
+         enumerable: false
+       });
+     } catch (e) {
+       // Ignorar se falhar
+     }
+   }
+   
+   // Monkey-patch Object.defineProperty para interceptar redefinições de ethereum
+   const originalDefineProperty = Object.defineProperty;
+   Object.defineProperty = function(obj, prop, descriptor) {
+     if (obj === window && prop === 'ethereum') {
+       // Silenciosamente ignorar tentativas de redefinir ethereum
+       return obj;
+     }
+     return originalDefineProperty.call(this, obj, prop, descriptor);
+   };
+   
  })();
  </script>
+ 
+ <meta name="viewport" content="width=device-width, initial-scale=1.0">
+ <title>Sistema de Ficha Técnica de Cozinha</title>
+ <link rel="icon" href="./favicon.svg" type="image/svg+xml">
  
  <script src="https://cdn.tailwindcss.com"></script>
  <script>
