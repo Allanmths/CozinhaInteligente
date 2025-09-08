@@ -2183,17 +2183,32 @@ function editInsumo(id) {
 
 function deleteInsumo(id) {
     // Verificar se o insumo está sendo usado em fichas técnicas ou pratos
-    const usedInFichas = fichasTecnicasDB.some(ficha => 
+    const usedInFichas = fichasTecnicasDB.filter(ficha => 
         ficha.ingredientes && ficha.ingredientes.some(ing => ing.insumoId === id)
     );
     
-    const usedInPratos = pratosDB.some(prato => 
+    const usedInPratos = pratosDB.filter(prato => 
         prato.insumos && prato.insumos.some(ing => ing.insumoId === id)
     );
     
-    if (usedInFichas || usedInPratos) {
-        showAlert('Não é possível excluir', 'Este insumo está sendo usado em fichas técnicas ou pratos. Remova-o primeiro desses locais.', 'error');
-        return;
+    if (usedInFichas.length > 0 || usedInPratos.length > 0) {
+        let message = 'Este insumo está sendo usado em:\n\n';
+        
+        if (usedInFichas.length > 0) {
+            message += 'Fichas Técnicas:\n';
+            usedInFichas.forEach(ficha => message += `• ${ficha.nome}\n`);
+        }
+        
+        if (usedInPratos.length > 0) {
+            message += '\nPratos:\n';
+            usedInPratos.forEach(prato => message += `• ${prato.nome}\n`);
+        }
+        
+        message += '\nDeseja excluir o insumo mesmo assim? (Os itens que o utilizam ficarão com ingredientes incompletos)';
+        
+        if (!confirm(message)) {
+            return;
+        }
     }
     
     if (confirm('Tem certeza que deseja excluir este insumo?')) {
