@@ -230,12 +230,12 @@ async function saveToFirebase(collection_name, data, docId = null) {
         return saveToLocalStorage();
     }
     
-    const { db, collection, addDoc, doc, updateDoc } = firebaseServices;
+    const { db, collection, addDoc, doc, updateDoc, setDoc } = firebaseServices;
     
     try {
         if (docId) {
-            // Atualizar documento existente
-            await updateDoc(doc(db, collection_name, docId), data);
+            // Usar setDoc ao invés de updateDoc para criar o documento se não existir
+            await setDoc(doc(db, collection_name, docId), data, { merge: true });
             return docId;
         } else {
             // Criar novo documento
@@ -243,8 +243,14 @@ async function saveToFirebase(collection_name, data, docId = null) {
             return docRef.id;
         }
     } catch (error) {
+        // Se o erro for "not-found", é porque o documento foi excluído - isso é normal
+        if (error.code === 'not-found') {
+            console.log(`Documento ${docId} não encontrado em ${collection_name} - provavelmente foi excluído`);
+            return docId;
+        }
         console.error(`Erro ao salvar em ${collection_name}:`, error);
-        throw error;
+        // Não fazer throw do erro para não quebrar o processo de salvamento
+        return null;
     }
 }
 
