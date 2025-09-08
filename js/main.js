@@ -255,9 +255,14 @@ async function deleteFromFirebase(collection_name, docId) {
     
     try {
         await deleteDoc(doc(db, collection_name, docId));
+        console.log(`Documento ${docId} deletado de ${collection_name}`);
     } catch (error) {
-        console.error(`Erro ao deletar de ${collection_name}:`, error);
-        throw error;
+        // Se o documento não existe, não é um erro crítico
+        if (error.code === 'not-found') {
+            console.log(`Documento ${docId} não encontrado em ${collection_name} - pode ser um item local`);
+        } else {
+            console.error(`Erro ao deletar de ${collection_name}:`, error);
+        }
     }
 }
 
@@ -1275,11 +1280,9 @@ function deletePrato(id) {
         // Remover do array local
         pratosDB = pratosDB.filter(p => p.id !== id);
         
-        // Deletar do Firebase se estiver conectado
+        // Deletar do Firebase se estiver conectado (sem bloquear a exclusão)
         if (isFirebaseReady) {
-            deleteFromFirebase('pratos', id).catch(error => {
-                console.error('Erro ao deletar prato do Firebase:', error);
-            });
+            deleteFromFirebase('pratos', id);
         }
         
         saveData();
@@ -1702,11 +1705,9 @@ function deleteFicha(id) {
         // Remover do array local
         fichasTecnicasDB = fichasTecnicasDB.filter(f => f.id !== id);
         
-        // Deletar do Firebase se estiver conectado
+        // Deletar do Firebase se estiver conectado (sem bloquear a exclusão)
         if (isFirebaseReady) {
-            deleteFromFirebase('fichas', id).catch(error => {
-                console.error('Erro ao deletar ficha do Firebase:', error);
-            });
+            deleteFromFirebase('fichas', id);
         }
         
         saveData();
@@ -2199,11 +2200,9 @@ function deleteInsumo(id) {
         // Remover do array local
         insumosDB = insumosDB.filter(i => i.id !== id);
         
-        // Deletar do Firebase se estiver conectado
+        // Deletar do Firebase se estiver conectado (sem bloquear a exclusão)
         if (isFirebaseReady) {
-            deleteFromFirebase('insumos', id).catch(error => {
-                console.error('Erro ao deletar insumo do Firebase:', error);
-            });
+            deleteFromFirebase('insumos', id);
         }
         
         saveData();
