@@ -18,42 +18,56 @@
      const errorStr = args.join(' ').toLowerCase();
      if (errorStr.includes('extension') || 
          errorStr.includes('ethereum') || 
-         errorStr.includes('script.bundle') ||
-         errorStr.includes('evmask') ||
-         errorStr.includes('sender: failed') ||
+         errorStr.includes('sender') ||
+         errorStr.includes('wallet') ||
+         errorStr.includes('metamask') ||
          errorStr.includes('cannot redefine property') ||
-         errorStr.includes('uncaught typeerror') ||
-         errorStr.includes('content.js') ||
-         errorStr.includes('please report this bug')) {
-       return;
+         errorStr.includes('evmask') ||
+         errorStr.includes('providerresult') ||
+         errorStr.includes('no account exist')) {
+       return; // Suprimir esses erros
      }
      originalError.apply(console, args);
    };
    
    window.console.warn = function(...args) {
      const warnStr = args.join(' ').toLowerCase();
-     if (warnStr.includes('plugins=') ||
-         warnStr.includes('tailwind') ||
-         warnStr.includes('aspect-ratio') ||
-         warnStr.includes('line-clamp') ||
-         warnStr.includes('could not establish connection') ||
-         warnStr.includes('receiving end does not exist') ||
-         warnStr.includes('port is disconnected') ||
-         warnStr.includes('content.js')) {
-       return;
+     if (warnStr.includes('extension') || 
+         warnStr.includes('ethereum') || 
+         warnStr.includes('sender') ||
+         warnStr.includes('wallet') ||
+         warnStr.includes('metamask')) {
+       return; // Suprimir esses warnings
      }
      originalWarn.apply(console, args);
    };
-
-   window.console.log = function(...args) {
-     const logStr = args.join(' ').toLowerCase();
-     if (logStr.includes('firebase conectado') ||
-         logStr.includes('dom carregado') ||
-         logStr.includes('inicializando aplicação')) {
-       return;
+   
+   // Prevenir redefinição de propriedade ethereum
+   if (window.ethereum) {
+     try {
+       Object.defineProperty(window, 'ethereum', {
+         value: window.ethereum,
+         writable: false,
+         configurable: false
+       });
+     } catch (e) {
+       // Ignorar erro se já foi definido
      }
-     originalLog.apply(console, args);
-   };
+   }
+   
+   // Interceptar erros globais de extensões
+   window.addEventListener('error', function(event) {
+     const errorMsg = event.message.toLowerCase();
+     if (errorMsg.includes('ethereum') || 
+         errorMsg.includes('sender') ||
+         errorMsg.includes('wallet') ||
+         errorMsg.includes('evmask') ||
+         errorMsg.includes('cannot redefine property')) {
+       event.preventDefault();
+       event.stopPropagation();
+       return false;
+     }
+   });
  })();
  </script>
  
