@@ -867,39 +867,25 @@
  <h2 class="text-3xl font-bold mb-6 text-gray-900">Fichas Técnicas</h2>
  
  <!-- Botão Adicionar Ficha Técnica -->
- <div class="mb-6 flex justify-between items-center">
+ <div class="mb-6">
  <button onclick="showModal('fichaModal')" class="bg-orange-600 text-white px-6 py-3 rounded-lg hover:bg-orange-700 transition-colors flex items-center">
  <i data-lucide="plus" class="h-5 w-5 mr-2"></i>
  Adicionar Ficha Técnica
- </button>
- 
- <!-- Botão Seleção Múltipla -->
- <button id="toggleFichaSelectMode" onclick="toggleFichaSelectMode()" 
- class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center">
- <i data-lucide="check-square" class="h-4 w-4 mr-2"></i>
- Seleção Múltipla
  </button>
  </div>
  
  <!-- Ações de Seleção Múltipla -->
  <div id="fichaMultiSelectActions" class="mb-4 p-4 bg-blue-50 border border-blue-200 rounded-lg hidden">
  <div class="flex items-center justify-between">
- <div class="flex items-center space-x-4">
- <label class="flex items-center">
- <input type="checkbox" id="selectAllFichas" onchange="toggleSelectAllFichas()" class="mr-2">
- <span class="text-sm font-medium">Selecionar Todos</span>
- </label>
- <span id="selectedFichasCount" class="text-sm text-gray-600">0 itens selecionados</span>
- </div>
+ <span id="selectedFichasCount" class="text-blue-700 font-medium">0 itens selecionados</span>
  <div class="flex space-x-2">
- <button onclick="deleteSelectedFichas()" 
- class="bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center text-sm">
- <i data-lucide="trash-2" class="h-4 w-4 mr-1"></i>
- Excluir Selecionados
- </button>
  <button onclick="clearFichaSelection()" 
- class="bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors text-sm">
- Cancelar
+ class="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600">
+ Limpar Seleção
+ </button>
+ <button onclick="deleteSelectedFichas()" 
+ class="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600">
+ Excluir Selecionados
  </button>
  </div>
  </div>
@@ -942,8 +928,8 @@
  <table class="w-full">
  <thead class="bg-gray-50">
  <tr>
- <th id="fichaSelectColumn" class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden">
- <input type="checkbox" id="selectAllFichasHeader" onchange="toggleSelectAllFichas()" class="rounded">
+ <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+ <input type="checkbox" id="selectAllFichas" onchange="toggleSelectAllFichas()" class="rounded">
  </th>
  <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Ficha Técnica</th>
  <th class="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>

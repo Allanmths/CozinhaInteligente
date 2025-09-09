@@ -1304,8 +1304,6 @@ function renderFichas() {
         return;
     }
     
-    const isSelectMode = document.getElementById('fichaSelectColumn')?.classList.contains('show-select');
-    
     tbody.innerHTML = fichasTecnicasDB.map(ficha => {
         const custoTotal = calcularCustoFichaTecnica(ficha);
         const custoPorcao = ficha.rendimento > 0 ? custoTotal / ficha.rendimento : 0;
@@ -1313,7 +1311,7 @@ function renderFichas() {
                            ficha.status === 'teste' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
         
         return `<tr class="hover:bg-gray-50">
-            <td class="px-6 py-4 ficha-select-cell ${isSelectMode ? '' : 'hidden'}">
+            <td class="px-6 py-4">
                 <input type="checkbox" class="ficha-checkbox rounded" value="${ficha.id}" onchange="updateSelectedFichasCount()">
             </td>
             <td class="px-6 py-4">
@@ -1452,38 +1450,8 @@ function deleteFicha(id) {
 }
 
 // --- FUNÇÕES DE SELEÇÃO MÚLTIPLA PARA FICHAS TÉCNICAS ---
-function toggleFichaSelectMode() {
-    const selectColumn = document.getElementById('fichaSelectColumn');
-    const selectHeader = document.getElementById('selectAllFichasHeader');
-    const multiSelectActions = document.getElementById('fichaMultiSelectActions');
-    const selectButton = document.getElementById('toggleFichaSelectMode');
-    const selectCells = document.querySelectorAll('.ficha-select-cell');
-    
-    if (selectColumn.classList.contains('hidden')) {
-        // Ativar modo de seleção
-        selectColumn.classList.remove('hidden');
-        selectColumn.classList.add('show-select');
-        selectCells.forEach(cell => cell.classList.remove('hidden'));
-        multiSelectActions.classList.remove('hidden');
-        selectButton.innerHTML = '<i data-lucide="x" class="h-4 w-4 mr-2"></i>Cancelar Seleção';
-        selectButton.className = 'bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center';
-    } else {
-        // Desativar modo de seleção
-        selectColumn.classList.add('hidden');
-        selectColumn.classList.remove('show-select');
-        selectCells.forEach(cell => cell.classList.add('hidden'));
-        multiSelectActions.classList.add('hidden');
-        selectButton.innerHTML = '<i data-lucide="check-square" class="h-4 w-4 mr-2"></i>Seleção Múltipla';
-        selectButton.className = 'bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center';
-        clearFichaSelection();
-    }
-    
-    lucide.createIcons();
-    renderFichas();
-}
-
 function toggleSelectAllFichas() {
-    const selectAll = document.getElementById('selectAllFichas') || document.getElementById('selectAllFichasHeader');
+    const selectAll = document.getElementById('selectAllFichas');
     const checkboxes = document.querySelectorAll('.ficha-checkbox');
     
     checkboxes.forEach(checkbox => {
@@ -1497,29 +1465,35 @@ function updateSelectedFichasCount() {
     const checkboxes = document.querySelectorAll('.ficha-checkbox:checked');
     const count = checkboxes.length;
     const selectAll = document.getElementById('selectAllFichas');
-    const selectAllHeader = document.getElementById('selectAllFichasHeader');
+    const multiSelectActions = document.getElementById('fichaMultiSelectActions');
     const selectedCount = document.getElementById('selectedFichasCount');
     
     if (selectedCount) {
         selectedCount.textContent = `${count} itens selecionados`;
     }
     
-    // Atualizar estado dos checkboxes "selecionar todos"
-    const allCheckboxes = document.querySelectorAll('.ficha-checkbox');
-    [selectAll, selectAllHeader].forEach(checkbox => {
-        if (checkbox) {
-            if (count === 0) {
-                checkbox.checked = false;
-                checkbox.indeterminate = false;
-            } else if (count === allCheckboxes.length) {
-                checkbox.checked = true;
-                checkbox.indeterminate = false;
-            } else {
-                checkbox.checked = false;
-                checkbox.indeterminate = true;
-            }
+    if (multiSelectActions) {
+        if (count > 0) {
+            multiSelectActions.classList.remove('hidden');
+        } else {
+            multiSelectActions.classList.add('hidden');
         }
-    });
+    }
+    
+    // Atualizar estado do checkbox "selecionar todos"
+    if (selectAll) {
+        const allCheckboxes = document.querySelectorAll('.ficha-checkbox');
+        if (count === 0) {
+            selectAll.checked = false;
+            selectAll.indeterminate = false;
+        } else if (count === allCheckboxes.length) {
+            selectAll.checked = true;
+            selectAll.indeterminate = false;
+        } else {
+            selectAll.checked = false;
+            selectAll.indeterminate = true;
+        }
+    }
 }
 
 function clearFichaSelection() {
@@ -1527,9 +1501,7 @@ function clearFichaSelection() {
         checkbox.checked = false;
     });
     const selectAll = document.getElementById('selectAllFichas');
-    const selectAllHeader = document.getElementById('selectAllFichasHeader');
     if (selectAll) selectAll.checked = false;
-    if (selectAllHeader) selectAllHeader.checked = false;
     updateSelectedFichasCount();
 }
 
