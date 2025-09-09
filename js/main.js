@@ -1300,9 +1300,11 @@ function renderFichas() {
     if (!tbody) return;
     
     if (fichasTecnicasDB.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-8 text-gray-500">Nenhuma ficha técnica cadastrada</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="8" class="text-center p-8 text-gray-500">Nenhuma ficha técnica cadastrada</td></tr>';
         return;
     }
+    
+    const isSelectMode = document.getElementById('fichaSelectColumn')?.classList.contains('show-select');
     
     tbody.innerHTML = fichasTecnicasDB.map(ficha => {
         const custoTotal = calcularCustoFichaTecnica(ficha);
@@ -1311,6 +1313,9 @@ function renderFichas() {
                            ficha.status === 'teste' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
         
         return `<tr class="hover:bg-gray-50">
+            <td class="px-6 py-4 ficha-select-cell ${isSelectMode ? '' : 'hidden'}">
+                <input type="checkbox" class="ficha-checkbox rounded" value="${ficha.id}" onchange="updateSelectedFichasCount()">
+            </td>
             <td class="px-6 py-4">
                 <div>
                     <div class="font-medium text-gray-900">${ficha.nome}</div>
@@ -1443,6 +1448,144 @@ function deleteFicha(id) {
         renderFichas();
         updateStats();
         showAlert('Ficha Excluída', 'Ficha técnica removida com sucesso!', 'success');
+    }
+}
+
+// --- FUNÇÕES DE SELEÇÃO MÚLTIPLA PARA FICHAS TÉCNICAS ---
+function toggleFichaSelectMode() {
+    const selectColumn = document.getElementById('fichaSelectColumn');
+    const selectHeader = document.getElementById('selectAllFichasHeader');
+    const multiSelectActions = document.getElementById('fichaMultiSelectActions');
+    const selectButton = document.getElementById('toggleFichaSelectMode');
+    const selectCells = document.querySelectorAll('.ficha-select-cell');
+    
+    if (selectColumn.classList.contains('hidden')) {
+        // Ativar modo de seleção
+        selectColumn.classList.remove('hidden');
+        selectColumn.classList.add('show-select');
+        selectCells.forEach(cell => cell.classList.remove('hidden'));
+        multiSelectActions.classList.remove('hidden');
+        selectButton.innerHTML = '<i data-lucide="x" class="h-4 w-4 mr-2"></i>Cancelar Seleção';
+        selectButton.className = 'bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors flex items-center';
+    } else {
+        // Desativar modo de seleção
+        selectColumn.classList.add('hidden');
+        selectColumn.classList.remove('show-select');
+        selectCells.forEach(cell => cell.classList.add('hidden'));
+        multiSelectActions.classList.add('hidden');
+        selectButton.innerHTML = '<i data-lucide="check-square" class="h-4 w-4 mr-2"></i>Seleção Múltipla';
+        selectButton.className = 'bg-gray-500 text-white px-4 py-2 rounded-lg hover:bg-gray-600 transition-colors flex items-center';
+        clearFichaSelection();
+    }
+    
+    lucide.createIcons();
+    renderFichas();
+}
+
+function toggleSelectAllFichas() {
+    const selectAll = document.getElementById('selectAllFichas') || document.getElementById('selectAllFichasHeader');
+    const checkboxes = document.querySelectorAll('.ficha-checkbox');
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.checked = selectAll.checked;
+    });
+    
+    updateSelectedFichasCount();
+}
+
+function updateSelectedFichasCount() {
+    const checkboxes = document.querySelectorAll('.ficha-checkbox:checked');
+    const count = checkboxes.length;
+    const selectAll = document.getElementById('selectAllFichas');
+    const selectAllHeader = document.getElementById('selectAllFichasHeader');
+    const selectedCount = document.getElementById('selectedFichasCount');
+    
+    if (selectedCount) {
+        selectedCount.textContent = `${count} itens selecionados`;
+    }
+    
+    // Atualizar estado dos checkboxes "selecionar todos"
+    const allCheckboxes = document.querySelectorAll('.ficha-checkbox');
+    [selectAll, selectAllHeader].forEach(checkbox => {
+        if (checkbox) {
+            if (count === 0) {
+                checkbox.checked = false;
+                checkbox.indeterminate = false;
+            } else if (count === allCheckboxes.length) {
+                checkbox.checked = true;
+                checkbox.indeterminate = false;
+            } else {
+                checkbox.checked = false;
+                checkbox.indeterminate = true;
+            }
+        }
+    });
+}
+
+function clearFichaSelection() {
+    document.querySelectorAll('.ficha-checkbox').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    const selectAll = document.getElementById('selectAllFichas');
+    const selectAllHeader = document.getElementById('selectAllFichasHeader');
+    if (selectAll) selectAll.checked = false;
+    if (selectAllHeader) selectAllHeader.checked = false;
+    updateSelectedFichasCount();
+}
+
+function deleteSelectedFichas() {
+    const selected = Array.from(document.querySelectorAll('.ficha-checkbox:checked')).map(cb => cb.value);
+    
+    if (selected.length === 0) {
+        showAlert('Nenhum item selecionado', 'Selecione pelo menos uma ficha técnica para excluir.', 'warning');
+        return;
+    }
+    
+    // Verificar se alguma das fichas selecionadas está em uso em pratos
+    const fichasEmUso = [];
+    selected.forEach(id => {
+        const usedInPratos = pratosDB.filter(prato => 
+            prato.componentes && prato.componentes.some(comp => comp.fichaId === id)
+        );
+        
+        if (usedInPratos.length > 0) {
+            const ficha = fichasTecnicasDB.find(f => f.id === id);
+            fichasEmUso.push({
+                ficha: ficha,
+                pratos: usedInPratos
+            });
+        }
+    });
+    
+    let message = `Tem certeza que deseja excluir ${selected.length} ficha(s) técnica(s) selecionada(s)?`;
+    
+    if (fichasEmUso.length > 0) {
+        message += '\n\nATENÇÃO: As seguintes fichas estão sendo usadas:\n\n';
+        fichasEmUso.forEach(item => {
+            message += `• ${item.ficha.nome}\n`;
+            if (item.pratos.length > 0) {
+                message += `  Pratos: ${item.pratos.map(p => p.nome).join(', ')}\n`;
+            }
+        });
+        message += '\nEstes pratos ficarão com componentes incompletos.';
+    }
+    
+    if (confirm(message)) {
+        // Excluir todas as fichas selecionadas
+        selected.forEach(id => {
+            fichasTecnicasDB = fichasTecnicasDB.filter(f => f.id !== id);
+            
+            // Deletar do Firebase se estiver conectado
+            if (isFirebaseReady) {
+                deleteFromFirebase('fichas', id);
+            }
+        });
+        
+        saveData();
+        renderFichas();
+        clearFichaSelection();
+        updateStats();
+        showAlert('Fichas Excluídas', `${selected.length} ficha(s) técnica(s) removida(s) com sucesso!`, 'success');
     }
 }
 
