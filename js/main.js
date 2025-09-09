@@ -482,7 +482,7 @@ async function saveData() {
             // Salvar fichas técnicas
             fichasTecnicasDB.forEach(ficha => {
                 if (ficha.id) {
-                    savePromises.push(saveToFirebase('fichas', ficha, ficha.id));
+                    savePromises.push(saveToFirebase('fichasTecnicas', ficha, ficha.id));
                 }
             });
             
@@ -1439,7 +1439,7 @@ function deleteFicha(id) {
         
         // Deletar do Firebase se estiver conectado (sem bloquear a exclusão)
         if (isFirebaseReady) {
-            deleteFromFirebase('fichas', id);
+            deleteFromFirebase('fichasTecnicas', id);
         }
         
         saveData();
@@ -1549,7 +1549,7 @@ function deleteSelectedFichas() {
             
             // Deletar do Firebase se estiver conectado
             if (isFirebaseReady) {
-                deleteFromFirebase('fichas', id);
+                deleteFromFirebase('fichasTecnicas', id);
             }
         });
         
