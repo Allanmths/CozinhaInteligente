@@ -857,7 +857,14 @@ function calcularCustoPrato(prato) {
             if (!ultimaCompra) return total;
             
             // Calcular custo baseado na quantidade usada
-            const custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
+            let custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
+            
+            // Aplicar taxa de correção do insumo (se houver)
+            if (insumo.taxaCorrecao && insumo.taxaCorrecao > 0) {
+                const fatorCorrecaoInsumo = insumo.taxaCorrecao / 100;
+                custoUnitario = custoUnitario * (1 + fatorCorrecaoInsumo);
+            }
+            
             return total + (custoUnitario * ingrediente.quantidade);
         }, 0);
     }
@@ -893,7 +900,14 @@ function calcularCustoFichaTecnica(ficha) {
         if (!ultimaCompra) return total;
         
         // Calcular custo baseado na quantidade usada
-        const custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
+        let custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
+        
+        // Aplicar taxa de correção do insumo (se houver)
+        if (insumo.taxaCorrecao && insumo.taxaCorrecao > 0) {
+            const fatorCorrecaoInsumo = insumo.taxaCorrecao / 100;
+            custoUnitario = custoUnitario * (1 + fatorCorrecaoInsumo);
+        }
+        
         const custoIngrediente = custoUnitario * ingrediente.quantidade;
         
         return total + custoIngrediente;
@@ -1988,11 +2002,16 @@ function saveInsumo(event) {
     event.preventDefault();
     
     const id = document.getElementById('insumoId').value;
+    const valorUnitario = parseFloat(document.getElementById('insumoValorUnitario').value) || 0;
+    const taxaCorrecao = parseFloat(document.getElementById('insumoTaxaCorrecao').value) || 0;
+    
     const insumo = {
         nome: document.getElementById('insumoNome').value,
         unidade: document.getElementById('insumoUnidade').value,
         categoria: document.getElementById('insumoCategoria').value,
-        observacoes: document.getElementById('insumoObservacoes').value
+        observacoes: document.getElementById('insumoObservacoes').value,
+        valorUnitario: valorUnitario,
+        taxaCorrecao: taxaCorrecao
     };
     
     if (id) {
@@ -2024,6 +2043,8 @@ function editInsumo(id) {
     document.getElementById('insumoUnidade').value = insumo.unidade || '';
     document.getElementById('insumoCategoria').value = insumo.categoria || '';
     document.getElementById('insumoObservacoes').value = insumo.observacoes || '';
+    document.getElementById('insumoValorUnitario').value = insumo.valorUnitario || '';
+    document.getElementById('insumoTaxaCorrecao').value = insumo.taxaCorrecao || '';
     
     showModal('insumoModal');
 }
