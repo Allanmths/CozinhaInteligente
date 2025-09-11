@@ -87,9 +87,9 @@ Write-Host "• Teste o sistema agora para verificar o login" -ForegroundColor Y
 Write-Host "• NÃO lance comercialmente ainda" -ForegroundColor Red
 Write-Host "• Execute a Fase 2 o mais rápido possível" -ForegroundColor Yellow
 Write-Host ""
-Write-Host "📋 PRÓXIMOS PASSOS CRÍTICOS:" -ForegroundColor Cyan
-Write-Host "1. Mover credenciais para variáveis de ambiente" -ForegroundColor White
-Write-Host "2. Configurar HTTPS obrigatório" -ForegroundColor White
+Write-Host "PROXIMOS PASSOS CRITICOS:" -ForegroundColor Cyan
+Write-Host "1. Mover credenciais para variaveis de ambiente" -ForegroundColor White
+Write-Host "2. Configurar HTTPS obrigatorio" -ForegroundColor White
 Write-Host "3. Implementar rate limiting" -ForegroundColor White
-Write-Host "4. Adicionar validação de entrada" -ForegroundColor White
+Write-Host "4. Adicionar validacao de entrada" -ForegroundColor White
 Write-Host ""

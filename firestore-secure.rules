@@ -2,71 +2,83 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // 🔐 REGRAS DE SEGURANÇA CRÍTICAS - IMPLEMENTAÇÃO IMEDIATA
+    // 🔐 REGRAS DE SEGURANÇA MULTIUSUÁRIO POR RESTAURANTE
     
     // ❌ REGRA PADRÃO: NEGAR TUDO por segurança
     match /{document=**} {
       allow read, write: if false;
     }
     
-    // 👤 Dados do usuário - APENAS o próprio usuário pode acessar
+    // 🏢 Restaurantes - APENAS o proprietário pode gerenciar
+    match /restaurants/{restaurantId} {
+      allow read, write: if request.auth != null && request.auth.uid == resource.data.ownerId;
+      allow create: if request.auth != null && request.auth.uid == request.resource.data.ownerId;
+    }
+    
+    // 👤 Usuários - APENAS o próprio usuário ou admin do restaurante pode acessar
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
+      
+      // Admin do restaurante pode ler dados de usuários do mesmo restaurante
+      allow read: if request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId == resource.data.restaurantId &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'manager'];
     }
     
-    // 🥕 Insumos - APENAS dados do usuário logado
+    // Função helper para verificar se usuário pertence ao restaurante
+    function belongsToRestaurant(restaurantId) {
+      return request.auth != null &&
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId == restaurantId;
+    }
+    
+    // 🥕 Insumos - APENAS usuários do mesmo restaurante
     match /insumos/{insumoId} {
-      allow read, write: if request.auth != null 
-        && request.auth.uid == resource.data.userId;
-      
-      // Criação - garantir que userId seja o do usuário logado
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.userId;
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      allow write: if belongsToRestaurant(resource.data.restaurantId);
+      allow create: if request.auth != null && 
+        belongsToRestaurant(request.resource.data.restaurantId);
     }
     
-    // 📝 Fichas Técnicas - APENAS dados do usuário logado
+    // 📝 Fichas Técnicas - APENAS usuários do mesmo restaurante  
     match /fichasTecnicas/{fichaId} {
-      allow read, write: if request.auth != null 
-        && request.auth.uid == resource.data.userId;
-      
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.userId;
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      allow write: if belongsToRestaurant(resource.data.restaurantId);
+      allow create: if request.auth != null && 
+        belongsToRestaurant(request.resource.data.restaurantId);
     }
     
-    // 🍽️ Pratos - APENAS dados do usuário logado
+    // 🍽️ Pratos - APENAS usuários do mesmo restaurante
     match /pratos/{pratoId} {
-      allow read, write: if request.auth != null 
-        && request.auth.uid == resource.data.userId;
-      
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.userId;
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      allow write: if belongsToRestaurant(resource.data.restaurantId);
+      allow create: if request.auth != null && 
+        belongsToRestaurant(request.resource.data.restaurantId);
     }
     
-    // 🛒 Compras - APENAS dados do usuário logado
+    // 🛒 Compras - APENAS usuários do mesmo restaurante
     match /compras/{compraId} {
-      allow read, write: if request.auth != null 
-        && request.auth.uid == resource.data.userId;
-      
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.userId;
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      allow write: if belongsToRestaurant(resource.data.restaurantId);
+      allow create: if request.auth != null && 
+        belongsToRestaurant(request.resource.data.restaurantId);
     }
     
-    // ⚙️ Configurações - APENAS dados do usuário logado
+    // ⚙️ Configurações - APENAS usuários do mesmo restaurante
     match /configuracoes/{configId} {
-      allow read, write: if request.auth != null 
-        && request.auth.uid == resource.data.userId;
-      
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.userId;
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      allow write: if belongsToRestaurant(resource.data.restaurantId);
+      allow create: if request.auth != null && 
+        belongsToRestaurant(request.resource.data.restaurantId);
     }
     
-    // 🏷️ Fornecedores - APENAS dados do usuário logado
+    // 🏷️ Fornecedores - APENAS usuários do mesmo restaurante
     match /fornecedores/{fornecedorId} {
-      allow read, write: if request.auth != null 
-        && request.auth.uid == resource.data.userId;
-      
-      allow create: if request.auth != null 
-        && request.auth.uid == request.resource.data.userId;
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      allow write: if belongsToRestaurant(resource.data.restaurantId);
+      allow create: if request.auth != null && 
+        belongsToRestaurant(request.resource.data.restaurantId);
     }
   }
 }

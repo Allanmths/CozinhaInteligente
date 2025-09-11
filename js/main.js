@@ -22,6 +22,8 @@ if (window.firebaseServices) {
 let currentUser = null;
 let isFirebaseReady = false;
 let auth = null; // Instância do Firebase Auth
+let currentRestaurant = null; // Dados do restaurante atual
+let userRole = 'user'; // Papel do usuário: 'admin', 'manager', 'chef', 'user'
 
 // --- BANCO DE DADOS ---
 let insumosDB = [], comprasDB = [], fichasTecnicasDB = [], pratosDB = [], configuracoesDB = {}, fornecedoresDB = [];
@@ -172,8 +174,8 @@ async function registerUser() {
         
         showAuthMessage('Conta criada com sucesso!', 'success');
         
-        // Criar dados iniciais do usuário
-        await createUserInitialData(userCredential.user.uid, name);
+        // 🏢 CRIAR RESTAURANTE E USUÁRIO ADMIN
+        await createRestaurantAndUser(userCredential.user.uid, name, email);
         
         // O onAuthStateChanged irá tratar o redirecionamento
         
@@ -241,31 +243,67 @@ async function resetPassword() {
     }
 }
 
-// Criar dados iniciais do usuário
-async function createUserInitialData(userId, userName) {
+// 🏢 Criar restaurante e usuário admin
+async function createRestaurantAndUser(userId, restaurantName, email) {
     try {
         if (!firebaseServices?.db) return;
         
-        const userDocRef = doc(firebaseServices.db, 'users', userId);
-        await setDoc(userDocRef, {
-            name: userName,
+        const { db } = firebaseServices;
+        const restaurantId = generateId();
+        
+        // 1. Criar restaurante
+        const restaurantRef = doc(db, 'restaurants', restaurantId);
+        await setDoc(restaurantRef, {
+            name: restaurantName,
             createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
+            updatedAt: new Date().toISOString(),
+            ownerId: userId,
+            status: 'active',
+            settings: {
+                currency: 'BRL',
+                timezone: 'America/Sao_Paulo',
+                features: {
+                    multiUser: true,
+                    reports: true,
+                    inventory: true
+                }
+            }
         });
         
+        // 2. Criar usuário como admin do restaurante
+        const userRef = doc(db, 'users', userId);
+        await setDoc(userRef, {
+            name: restaurantName,
+            email: email,
+            restaurantId: restaurantId,
+            role: 'admin',
+            permissions: ['all'],
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isActive: true
+        });
+        
+        console.log(`✅ Restaurante criado: ${restaurantId} para usuário: ${userId}`);
+        
     } catch (error) {
-        logError('Erro ao criar dados iniciais do usuário', error);
+        logError('Erro ao criar restaurante e usuário', error);
+        throw error;
     }
 }
 
-// Carregar dados do usuário
+// Carregar dados do usuário e restaurante
 async function loadUserData() {
     if (!currentUser) return;
     
     try {
-        // Carregar dados do Firestore para este usuário específico
-        await loadFromFirebase();
-        renderDashboard();
+        // 1. Carregar dados do usuário
+        await loadUserProfile();
+        
+        // 2. Carregar dados do restaurante
+        if (currentRestaurant) {
+            await loadFromFirebase();
+            renderDashboard();
+        }
         
     } catch (error) {
         logError('Erro ao carregar dados do usuário', error);
@@ -274,6 +312,47 @@ async function loadUserData() {
         loadLocalData();
         renderDashboard();
     }
+}
+
+// Carregar perfil do usuário e dados do restaurante
+async function loadUserProfile() {
+    if (!firebaseServices || !currentUser) return;
+    
+    try {
+        const { db } = firebaseServices;
+        const userRef = doc(db, 'users', currentUser.uid);
+        const userSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', currentUser.uid)));
+        
+        if (!userSnap.empty) {
+            const userData = userSnap.docs[0].data();
+            currentRestaurant = { id: userData.restaurantId };
+            userRole = userData.role || 'user';
+            
+            console.log(`✅ Usuário carregado - Restaurante: ${userData.restaurantId}, Papel: ${userRole}`);
+            
+            // Atualizar UI com informações do usuário
+            document.getElementById('currentUserName').textContent = 
+                `${userData.name} (${getRoleDisplayName(userRole)})`;
+            
+        } else {
+            console.error('❌ Dados do usuário não encontrados');
+        }
+        
+    } catch (error) {
+        logError('Erro ao carregar perfil do usuário', error);
+        throw error;
+    }
+}
+
+// Converter role para nome amigável
+function getRoleDisplayName(role) {
+    const roleNames = {
+        'admin': 'Administrador',
+        'manager': 'Gerente', 
+        'chef': 'Chef',
+        'user': 'Usuário'
+    };
+    return roleNames[role] || 'Usuário';
 }
 
 // Função que carrega dados específicos do usuário do Firebase
@@ -342,6 +421,31 @@ function showAuthMessage(message, type) {
 function hideAuthMessage() {
     const messageDiv = document.getElementById('authMessage');
     messageDiv.classList.add('hidden');
+}
+
+// Alternar entre campos de registro
+function toggleRegistrationFields() {
+    const registrationType = document.querySelector('input[name="registrationType"]:checked').value;
+    const newFields = document.getElementById('newRestaurantFields');
+    const joinFields = document.getElementById('joinRestaurantFields');
+    
+    if (registrationType === 'new') {
+        newFields.classList.remove('hidden');
+        joinFields.classList.add('hidden');
+        
+        // Tornar campos obrigatórios
+        document.getElementById('registerName').required = true;
+        document.getElementById('restaurantCode').required = false;
+        document.getElementById('staffName').required = false;
+    } else {
+        newFields.classList.add('hidden');
+        joinFields.classList.remove('hidden');
+        
+        // Tornar campos obrigatórios
+        document.getElementById('registerName').required = false;
+        document.getElementById('restaurantCode').required = true;
+        document.getElementById('staffName').required = true;
+    }
 }
 
 // =====================================================
@@ -513,24 +617,24 @@ async function initializeFirebase() {
 }
 
 async function loadFirebaseData() {
-    if (!firebaseServices || !currentUser) {
-        console.log('Firebase services ou usuário não disponível');
+    if (!firebaseServices || !currentUser || !currentRestaurant) {
+        console.log('Firebase services, usuário ou restaurante não disponível');
         return;
     }
     
-    // MUDANÇA CRÍTICA: Dados separados por usuário
+    // 🏢 MUDANÇA CRÍTICA: Dados compartilhados por RESTAURANTE
     const { db, collection, addDoc, getDocs, query, orderBy, where } = firebaseServices;
     
     try {
-        const userId = currentUser.uid;
+        const restaurantId = currentRestaurant.id;
         
-        // 🔐 CARREGAR DADOS ESPECÍFICOS DO USUÁRIO
+        // 🔐 CARREGAR DADOS COMPARTILHADOS DO RESTAURANTE
         const [insumosSnap, comprasSnap, fichasSnap, pratosSnap, configSnap] = await Promise.all([
-            getDocs(query(collection(db, 'insumos'), where('userId', '==', userId))),
-            getDocs(query(collection(db, 'compras'), where('userId', '==', userId), orderBy('data', 'desc'))),
-            getDocs(query(collection(db, 'fichasTecnicas'), where('userId', '==', userId))),
-            getDocs(query(collection(db, 'pratos'), where('userId', '==', userId))),
-            getDocs(query(collection(db, 'configuracoes'), where('userId', '==', userId)))
+            getDocs(query(collection(db, 'insumos'), where('restaurantId', '==', restaurantId))),
+            getDocs(query(collection(db, 'compras'), where('restaurantId', '==', restaurantId), orderBy('data', 'desc'))),
+            getDocs(query(collection(db, 'fichasTecnicas'), where('restaurantId', '==', restaurantId))),
+            getDocs(query(collection(db, 'pratos'), where('restaurantId', '==', restaurantId))),
+            getDocs(query(collection(db, 'configuracoes'), where('restaurantId', '==', restaurantId)))
         ]);
         
         // Processar dados
@@ -569,24 +673,35 @@ async function loadFirebaseData() {
 }
 
 async function saveToFirebase(collection_name, data, docId = null) {
-    if (!isFirebaseReady || !firebaseServices || !currentUser) {
-        console.warn('Firebase não está pronto ou usuário não logado, salvando localmente');
+    if (!isFirebaseReady || !firebaseServices || !currentUser || !currentRestaurant) {
+        console.warn('Firebase não está pronto, usuário não logado ou restaurante não definido, salvando localmente');
         return saveToLocalStorage();
     }
     
     const { db, collection, addDoc, doc, updateDoc, setDoc } = firebaseServices;
     
     try {
-        // 🔐 ADICIONAR userId em TODOS os documentos
+        // 🏢 ADICIONAR restaurantId e metadados em TODOS os documentos
         const secureData = {
             ...data,
-            userId: currentUser.uid,
-            updatedAt: new Date().toISOString()
+            restaurantId: currentRestaurant.id,
+            userId: currentUser.uid, // Para auditoria - quem criou/editou
+            updatedAt: new Date().toISOString(),
+            updatedBy: {
+                uid: currentUser.uid,
+                name: currentUser.displayName || currentUser.email,
+                role: userRole
+            }
         };
         
         // Adicionar createdAt apenas para novos documentos
         if (!docId) {
             secureData.createdAt = new Date().toISOString();
+            secureData.createdBy = {
+                uid: currentUser.uid,
+                name: currentUser.displayName || currentUser.email,
+                role: userRole
+            };
         }
         
         if (docId) {
