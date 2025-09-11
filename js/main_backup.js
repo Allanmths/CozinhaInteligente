@@ -21,7 +21,6 @@ if (window.firebaseServices) {
 // Estado de autenticação
 let currentUser = null;
 let isFirebaseReady = false;
-let auth = null; // Instância do Firebase Auth
 
 // --- BANCO DE DADOS ---
 let insumosDB = [], comprasDB = [], fichasTecnicasDB = [], pratosDB = [], configuracoesDB = {}, fornecedoresDB = [];
@@ -29,324 +28,6 @@ let categoriasDB = []; // Array para categorias de insumos
 let insumosParaRevisao = [];
 const conversionFactors = { 'kg': 1000, 'g': 1, 'l': 1000, 'ml': 1 };
 let charts = {};
-
-// =====================================================
-// 🔐 SISTEMA DE AUTENTICAÇÃO SEGURA
-// =====================================================
-
-// Verificar estado de autenticação
-function setupAuthListener() {
-    if (!auth) return;
-    
-    onAuthStateChanged(auth, (user) => {
-        if (user) {
-            // Usuário logado
-            currentUser = user;
-            showApp();
-            document.getElementById('currentUserName').textContent = user.displayName || user.email;
-            loadUserData();
-        } else {
-            // Usuário não logado
-            currentUser = null;
-            showAuth();
-        }
-    });
-}
-
-// Exibir tela de autenticação
-function showAuth() {
-    document.getElementById('authContainer').classList.remove('hidden');
-    document.getElementById('appContainer').classList.add('hidden');
-}
-
-// Exibir aplicação principal
-function showApp() {
-    document.getElementById('authContainer').classList.add('hidden');
-    document.getElementById('appContainer').classList.remove('hidden');
-    
-    // Inicializar dados da aplicação
-    if (!insumosDB.length) {
-        carregarCategorias();
-        renderDashboard();
-    }
-}
-
-// Alternar entre abas de login/registro
-function showAuthTab(tab) {
-    const loginTab = document.getElementById('loginTab');
-    const registerTab = document.getElementById('registerTab');
-    const loginForm = document.getElementById('loginForm');
-    const registerForm = document.getElementById('registerForm');
-    
-    if (tab === 'login') {
-        loginTab.className = 'flex-1 py-2 px-4 bg-orange-600 text-white rounded-md font-medium transition-all';
-        registerTab.className = 'flex-1 py-2 px-4 text-gray-700 rounded-md font-medium transition-all';
-        loginForm.classList.remove('hidden');
-        registerForm.classList.add('hidden');
-    } else {
-        loginTab.className = 'flex-1 py-2 px-4 text-gray-700 rounded-md font-medium transition-all';
-        registerTab.className = 'flex-1 py-2 px-4 bg-orange-600 text-white rounded-md font-medium transition-all';
-        loginForm.classList.add('hidden');
-        registerForm.classList.remove('hidden');
-    }
-    
-    // Limpar mensagens
-    hideAuthMessage();
-}
-
-// Login do usuário
-async function loginUser() {
-    const email = document.getElementById('loginEmail').value.trim();
-    const password = document.getElementById('loginPassword').value;
-    
-    if (!email || !password) {
-        showAuthMessage('Por favor, preencha todos os campos.', 'error');
-        return;
-    }
-    
-    setLoginLoading(true);
-    
-    try {
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        showAuthMessage('Login realizado com sucesso!', 'success');
-        
-        // O onAuthStateChanged irá tratar o redirecionamento
-        
-    } catch (error) {
-        logError('Erro no login', error);
-        
-        let message = 'Erro no login. Tente novamente.';
-        if (error.code === 'auth/user-not-found') {
-            message = 'Usuário não encontrado.';
-        } else if (error.code === 'auth/wrong-password') {
-            message = 'Senha incorreta.';
-        } else if (error.code === 'auth/invalid-email') {
-            message = 'E-mail inválido.';
-        } else if (error.code === 'auth/too-many-requests') {
-            message = 'Muitas tentativas. Tente novamente em alguns minutos.';
-        }
-        
-        showAuthMessage(message, 'error');
-    } finally {
-        setLoginLoading(false);
-    }
-}
-
-// Registro do usuário
-async function registerUser() {
-    const name = document.getElementById('registerName').value.trim();
-    const email = document.getElementById('registerEmail').value.trim();
-    const password = document.getElementById('registerPassword').value;
-    const confirmPassword = document.getElementById('confirmPassword').value;
-    const acceptTerms = document.getElementById('acceptTerms').checked;
-    
-    if (!name || !email || !password || !confirmPassword) {
-        showAuthMessage('Por favor, preencha todos os campos.', 'error');
-        return;
-    }
-    
-    if (password !== confirmPassword) {
-        showAuthMessage('As senhas não coincidem.', 'error');
-        return;
-    }
-    
-    if (password.length < 6) {
-        showAuthMessage('A senha deve ter pelo menos 6 caracteres.', 'error');
-        return;
-    }
-    
-    if (!acceptTerms) {
-        showAuthMessage('Você deve aceitar os termos de uso.', 'error');
-        return;
-    }
-    
-    setRegisterLoading(true);
-    
-    try {
-        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        
-        // Atualizar perfil do usuário
-        await updateProfile(userCredential.user, {
-            displayName: name
-        });
-        
-        showAuthMessage('Conta criada com sucesso!', 'success');
-        
-        // Criar dados iniciais do usuário
-        await createUserInitialData(userCredential.user.uid, name);
-        
-        // O onAuthStateChanged irá tratar o redirecionamento
-        
-    } catch (error) {
-        logError('Erro no registro', error);
-        
-        let message = 'Erro ao criar conta. Tente novamente.';
-        if (error.code === 'auth/email-already-in-use') {
-            message = 'Este e-mail já está em uso.';
-        } else if (error.code === 'auth/weak-password') {
-            message = 'Senha muito fraca. Use pelo menos 6 caracteres.';
-        } else if (error.code === 'auth/invalid-email') {
-            message = 'E-mail inválido.';
-        }
-        
-        showAuthMessage(message, 'error');
-    } finally {
-        setRegisterLoading(false);
-    }
-}
-
-// Logout do usuário
-async function logoutUser() {
-    try {
-        await signOut(auth);
-        
-        // Limpar dados locais
-        insumosDB = [];
-        fichasTecnicasDB = [];
-        pratosDB = [];
-        comprasDB = [];
-        configuracoesDB = {};
-        
-        showAuthMessage('Logout realizado com sucesso!', 'success');
-        
-    } catch (error) {
-        logError('Erro no logout', error);
-        showAuthMessage('Erro ao fazer logout.', 'error');
-    }
-}
-
-// Recuperar senha
-async function resetPassword() {
-    const email = document.getElementById('loginEmail').value.trim();
-    
-    if (!email) {
-        showAuthMessage('Digite seu e-mail no campo acima e clique em "Recuperar senha".', 'error');
-        return;
-    }
-    
-    try {
-        await sendPasswordResetEmail(auth, email);
-        showAuthMessage('E-mail de recuperação enviado!', 'success');
-    } catch (error) {
-        logError('Erro na recuperação de senha', error);
-        
-        let message = 'Erro ao enviar e-mail de recuperação.';
-        if (error.code === 'auth/user-not-found') {
-            message = 'Usuário não encontrado.';
-        } else if (error.code === 'auth/invalid-email') {
-            message = 'E-mail inválido.';
-        }
-        
-        showAuthMessage(message, 'error');
-    }
-}
-
-// Criar dados iniciais do usuário
-async function createUserInitialData(userId, userName) {
-    try {
-        if (!firebaseServices?.db) return;
-        
-        const userDocRef = doc(firebaseServices.db, 'users', userId);
-        await setDoc(userDocRef, {
-            name: userName,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString()
-        });
-        
-    } catch (error) {
-        logError('Erro ao criar dados iniciais do usuário', error);
-    }
-}
-
-// Carregar dados do usuário
-async function loadUserData() {
-    if (!currentUser) return;
-    
-    try {
-        // Carregar dados do Firestore para este usuário específico
-        await loadFromFirebase();
-        renderDashboard();
-        
-    } catch (error) {
-        logError('Erro ao carregar dados do usuário', error);
-        
-        // Fallback para localStorage
-        loadLocalData();
-        renderDashboard();
-    }
-}
-
-// Função que carrega dados específicos do usuário do Firebase
-async function loadFromFirebase() {
-    if (!firebaseServices || !currentUser) return;
-    
-    try {
-        console.log('Carregando dados do usuário:', currentUser.uid);
-        await loadFirebaseData();
-        console.log('Dados carregados com sucesso');
-    } catch (error) {
-        console.error('Erro ao carregar dados do Firebase:', error);
-        throw error;
-    }
-}
-
-// Utilitários de UI para autenticação
-function setLoginLoading(loading) {
-    const btn = document.querySelector('#loginForm button');
-    const text = document.getElementById('loginBtnText');
-    const loader = document.getElementById('loginBtnLoader');
-    
-    if (loading) {
-        btn.disabled = true;
-        text.textContent = 'Entrando...';
-        loader.classList.remove('hidden');
-    } else {
-        btn.disabled = false;
-        text.textContent = 'Entrar';
-        loader.classList.add('hidden');
-    }
-}
-
-function setRegisterLoading(loading) {
-    const btn = document.querySelector('#registerForm button');
-    const text = document.getElementById('registerBtnText');
-    const loader = document.getElementById('registerBtnLoader');
-    
-    if (loading) {
-        btn.disabled = true;
-        text.textContent = 'Criando conta...';
-        loader.classList.remove('hidden');
-    } else {
-        btn.disabled = false;
-        text.textContent = 'Criar Conta';
-        loader.classList.add('hidden');
-    }
-}
-
-function showAuthMessage(message, type) {
-    const messageDiv = document.getElementById('authMessage');
-    messageDiv.textContent = message;
-    messageDiv.className = `mt-4 p-3 rounded-lg text-sm ${
-        type === 'error' 
-            ? 'bg-red-100 text-red-700 border border-red-300' 
-            : 'bg-green-100 text-green-700 border border-green-300'
-    }`;
-    messageDiv.classList.remove('hidden');
-    
-    // Auto hide após 5 segundos
-    setTimeout(() => {
-        hideAuthMessage();
-    }, 5000);
-}
-
-function hideAuthMessage() {
-    const messageDiv = document.getElementById('authMessage');
-    messageDiv.classList.add('hidden');
-}
-
-// =====================================================
-// 🔐 FIM DO SISTEMA DE AUTENTICAÇÃO
-// ===================================================== 
 
 // === TRATAMENTO DE ERROS E LOGS ===
 function logError(message, error = null) {
@@ -460,77 +141,52 @@ function verificarIntegridadePagina() {
     return true;
 }
 
-// --- FUNÇÕES DE FIREBASE COM AUTENTICAÇÃO ---
+// --- FUNÇÕES DE FIREBASE ---
 async function initializeFirebase() {
     if (!firebaseServices) {
         console.log('Firebase services não estão disponíveis ainda');
         return;
     }
     
+    const { db, auth, signInAnonymously, onAuthStateChanged } = firebaseServices;
+    
     try {
         showLoading(true);
         
-        // Importar serviços do Firebase
-        const { 
-            getAuth, 
-            createUserWithEmailAndPassword, 
-            signInWithEmailAndPassword, 
-            signOut, 
-            onAuthStateChanged,
-            sendPasswordResetEmail,
-            updateProfile
-        } = await import('https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js');
-        
-        // Inicializar Auth
-        auth = getAuth();
-        
-        // Disponibilizar funções globalmente para as funções de autenticação
-        window.createUserWithEmailAndPassword = createUserWithEmailAndPassword;
-        window.signInWithEmailAndPassword = signInWithEmailAndPassword;
-        window.signOut = signOut;
-        window.onAuthStateChanged = onAuthStateChanged;
-        window.sendPasswordResetEmail = sendPasswordResetEmail;
-        window.updateProfile = updateProfile;
-        
+        // Conectar diretamente ao Firestore sem autenticação
+        currentUser = { uid: 'anonymous' }; // Mock user
         isFirebaseReady = true;
         
-        console.log('Firebase conectado COM autenticação');
+        console.log('Firebase conectado sem autenticação');
         showFirebaseStatus(true);
-        
-        // Configurar listener de autenticação
-        setupAuthListener();
+        loadFirebaseData();
         
         showLoading(false);
-        
     } catch (error) {
         console.error('Erro na conexão Firebase:', error);
         showFirebaseStatus(false);
-        
-        // Fallback: mostrar tela de autenticação mesmo sem Firebase
-        showAuth();
+        // Fallback para localStorage se Firebase falhar
+        loadLocalData();
         showLoading(false);
     }
 }
 
 async function loadFirebaseData() {
-    if (!firebaseServices || !currentUser) {
-        console.log('Firebase services ou usuário não disponível');
+    if (!firebaseServices) {
+        console.log('Firebase services não disponíveis');
         return;
     }
     
-    // MUDANÇA CRÍTICA: Dados separados por usuário
-    const { db, collection, addDoc, getDocs, query, orderBy, where } = firebaseServices;
+    const { db, collection, addDoc, getDocs, query, orderBy } = firebaseServices;
     
     try {
-        const userId = currentUser.uid;
-        
-        // 🔐 CARREGAR DADOS ESPECÍFICOS DO USUÁRIO
+        // Carregar todas as coleções
         const [insumosSnap, comprasSnap, fichasSnap, pratosSnap, configSnap] = await Promise.all([
-            getDocs(query(collection(db, 'insumos'), where('userId', '==', userId))),
-            getDocs(query(collection(db, 'compras'), where('userId', '==', userId), orderBy('data', 'desc'))),
-            getDocs(query(collection(db, 'fichasTecnicas'), where('userId', '==', userId))),
-            getDocs(query(collection(db, 'pratos'), where('userId', '==', userId))),
-            getDocs(query(collection(db, 'configuracoes'), where('userId', '==', userId)))
+            getDocs(collection(db, 'insumos')),
+            getDocs(query(collection(db, 'compras'), orderBy('data', 'desc'))),
+            getDocs(collection(db, 'fichasTecnicas')),
+            getDocs(collection(db, 'pratos')),
+            getDocs(collection(db, 'configuracoes'))
         ]);
         
         // Processar dados
@@ -569,33 +225,21 @@ async function loadFirebaseData() {
 }
 
 async function saveToFirebase(collection_name, data, docId = null) {
-    if (!isFirebaseReady || !firebaseServices || !currentUser) {
-        console.warn('Firebase não está pronto ou usuário não logado, salvando localmente');
+    if (!isFirebaseReady || !firebaseServices) {
+        console.warn('Firebase não está pronto, salvando localmente');
         return saveToLocalStorage();
     }
     
     const { db, collection, addDoc, doc, updateDoc, setDoc } = firebaseServices;
     
     try {
-        // 🔐 ADICIONAR userId em TODOS os documentos
-        const secureData = {
-            ...data,
-            userId: currentUser.uid,
-            updatedAt: new Date().toISOString()
-        };
-        
-        // Adicionar createdAt apenas para novos documentos
-        if (!docId) {
-            secureData.createdAt = new Date().toISOString();
-        }
-        
         if (docId) {
             // Usar setDoc ao invés de updateDoc para criar o documento se não existir
-            await setDoc(doc(db, collection_name, docId), secureData, { merge: true });
+            await setDoc(doc(db, collection_name, docId), data, { merge: true });
             return docId;
         } else {
             // Criar novo documento
-            const docRef = await addDoc(collection(db, collection_name), secureData);
+            const docRef = await addDoc(collection(db, collection_name), data);
             return docRef.id;
         }
     } catch (error) {
@@ -628,9 +272,125 @@ async function deleteFromFirebase(collection_name, docId) {
     }
 }
 
-// Função para criar dados de exemplo (simplificada)
-async function createSampleData({ db, collection, addDoc }) {
-    console.log('Sistema iniciado sem dados de exemplo');
+async function createSampleData() {
+    // Sistema inicia vazio - sem dados pré-cadastrados
+    console.log('Sistema iniciado sem dados pré-cadastrados');
+}
+                nome: 'Molho de Tomate Caseiro',
+                tipo: 'molho',
+                rendimento: 500,
+                unidade: 'ml',
+                tempoPreparo: 45,
+                modoPreparo: '1. Refogue a cebola e o alho no azeite\n2. Adicione os tomates picados\n3. Tempere com sal, pimenta e manjericão\n4. Cozinhe em fogo baixo por 30-40 minutos\n5. Ajuste temperos a gosto',
+                custoFinalizacao: 8,
+                status: 'ativo',
+                ingredientes: [
+                    { insumoId: insumosDB[0].id, quantidade: 0.8 }, // Tomate - 800g
+                    { insumoId: insumosDB[1].id, quantidade: 0.1 }, // Cebola - 100g
+                    { insumoId: insumosDB[2].id, quantidade: 0.05 }, // Azeite - 50ml
+                    { insumoId: insumosDB[3].id, quantidade: 0.2 }, // Manjericão - 0.2 maço
+                    { insumoId: insumosDB[11].id, quantidade: 0.02 }, // Alho - 20g
+                    { insumoId: insumosDB[9].id, quantidade: 0.01 }, // Sal - 10g
+                    { insumoId: insumosDB[10].id, quantidade: 0.002 } // Pimenta - 2g
+                ],
+                dataCriacao: '2024-08-30',
+                dataAtualizacao: '2024-08-30'
+            },
+            {
+                nome: 'Recheio de Ricota e Manjericão',
+                tipo: 'base',
+                rendimento: 600,
+                unidade: 'g',
+                tempoPreparo: 15,
+                modoPreparo: '1. Amasse bem a ricota com um garfo\n2. Misture o manjericão picado finamente\n3. Tempere com sal e pimenta\n4. Adicione o queijo parmesão ralado\n5. Misture até obter consistência homogênea',
+                custoFinalizacao: 5,
+                status: 'ativo',
+                ingredientes: [
+                    { insumoId: insumosDB[8].id, quantidade: 0.5 }, // Ricota - 500g
+                    { insumoId: insumosDB[3].id, quantidade: 0.3 }, // Manjericão - 0.3 maço
+                    { insumoId: insumosDB[6].id, quantidade: 0.1 }, // Parmesão - 100g
+                    { insumoId: insumosDB[9].id, quantidade: 0.005 }, // Sal - 5g
+                    { insumoId: insumosDB[10].id, quantidade: 0.001 } // Pimenta - 1g
+                ],
+                dataCriacao: '2024-08-30',
+                dataAtualizacao: '2024-08-30'
+            }
+        ];
+        
+        for (const ficha of sampleFichas) {
+            const docRef = await addDoc(collection(db, 'fichasTecnicas'), ficha);
+            fichasTecnicasDB.push({ id: docRef.id, ...ficha });
+        }
+        
+        // Criar pratos de exemplo
+        const samplePratos = [
+            {
+                nome: 'Lasanha de Ricota com Manjericão',
+                categoria: 'prato-principal',
+                descricao: 'Deliciosa lasanha com camadas de massa artesanal, recheio cremoso de ricota e manjericão fresco, coberta com molho de tomate caseiro e queijo parmesão gratinado.',
+                rendimento: 8,
+                unidade: 'porções',
+                tempoPreparo: 90,
+                modoPreparo: '1. Pré-aqueça o forno a 180°C\n2. Cozinhe a massa de lasanha al dente\n3. Prepare uma camada de molho no fundo da forma\n4. Alterne camadas: massa, recheio de ricota, molho\n5. Finalize com queijo parmesão por cima\n6. Leve ao forno por 35-40 minutos\n7. Deixe descansar 10 minutos antes de servir',
+                custoFinalizacao: 12,
+                margemLucro: 180,
+                status: 'ativo',
+                componentes: [
+                    { 
+                        tipo: 'ficha', 
+                        fichaId: fichasTecnicasDB[0].id, 
+                        quantidade: 1, 
+                        observacoes: 'Molho para todas as camadas' 
+                    },
+                    { 
+                        tipo: 'ficha', 
+                        fichaId: fichasTecnicasDB[1].id, 
+                        quantidade: 1, 
+                        observacoes: 'Recheio principal' 
+                    }
+                ],
+                insumos: [
+                    { insumoId: insumosDB[7].id, quantidade: 0.5 }, // Massa de lasanha - 500g
+                    { insumoId: insumosDB[6].id, quantidade: 0.2 }  // Parmesão para gratinar - 200g
+                ],
+                dataCriacao: '2024-08-30',
+                dataAtualizacao: '2024-08-30'
+            },
+            {
+                nome: 'Bruschetta de Tomate e Manjericão',
+                categoria: 'entrada',
+                descricao: 'Entrada clássica italiana com fatias de pão tostado, cobertas com tomates frescos temperados, manjericão e azeite extra virgem.',
+                rendimento: 4,
+                unidade: 'porções',
+                tempoPreparo: 20,
+                modoPreparo: '1. Corte o pão em fatias de 2cm\n2. Toste as fatias até dourar\n3. Esfregue alho nas fatias quentes\n4. Cubra com a mistura de tomate temperado\n5. Finalize com manjericão fresco e azeite',
+                custoFinalizacao: 10,
+                margemLucro: 250,
+                status: 'ativo',
+                componentes: [],
+                insumos: [
+                    { insumoId: insumosDB[0].id, quantidade: 0.3 }, // Tomate - 300g
+                    { insumoId: insumosDB[2].id, quantidade: 0.03 }, // Azeite - 30ml
+                    { insumoId: insumosDB[3].id, quantidade: 0.15 }, // Manjericão - 0.15 maço
+                    { insumoId: insumosDB[11].id, quantidade: 0.01 }, // Alho - 10g
+                    { insumoId: insumosDB[9].id, quantidade: 0.003 }, // Sal - 3g
+                    { insumoId: insumosDB[10].id, quantidade: 0.001 } // Pimenta - 1g
+                ],
+                dataCriacao: '2024-08-30',
+                dataAtualizacao: '2024-08-30'
+            }
+        ];
+        
+        for (const prato of samplePratos) {
+            const docRef = await addDoc(collection(db, 'pratos'), prato);
+            pratosDB.push({ id: docRef.id, ...prato });
+        }
+        
+        console.log('Dados de exemplo criados no Firebase');
+        
+    } catch (error) {
+        console.error('Erro ao criar dados de exemplo:', error);
+    }
 }
 
 function showLoading(show) {
@@ -838,7 +598,7 @@ async function saveData() {
             // Salvar fichas técnicas
             fichasTecnicasDB.forEach(ficha => {
                 if (ficha.id) {
-                    savePromises.push(saveToFirebase('fichasTecnicas', ficha, ficha.id));
+                    savePromises.push(saveToFirebase('fichas', ficha, ficha.id));
                 }
             });
             
@@ -1213,14 +973,7 @@ function calcularCustoPrato(prato) {
             if (!ultimaCompra) return total;
             
             // Calcular custo baseado na quantidade usada
-            let custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
-            
-            // Aplicar taxa de correção do insumo (se houver)
-            if (insumo.taxaCorrecao && insumo.taxaCorrecao > 0) {
-                const fatorCorrecaoInsumo = insumo.taxaCorrecao / 100;
-                custoUnitario = custoUnitario * (1 + fatorCorrecaoInsumo);
-            }
-            
+            const custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
             return total + (custoUnitario * ingrediente.quantidade);
         }, 0);
     }
@@ -1256,14 +1009,7 @@ function calcularCustoFichaTecnica(ficha) {
         if (!ultimaCompra) return total;
         
         // Calcular custo baseado na quantidade usada
-        let custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
-        
-        // Aplicar taxa de correção do insumo (se houver)
-        if (insumo.taxaCorrecao && insumo.taxaCorrecao > 0) {
-            const fatorCorrecaoInsumo = insumo.taxaCorrecao / 100;
-            custoUnitario = custoUnitario * (1 + fatorCorrecaoInsumo);
-        }
-        
+        const custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
         const custoIngrediente = custoUnitario * ingrediente.quantidade;
         
         return total + custoIngrediente;
@@ -1670,7 +1416,7 @@ function renderFichas() {
     if (!tbody) return;
     
     if (fichasTecnicasDB.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="8" class="text-center p-8 text-gray-500">Nenhuma ficha técnica cadastrada</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="text-center p-8 text-gray-500">Nenhuma ficha técnica cadastrada</td></tr>';
         return;
     }
     
@@ -1681,9 +1427,6 @@ function renderFichas() {
                            ficha.status === 'teste' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
         
         return `<tr class="hover:bg-gray-50">
-            <td class="px-6 py-4">
-                <input type="checkbox" class="ficha-checkbox rounded" value="${ficha.id}" onchange="updateSelectedFichasCount()">
-            </td>
             <td class="px-6 py-4">
                 <div>
                     <div class="font-medium text-gray-900">${ficha.nome}</div>
@@ -1809,125 +1552,13 @@ function deleteFicha(id) {
         
         // Deletar do Firebase se estiver conectado (sem bloquear a exclusão)
         if (isFirebaseReady) {
-            deleteFromFirebase('fichasTecnicas', id);
+            deleteFromFirebase('fichas', id);
         }
         
         saveData();
         renderFichas();
         updateStats();
         showAlert('Ficha Excluída', 'Ficha técnica removida com sucesso!', 'success');
-    }
-}
-
-// --- FUNÇÕES DE SELEÇÃO MÚLTIPLA PARA FICHAS TÉCNICAS ---
-function toggleSelectAllFichas() {
-    const selectAll = document.getElementById('selectAllFichas');
-    const checkboxes = document.querySelectorAll('.ficha-checkbox');
-    
-    checkboxes.forEach(checkbox => {
-        checkbox.checked = selectAll.checked;
-    });
-    
-    updateSelectedFichasCount();
-}
-
-function updateSelectedFichasCount() {
-    const checkboxes = document.querySelectorAll('.ficha-checkbox:checked');
-    const count = checkboxes.length;
-    const selectAll = document.getElementById('selectAllFichas');
-    const multiSelectActions = document.getElementById('fichaMultiSelectActions');
-    const selectedCount = document.getElementById('selectedFichasCount');
-    
-    if (selectedCount) {
-        selectedCount.textContent = `${count} itens selecionados`;
-    }
-    
-    if (multiSelectActions) {
-        if (count > 0) {
-            multiSelectActions.classList.remove('hidden');
-        } else {
-            multiSelectActions.classList.add('hidden');
-        }
-    }
-    
-    // Atualizar estado do checkbox "selecionar todos"
-    if (selectAll) {
-        const allCheckboxes = document.querySelectorAll('.ficha-checkbox');
-        if (count === 0) {
-            selectAll.checked = false;
-            selectAll.indeterminate = false;
-        } else if (count === allCheckboxes.length) {
-            selectAll.checked = true;
-            selectAll.indeterminate = false;
-        } else {
-            selectAll.checked = false;
-            selectAll.indeterminate = true;
-        }
-    }
-}
-
-function clearFichaSelection() {
-    document.querySelectorAll('.ficha-checkbox').forEach(checkbox => {
-        checkbox.checked = false;
-    });
-    const selectAll = document.getElementById('selectAllFichas');
-    if (selectAll) selectAll.checked = false;
-    updateSelectedFichasCount();
-}
-
-function deleteSelectedFichas() {
-    const selected = Array.from(document.querySelectorAll('.ficha-checkbox:checked')).map(cb => cb.value);
-    
-    if (selected.length === 0) {
-        showAlert('Nenhum item selecionado', 'Selecione pelo menos uma ficha técnica para excluir.', 'warning');
-        return;
-    }
-    
-    // Verificar se alguma das fichas selecionadas está em uso em pratos
-    const fichasEmUso = [];
-    selected.forEach(id => {
-        const usedInPratos = pratosDB.filter(prato => 
-            prato.componentes && prato.componentes.some(comp => comp.fichaId === id)
-        );
-        
-        if (usedInPratos.length > 0) {
-            const ficha = fichasTecnicasDB.find(f => f.id === id);
-            fichasEmUso.push({
-                ficha: ficha,
-                pratos: usedInPratos
-            });
-        }
-    });
-    
-    let message = `Tem certeza que deseja excluir ${selected.length} ficha(s) técnica(s) selecionada(s)?`;
-    
-    if (fichasEmUso.length > 0) {
-        message += '\n\nATENÇÃO: As seguintes fichas estão sendo usadas:\n\n';
-        fichasEmUso.forEach(item => {
-            message += `• ${item.ficha.nome}\n`;
-            if (item.pratos.length > 0) {
-                message += `  Pratos: ${item.pratos.map(p => p.nome).join(', ')}\n`;
-            }
-        });
-        message += '\nEstes pratos ficarão com componentes incompletos.';
-    }
-    
-    if (confirm(message)) {
-        // Excluir todas as fichas selecionadas
-        selected.forEach(id => {
-            fichasTecnicasDB = fichasTecnicasDB.filter(f => f.id !== id);
-            
-            // Deletar do Firebase se estiver conectado
-            if (isFirebaseReady) {
-                deleteFromFirebase('fichasTecnicas', id);
-            }
-        });
-        
-        saveData();
-        renderFichas();
-        clearFichaSelection();
-        updateStats();
-        showAlert('Fichas Excluídas', `${selected.length} ficha(s) técnica(s) removida(s) com sucesso!`, 'success');
     }
 }
 
@@ -2358,16 +1989,11 @@ function saveInsumo(event) {
     event.preventDefault();
     
     const id = document.getElementById('insumoId').value;
-    const valorUnitario = parseFloat(document.getElementById('insumoValorUnitario').value) || 0;
-    const taxaCorrecao = parseFloat(document.getElementById('insumoTaxaCorrecao').value) || 0;
-    
     const insumo = {
         nome: document.getElementById('insumoNome').value,
         unidade: document.getElementById('insumoUnidade').value,
         categoria: document.getElementById('insumoCategoria').value,
-        observacoes: document.getElementById('insumoObservacoes').value,
-        valorUnitario: valorUnitario,
-        taxaCorrecao: taxaCorrecao
+        observacoes: document.getElementById('insumoObservacoes').value
     };
     
     if (id) {
@@ -2399,8 +2025,6 @@ function editInsumo(id) {
     document.getElementById('insumoUnidade').value = insumo.unidade || '';
     document.getElementById('insumoCategoria').value = insumo.categoria || '';
     document.getElementById('insumoObservacoes').value = insumo.observacoes || '';
-    document.getElementById('insumoValorUnitario').value = insumo.valorUnitario || '';
-    document.getElementById('insumoTaxaCorrecao').value = insumo.taxaCorrecao || '';
     
     showModal('insumoModal');
 }

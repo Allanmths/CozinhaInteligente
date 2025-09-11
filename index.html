@@ -81,20 +81,41 @@
  <script src="https://unpkg.com/lucide@latest"></script>
  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
  
- <!-- Firebase SDK -->
+ <!-- 🔥 Firebase SDK COM AUTENTICAÇÃO SEGURA -->
  <script type="module">
- import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-app.js';
- import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, deleteDoc, setDoc, query, orderBy, where, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-firestore.js';
- import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/10.12.4/firebase-auth.js';
+ import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js';
+ import { 
+   getFirestore, 
+   collection, 
+   addDoc, 
+   getDocs, 
+   doc, 
+   updateDoc, 
+   deleteDoc, 
+   setDoc, 
+   query, 
+   orderBy, 
+   where, 
+   onSnapshot 
+ } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js';
+ import { 
+   getAuth, 
+   createUserWithEmailAndPassword, 
+   signInWithEmailAndPassword, 
+   signOut, 
+   onAuthStateChanged,
+   sendPasswordResetEmail,
+   updateProfile
+ } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js';
  
- // Configuração do Firebase
+ // ⚠️ CONFIGURAÇÃO TEMPORÁRIA - SERÁ MOVIDA PARA VARIÁVEIS DE AMBIENTE
  const firebaseConfig = {
- apiKey: "AIzaSyCvjYUQr1xvTskO1ZZqGHKi1d1SysvGWLc",
- authDomain: "cozinha-inteligente-2b040.firebaseapp.com",
- projectId: "cozinha-inteligente-2b040",
- storageBucket: "cozinha-inteligente-2b040.firebasestorage.app",
- messagingSenderId: "350206574229",
- appId: "1:350206574229:web:1e525a795d69e3dbd9259c"
+   apiKey: "AIzaSyCvjYUQr1xvTskO1ZZqGHKi1d1SysvGWLc",
+   authDomain: "cozinha-inteligente-2b040.firebaseapp.com",
+   projectId: "cozinha-inteligente-2b040",
+   storageBucket: "cozinha-inteligente-2b040.firebasestorage.app",
+   messagingSenderId: "350206574229",
+   appId: "1:350206574229:web:1e525a795d69e3dbd9259c"
  };
  
  // Inicializar Firebase
@@ -102,23 +123,29 @@
  const firestore = getFirestore(app);
  const firebaseAuth = getAuth(app);
  
- // Tornar disponível globalmente
+ // 🔐 Disponibilizar serviços SEGUROS globalmente
  window.firebaseServices = { 
- db: firestore, 
- auth: firebaseAuth, 
- collection, 
- addDoc, 
- getDocs, 
- doc, 
- updateDoc, 
- deleteDoc,
- setDoc, 
- query, 
- orderBy, 
- where, 
- signInAnonymously, 
- onAuthStateChanged, 
- onSnapshot 
+   db: firestore, 
+   auth: firebaseAuth, 
+   collection, 
+   addDoc, 
+   getDocs, 
+   doc, 
+   updateDoc, 
+   deleteDoc,
+   setDoc, 
+   query, 
+   orderBy, 
+   where, 
+   onSnapshot,
+   // Funções de autenticação
+   getAuth,
+   createUserWithEmailAndPassword,
+   signInWithEmailAndPassword,
+   signOut,
+   onAuthStateChanged,
+   sendPasswordResetEmail,
+   updateProfile
  };
  
  // Disparar evento quando Firebase estiver pronto
@@ -303,8 +330,6 @@
 </head>
 <body class="bg-gray-50 text-gray-800">
 
-
-
  <!-- Loading Indicator -->
  <div id="loadingIndicator" class="loading-overlay">
  <div class="bg-white p-6 rounded-lg shadow-lg flex items-center space-x-3">
@@ -313,18 +338,119 @@
  </div>
  </div>
 
+ <!-- 🔐 TELA DE AUTENTICAÇÃO - NOVA SEGURANÇA -->
+ <div id="authContainer" class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-400 to-red-600 py-12 px-4 sm:px-6 lg:px-8">
+ <div class="max-w-md w-full space-y-8">
+ <div class="bg-white rounded-lg shadow-xl p-8">
+ <div class="text-center">
+ <i data-lucide="chef-hat" class="h-16 w-16 text-orange-500 mx-auto mb-4"></i>
+ <h1 class="text-3xl font-bold text-gray-900 mb-2">Cozinha Inteligente</h1>
+ <p class="text-gray-600 mb-8">Sistema de Gestão Gastronômica Seguro</p>
+ </div>
+ 
+ <!-- Toggle Login/Register -->
+ <div class="flex mb-6 bg-gray-100 rounded-lg p-1">
+ <button id="loginTab" onclick="showAuthTab('login')" class="flex-1 py-2 px-4 bg-orange-600 text-white rounded-md font-medium transition-all">Entrar</button>
+ <button id="registerTab" onclick="showAuthTab('register')" class="flex-1 py-2 px-4 text-gray-700 rounded-md font-medium transition-all">Cadastrar</button>
+ </div>
+ 
+ <!-- Login Form -->
+ <div id="loginForm" class="space-y-4">
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+ <input type="email" id="loginEmail" required 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+ placeholder="seu@email.com">
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+ <input type="password" id="loginPassword" required 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+ placeholder="••••••••">
+ </div>
+ <button onclick="loginUser()" class="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors font-medium">
+ <span id="loginBtnText">Entrar</span>
+ <div id="loginBtnLoader" class="hidden animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block ml-2"></div>
+ </button>
+ </div>
+ 
+ <!-- Register Form -->
+ <div id="registerForm" class="space-y-4 hidden">
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-1">Nome do Estabelecimento</label>
+ <input type="text" id="registerName" required 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+ placeholder="Ex: Restaurante Dom Pedro">
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-1">E-mail</label>
+ <input type="email" id="registerEmail" required 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+ placeholder="seu@email.com">
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-1">Senha</label>
+ <input type="password" id="registerPassword" required 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+ placeholder="Mínimo 6 caracteres">
+ </div>
+ <div>
+ <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar Senha</label>
+ <input type="password" id="confirmPassword" required 
+ class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+ placeholder="••••••••">
+ </div>
+ <div class="flex items-center">
+ <input type="checkbox" id="acceptTerms" required class="mr-2 h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded">
+ <label for="acceptTerms" class="text-sm text-gray-600">
+ Aceito os <a href="#" class="text-orange-600 hover:underline">termos de uso</a> e 
+ <a href="#" class="text-orange-600 hover:underline">política de privacidade</a>
+ </label>
+ </div>
+ <button onclick="registerUser()" class="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors font-medium">
+ <span id="registerBtnText">Criar Conta</span>
+ <div id="registerBtnLoader" class="hidden animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block ml-2"></div>
+ </button>
+ </div>
+ 
+ <!-- Error/Success Messages -->
+ <div id="authMessage" class="hidden mt-4 p-3 rounded-lg text-sm"></div>
+ 
+ <!-- Divider -->
+ <div class="mt-6 text-center">
+ <p class="text-sm text-gray-500">Problemas para acessar? <a href="#" onclick="resetPassword()" class="text-orange-600 hover:underline">Recuperar senha</a></p>
+ </div>
+ </div>
+ </div>
+ </div>
 
-
-
-
- <div class="flex min-h-screen">
+ <!-- 🏠 APLICAÇÃO PRINCIPAL - EXIBIDA APÓS LOGIN -->
+ <div id="appContainer" class="flex min-h-screen hidden">
  <!-- Sidebar -->
  <aside class="w-64 bg-white shadow-md flex-shrink-0 flex flex-col">
- <div class="p-6 flex items-center space-x-3 border-b border-gray-200">
+ <div class="p-6 flex items-center justify-between border-b border-gray-200">
+ <div class="flex items-center space-x-3">
  <i data-lucide="chef-hat" class="h-10 w-10 text-orange-500"></i>
  <div>
  <h1 class="text-xl font-bold text-gray-800">Cozinha Inteligente</h1>
- <p class="text-xs text-gray-500">v2.0 Firebase Edition</p>
+ <p class="text-xs text-gray-500">v2.0 Secure Edition</p>
+ </div>
+ </div>
+ <button onclick="logoutUser()" class="text-gray-500 hover:text-red-500 p-2 rounded-md hover:bg-gray-100 transition-colors" title="Sair">
+ <i data-lucide="log-out" class="h-5 w-5"></i>
+ </button>
+ </div>
+ 
+ <!-- Info do Usuário -->
+ <div class="p-6 bg-orange-50 border-b border-gray-200">
+ <div class="flex items-center space-x-3">
+ <div class="w-10 h-10 bg-orange-200 rounded-full flex items-center justify-center">
+ <i data-lucide="user" class="h-5 w-5 text-orange-700"></i>
+ </div>
+ <div>
+ <p class="text-sm text-gray-600">Logado como:</p>
+ <p id="currentUserName" class="font-medium text-gray-900 truncate">Carregando...</p>
+ </div>
  </div>
  </div>
  <nav class="mt-6 flex-grow">

@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Regra padrão: negar tudo
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // Dados do usuário - apenas o próprio usuário pode acessar
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Insumos do usuário
+    match /users/{userId}/insumos/{insumoId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Fichas técnicas do usuário
+    match /users/{userId}/fichasTecnicas/{fichaId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Compras do usuário
+    match /users/{userId}/compras/{compraId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Pratos do usuário
+    match /users/{userId}/pratos/{pratoId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Configurações do usuário
+    match /users/{userId}/configuracoes/{configId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Validações adicionais
+    match /users/{userId}/{collection}/{document} {
+      // Limitar tamanho dos documentos (1MB)
+      allow write: if request.auth != null 
+                  && request.auth.uid == userId 
+                  && resource.size() < 1024 * 1024;
+      
+      // Rate limiting através de timestamp
+      allow write: if request.auth != null 
+                  && request.auth.uid == userId 
+                  && (!exists(/databases/$(database)/documents/users/$(userId)/lastWrite) 
+                      || request.time > get(/databases/$(database)/documents/users/$(userId)/lastWrite).data.timestamp + duration.value(1, 's'));
+    }
+  }
+}

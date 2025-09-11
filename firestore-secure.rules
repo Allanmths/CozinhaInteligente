@@ -1,0 +1,72 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // 🔐 REGRAS DE SEGURANÇA CRÍTICAS - IMPLEMENTAÇÃO IMEDIATA
+    
+    // ❌ REGRA PADRÃO: NEGAR TUDO por segurança
+    match /{document=**} {
+      allow read, write: if false;
+    }
+    
+    // 👤 Dados do usuário - APENAS o próprio usuário pode acessar
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 🥕 Insumos - APENAS dados do usuário logado
+    match /insumos/{insumoId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      
+      // Criação - garantir que userId seja o do usuário logado
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // 📝 Fichas Técnicas - APENAS dados do usuário logado
+    match /fichasTecnicas/{fichaId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // 🍽️ Pratos - APENAS dados do usuário logado
+    match /pratos/{pratoId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // 🛒 Compras - APENAS dados do usuário logado
+    match /compras/{compraId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // ⚙️ Configurações - APENAS dados do usuário logado
+    match /configuracoes/{configId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId;
+    }
+    
+    // 🏷️ Fornecedores - APENAS dados do usuário logado
+    match /fornecedores/{fornecedorId} {
+      allow read, write: if request.auth != null 
+        && request.auth.uid == resource.data.userId;
+      
+      allow create: if request.auth != null 
+        && request.auth.uid == request.resource.data.userId;
+    }
+  }
+}
