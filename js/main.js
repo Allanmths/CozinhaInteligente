@@ -184,13 +184,15 @@ async function loginUser() {
 
 // Registro do usuário
 async function registerUser() {
-    const name = document.getElementById('registerName').value.trim();
     const email = document.getElementById('registerEmail').value.trim();
     const password = document.getElementById('registerPassword').value;
     const confirmPassword = document.getElementById('confirmPassword').value;
     const acceptTerms = document.getElementById('acceptTerms').checked;
     
-    if (!name || !email || !password || !confirmPassword) {
+    // Verificar qual tipo de registro foi selecionado
+    const registrationType = document.querySelector('input[name="registrationType"]:checked').value;
+    
+    if (!email || !password || !confirmPassword) {
         showAuthMessage('Por favor, preencha todos os campos.', 'error');
         return;
     }
@@ -215,15 +217,40 @@ async function registerUser() {
     try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
         
-        // Atualizar perfil do usuário
-        await updateProfile(userCredential.user, {
-            displayName: name
-        });
-        
         showAuthMessage('Conta criada com sucesso!', 'success');
         
-        // 🏢 CRIAR RESTAURANTE E USUÁRIO ADMIN
-        await createRestaurantAndUser(userCredential.user.uid, name, email);
+        if (registrationType === 'new') {
+            // 🏢 CRIAR NOVO RESTAURANTE E USUÁRIO ADMIN
+            const restaurantName = document.getElementById('registerName').value.trim();
+            if (!restaurantName) {
+                showAuthMessage('Por favor, informe o nome do restaurante.', 'error');
+                return;
+            }
+            
+            // Atualizar perfil do usuário
+            await updateProfile(userCredential.user, {
+                displayName: restaurantName
+            });
+            
+            await createRestaurantAndUser(userCredential.user.uid, restaurantName, email);
+            
+        } else if (registrationType === 'join') {
+            // 👥 JUNTAR-SE A RESTAURANTE EXISTENTE
+            const restaurantCode = document.getElementById('joinRestaurantCode').value.trim();
+            const staffName = document.getElementById('staffName').value.trim();
+            
+            if (!restaurantCode || !staffName) {
+                showAuthMessage('Por favor, preencha o código do restaurante e seu nome.', 'error');
+                return;
+            }
+            
+            // Atualizar perfil do usuário
+            await updateProfile(userCredential.user, {
+                displayName: staffName
+            });
+            
+            await joinExistingRestaurant(userCredential.user.uid, restaurantCode, staffName, email);
+        }
         
         // O onAuthStateChanged irá tratar o redirecionamento
         
@@ -342,6 +369,56 @@ async function createRestaurantAndUser(userId, restaurantName, email) {
         
     } catch (error) {
         logError('Erro ao criar restaurante e usuário', error);
+        throw error;
+    }
+}
+
+// 👥 Juntar-se a restaurante existente
+async function joinExistingRestaurant(userId, restaurantCode, staffName, email) {
+    try {
+        if (!firebaseServices?.db) {
+            throw new Error('Firebase não disponível');
+        }
+        
+        const { db, collection, query, where, getDocs, doc: fbDoc, setDoc } = firebaseServices;
+        
+        console.log(`🔍 Procurando restaurante com código: ${restaurantCode}`);
+        
+        // 1. Procurar restaurante pelo código
+        const restaurantsRef = collection(db, 'restaurants');
+        const q = query(restaurantsRef, where('accessCode', '==', restaurantCode));
+        const querySnapshot = await getDocs(q);
+        
+        if (querySnapshot.empty) {
+            throw new Error('Código do restaurante inválido ou não encontrado.');
+        }
+        
+        // 2. Pegar dados do restaurante encontrado
+        const restaurantDoc = querySnapshot.docs[0];
+        const restaurantData = restaurantDoc.data();
+        const restaurantId = restaurantDoc.id;
+        
+        console.log(`✅ Restaurante encontrado: ${restaurantData.name} (${restaurantId})`);
+        
+        // 3. Criar usuário como funcionário do restaurante
+        const userRef = fbDoc(db, 'users', userId);
+        await setDoc(userRef, {
+            name: staffName,
+            email: email,
+            restaurantId: restaurantId,
+            restaurantName: restaurantData.name, // Para facilitar consultas
+            role: 'user', // Papel padrão para funcionários
+            permissions: ['read', 'write'], // Permissões básicas
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            isActive: true,
+            joinedViaCode: restaurantCode // Auditoria
+        });
+        
+        console.log(`✅ Usuário ${staffName} adicionado ao restaurante ${restaurantData.name}`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao juntar-se ao restaurante:', error);
         throw error;
     }
 }
@@ -4376,8 +4453,46 @@ async function convidarUsuario() {
     }
     
     try {
-        // Por enquanto, apenas salvar o convite (implementar sistema de convites depois)
-        showAlert('Convite Enviado', `Convite enviado para ${email} como ${getRoleDisplayName(role)}`, 'success');
+        const { db, collection, doc: fbDoc, setDoc } = firebaseServices;
+        
+        // 1. Salvar convite no Firebase
+        const inviteId = generateId();
+        const inviteRef = fbDoc(db, 'invites', inviteId);
+        
+        const inviteData = {
+            email: email,
+            role: role,
+            restaurantId: currentRestaurant.id,
+            restaurantName: currentRestaurant.name,
+            invitedBy: currentUser.uid,
+            invitedByName: currentUser.displayName || currentUser.email,
+            createdAt: new Date().toISOString(),
+            status: 'pending', // pending, accepted, expired
+            expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString() // 7 dias
+        };
+        
+        await setDoc(inviteRef, inviteData);
+        
+        // 2. Criar mensagem com instruções
+        const inviteMessage = `
+🏢 CONVITE PARA ${currentRestaurant.name}
+
+Você foi convidado(a) para fazer parte da equipe como ${getRoleDisplayName(role)}.
+
+📋 COMO ACEITAR:
+1. Acesse: https://allanmths.github.io/CozinhaInteligente/
+2. Crie sua conta escolhendo "Juntar-se a Restaurante"
+3. Use o código: ${currentRestaurant.accessCode || await getRestaurantCode()}
+
+O convite expira em 7 dias.
+        `;
+        
+        console.log('📧 Instruções do convite:', inviteMessage);
+        
+        // 3. Mostrar instruções para compartilhar
+        showAlert('Convite Criado', 
+            `Convite criado para ${email}. Compartilhe o código do restaurante: ${currentRestaurant.accessCode || 'Carregando...'} \n\nInstruções detalhadas foram logadas no console.`, 
+            'success');
         
         // Limpar campos
         document.getElementById('novoUsuarioEmail').value = '';
@@ -4387,6 +4502,24 @@ async function convidarUsuario() {
         console.error('❌ Erro ao convidar usuário:', error);
         showAlert('Erro', 'Erro ao enviar convite', 'error');
     }
+}
+
+// Buscar código do restaurante (função auxiliar)
+async function getRestaurantCode() {
+    try {
+        if (!currentRestaurant?.id) return null;
+        
+        const { db, doc: fbDoc, getDoc } = firebaseServices;
+        const restaurantRef = fbDoc(db, 'restaurants', currentRestaurant.id);
+        const restaurantSnap = await getDoc(restaurantRef);
+        
+        if (restaurantSnap.exists()) {
+            return restaurantSnap.data().accessCode;
+        }
+    } catch (error) {
+        console.error('❌ Erro ao buscar código:', error);
+    }
+    return null;
 }
 
 // Alterar role do usuário
