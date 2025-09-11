@@ -383,8 +383,10 @@ async function loadUserProfile() {
             const userName = userData.name || currentUser.displayName || currentUser.email;
             const roleDisplay = getRoleDisplayName(userRole);
             
-            document.getElementById('currentUserName').textContent = 
-                `${userName} (${roleDisplay})`;
+            // Texto mais compacto para evitar overflow
+            const displayName = userName.length > 25 ? userName.substring(0, 22) + '...' : userName;
+            document.getElementById('currentUserName').innerHTML = 
+                `${displayName}<br><span class="text-xs text-orange-600">${roleDisplay} • ${currentRestaurant.name || 'Carregando...'}</span>`;
             
             // 🔐 MOSTRAR/OCULTAR MENUS BASEADO NO PAPEL
             updateUIBasedOnRole(userRole);
@@ -789,7 +791,7 @@ async function loadFirebaseData() {
         // 🔐 CARREGAR DADOS COMPARTILHADOS DO RESTAURANTE
         const [insumosSnap, comprasSnap, fichasSnap, pratosSnap, configSnap] = await Promise.all([
             getDocs(query(collection(db, 'insumos'), where('restaurantId', '==', restaurantId))),
-            getDocs(query(collection(db, 'compras'), where('restaurantId', '==', restaurantId), orderBy('data', 'desc'))),
+            getDocs(query(collection(db, 'compras'), where('restaurantId', '==', restaurantId))),
             getDocs(query(collection(db, 'fichasTecnicas'), where('restaurantId', '==', restaurantId))),
             getDocs(query(collection(db, 'pratos'), where('restaurantId', '==', restaurantId))),
             getDocs(query(collection(db, 'configuracoes'), where('restaurantId', '==', restaurantId)))
@@ -797,7 +799,8 @@ async function loadFirebaseData() {
         
         // Processar dados
         insumosDB = insumosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        comprasDB = comprasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        comprasDB = comprasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+                       .sort((a, b) => new Date(b.data) - new Date(a.data)); // Ordenar por data desc
         fichasTecnicasDB = fichasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         pratosDB = pratosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
@@ -4404,11 +4407,30 @@ async function carregarCodigoRestaurante() {
         if (restaurantSnap.exists()) {
             const data = restaurantSnap.data();
             
+            console.log('🔍 Dados do restaurante carregados:', data);
+            
+            // Verificar se existe código de acesso, senão gerar um
+            let accessCode = data.accessCode;
+            if (!accessCode) {
+                console.log('⚠️ Código de acesso não encontrado, gerando novo...');
+                accessCode = generateRestaurantCode();
+                
+                // Atualizar no Firebase
+                const { updateDoc } = firebaseServices;
+                await updateDoc(restaurantRef, {
+                    accessCode: accessCode,
+                    updatedAt: new Date().toISOString()
+                });
+            }
+            
             // Atualizar campos na interface
             const codeInput = document.getElementById('restaurantCode');
             const nameInput = document.getElementById('restaurantName');
             
-            if (codeInput) codeInput.value = data.accessCode || '';
+            if (codeInput) {
+                codeInput.value = accessCode;
+                console.log('✅ Código do restaurante definido:', accessCode);
+            }
             if (nameInput) nameInput.value = data.name || '';
         }
         
