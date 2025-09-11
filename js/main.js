@@ -40,7 +40,20 @@ let charts = {};
 function setupAuthListener() {
     if (!auth) return;
     
+    // Timestamp do início do loading
+    const loadingStartTime = Date.now();
+    const minimumLoadingTime = 500; // 500ms mínimo
+    
     onAuthStateChanged(auth, async (user) => {
+        // Calcular tempo decorrido
+        const elapsedTime = Date.now() - loadingStartTime;
+        const remainingTime = Math.max(0, minimumLoadingTime - elapsedTime);
+        
+        // Aguardar o tempo mínimo se necessário
+        if (remainingTime > 0) {
+            await new Promise(resolve => setTimeout(resolve, remainingTime));
+        }
+        
         if (user) {
             // 👤 USUÁRIO LOGADO
             currentUser = user;
@@ -81,14 +94,23 @@ function setupAuthListener() {
     });
 }
 
+// Exibir tela de carregamento
+function showLoading() {
+    document.getElementById('loadingContainer').classList.remove('hidden');
+    document.getElementById('authContainer').classList.add('hidden');
+    document.getElementById('appContainer').classList.add('hidden');
+}
+
 // Exibir tela de autenticação
 function showAuth() {
+    document.getElementById('loadingContainer').classList.add('hidden');
     document.getElementById('authContainer').classList.remove('hidden');
     document.getElementById('appContainer').classList.add('hidden');
 }
 
 // Exibir aplicação principal
 function showApp() {
+    document.getElementById('loadingContainer').classList.add('hidden');
     document.getElementById('authContainer').classList.add('hidden');
     document.getElementById('appContainer').classList.remove('hidden');
     
@@ -2748,6 +2770,9 @@ function deleteInsumo(id) {
 
 // --- INICIALIZAÇÃO DA APLICAÇÃO ---
 function initializeApp() {
+    // Mostrar tela de carregamento imediatamente
+    showLoading();
+    
     // Suprimir erros de extensões do navegador
     suppressExtensionErrors();
     
