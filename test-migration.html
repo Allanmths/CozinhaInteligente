@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Migração - Cozinha Inteligente</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100">
+    <div class="container mx-auto px-4 py-8">
+        <div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+            <h1 class="text-2xl font-bold text-center mb-6">Teste de Migração</h1>
+            
+            <div id="status" class="mb-4 p-3 rounded-md text-center">
+                Inicializando...
+            </div>
+            
+            <div class="space-y-4">
+                <button id="testMigration" class="w-full bg-blue-500 text-white py-2 rounded-md hover:bg-blue-600">
+                    Testar Migração
+                </button>
+                
+                <button id="checkUserData" class="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600">
+                    Verificar Dados do Usuário
+                </button>
+                
+                <button id="clearData" class="w-full bg-red-500 text-white py-2 rounded-md hover:bg-red-600">
+                    Limpar Cache Local
+                </button>
+            </div>
+            
+            <div id="console" class="mt-6 p-3 bg-gray-900 text-green-400 font-mono text-sm rounded-md max-h-60 overflow-y-auto">
+                Console de teste...
+            </div>
+        </div>
+    </div>
+
+    <!-- Firebase -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js';
+        import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js';
+        import { getAuth, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js';
+
+        // Configuração do Firebase (substitua pela sua configuração)
+        const firebaseConfig = {
+            apiKey: "AIzaSyBnl-T2c8mOgMaVpiV8vUrAY5sGkjtG7iw",
+            authDomain: "cozinha-inteligente-6c6ae.firebaseapp.com",
+            projectId: "cozinha-inteligente-6c6ae",
+            storageBucket: "cozinha-inteligente-6c6ae.firebasestorage.app",
+            messagingSenderId: "962438764425",
+            appId: "1:962438764425:web:e08db8953b144cf0bdf52b",
+            measurementId: "G-4GY5TL072V"
+        };
+
+        // Inicializar Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let currentUser = null;
+        
+        // Elementos da interface
+        const statusEl = document.getElementById('status');
+        const consoleEl = document.getElementById('console');
+        
+        function log(message) {
+            console.log(message);
+            consoleEl.innerHTML += message + '\\n';
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+        
+        function setStatus(message, type = 'info') {
+            statusEl.textContent = message;
+            statusEl.className = 'mb-4 p-3 rounded-md text-center ';
+            
+            switch(type) {
+                case 'success':
+                    statusEl.className += 'bg-green-100 text-green-800';
+                    break;
+                case 'error':
+                    statusEl.className += 'bg-red-100 text-red-800';
+                    break;
+                case 'warning':
+                    statusEl.className += 'bg-yellow-100 text-yellow-800';
+                    break;
+                default:
+                    statusEl.className += 'bg-blue-100 text-blue-800';
+            }
+        }
+
+        // Monitorar autenticação
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                setStatus(`Usuário logado: ${user.email}`, 'success');
+                log(`✅ Usuário autenticado: ${user.email}`);
+            } else {
+                currentUser = null;
+                setStatus('Nenhum usuário logado', 'warning');
+                log('⚠️ Nenhum usuário logado');
+            }
+        });
+
+        // Testar migração
+        document.getElementById('testMigration').addEventListener('click', async () => {
+            if (!currentUser) {
+                setStatus('Faça login primeiro!', 'error');
+                return;
+            }
+            
+            log('🔄 Iniciando teste de migração...');
+            
+            try {
+                // Verificar se usuário existe na coleção users
+                const userRef = doc(db, 'users', currentUser.uid);
+                const userSnap = await getDoc(userRef);
+                
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    log(`✅ Usuário encontrado na base de dados:`);
+                    log(`   - Nome: ${userData.name}`);
+                    log(`   - Restaurante: ${userData.restaurantId}`);
+                    log(`   - Papel: ${userData.role}`);
+                    setStatus('Usuário já migrado!', 'success');
+                } else {
+                    log(`⚠️ Usuário NÃO encontrado - precisa de migração`);
+                    log(`   - Email: ${currentUser.email}`);
+                    log(`   - UID: ${currentUser.uid}`);
+                    setStatus('Usuário precisa de migração', 'warning');
+                }
+            } catch (error) {
+                log(`❌ Erro no teste: ${error.message}`);
+                setStatus('Erro no teste', 'error');
+            }
+        });
+
+        // Verificar dados do usuário
+        document.getElementById('checkUserData').addEventListener('click', async () => {
+            if (!currentUser) {
+                setStatus('Faça login primeiro!', 'error');
+                return;
+            }
+            
+            log('🔍 Verificando dados do usuário...');
+            
+            try {
+                const userRef = doc(db, 'users', currentUser.uid);
+                const userSnap = await getDoc(userRef);
+                
+                log(`📄 Documento do usuário: ${currentUser.uid}`);
+                log(`📋 Existe: ${userSnap.exists()}`);
+                
+                if (userSnap.exists()) {
+                    const userData = userSnap.data();
+                    log(`📊 Dados completos:`);
+                    log(JSON.stringify(userData, null, 2));
+                } else {
+                    log(`⚠️ Documento não existe!`);
+                }
+                
+            } catch (error) {
+                log(`❌ Erro ao verificar: ${error.message}`);
+                setStatus('Erro na verificação', 'error');
+            }
+        });
+
+        // Limpar cache local
+        document.getElementById('clearData').addEventListener('click', () => {
+            localStorage.clear();
+            sessionStorage.clear();
+            log('🧹 Cache local limpo');
+            setStatus('Cache limpo - recarregue a página', 'info');
+        });
+
+        // Inicialização
+        log('🚀 Sistema de teste inicializado');
+        setStatus('Sistema pronto para teste', 'info');
+    </script>
+</body>
+</html>

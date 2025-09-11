@@ -44,16 +44,23 @@ function setupAuthListener() {
         if (user) {
             // 👤 USUÁRIO LOGADO
             currentUser = user;
-            console.log(`🔐 Usuário autenticado: ${user.email}`);
+            console.log(`🔐 === INÍCIO AUTENTICAÇÃO ===`);
+            console.log(`👤 Email: ${user.email}`);
+            console.log(`🆔 UID: ${user.uid}`);
+            console.log(`📅 Criado em: ${user.metadata.creationTime}`);
+            console.log(`🕒 Último login: ${user.metadata.lastSignInTime}`);
             
             showApp();
             
             // 🔄 CARREGAR DADOS DO USUÁRIO E RESTAURANTE
             try {
+                console.log('🔄 Iniciando carregamento de dados...');
                 await loadUserData();
-                console.log('✅ Dados do usuário carregados com sucesso');
+                console.log('✅ === AUTENTICAÇÃO CONCLUÍDA COM SUCESSO ===');
             } catch (error) {
-                console.error('❌ Erro ao carregar dados do usuário:', error);
+                console.error('❌ === ERRO NA AUTENTICAÇÃO ===');
+                console.error('📋 Detalhes do erro:', error);
+                console.error('📋 Stack trace:', error.stack);
                 showAuthMessage('Erro ao carregar dados. Tente fazer login novamente.', 'error');
             }
         } else {
@@ -335,16 +342,25 @@ async function loadUserData() {
 
 // Carregar perfil do usuário e dados do restaurante
 async function loadUserProfile() {
-    if (!firebaseServices || !currentUser) return;
+    if (!firebaseServices || !currentUser) {
+        console.error('❌ Firebase services ou currentUser não disponível');
+        console.log('📋 firebaseServices:', firebaseServices);
+        console.log('📋 currentUser:', currentUser);
+        return;
+    }
     
     try {
         const { db, doc: fbDoc, getDoc } = firebaseServices;
         
-        // 🔍 BUSCAR DADOS DO USUÁRIO NO FIREBASE
-        console.log(`🔍 Carregando perfil do usuário: ${currentUser.uid}`);
+        console.log('🔍 === VERIFICANDO USUÁRIO NA BASE DE DADOS ===');
+        console.log(`📂 Coleção: users`);
+        console.log(`🆔 Documento: ${currentUser.uid}`);
         
+        // 🔍 BUSCAR DADOS DO USUÁRIO NO FIREBASE
         const userRef = fbDoc(db, 'users', currentUser.uid);
         const userSnap = await getDoc(userRef);
+        
+        console.log(`📋 Documento existe: ${userSnap.exists()}`);
         
         if (userSnap.exists()) {
             const userData = userSnap.data();
@@ -356,10 +372,11 @@ async function loadUserProfile() {
             };
             userRole = userData.role || 'user';
             
-            console.log(`✅ Usuário carregado:`);
-            console.log(`   - Nome: ${userData.name}`);
-            console.log(`   - Restaurante ID: ${userData.restaurantId}`);
-            console.log(`   - Papel: ${userRole}`);
+            console.log(`✅ === USUÁRIO ENCONTRADO ===`);
+            console.log(`📋 Dados do documento:`, userData);
+            console.log(`👤 Nome: ${userData.name}`);
+            console.log(`🏢 Restaurante ID: ${userData.restaurantId}`);
+            console.log(`👔 Papel: ${userRole}`);
             
             // 🎨 ATUALIZAR INTERFACE COM INFORMAÇÕES DO USUÁRIO
             const userName = userData.name || currentUser.displayName || currentUser.email;
@@ -375,7 +392,11 @@ async function loadUserProfile() {
             await loadRestaurantInfo(userData.restaurantId);
             
         } else {
-            console.error('❌ Dados do usuário não encontrados - pode ser usuário antigo');
+            console.warn('⚠️ === USUÁRIO NÃO ENCONTRADO - INICIANDO MIGRAÇÃO ===');
+            console.log(`📧 Email do usuário: ${currentUser.email}`);
+            console.log(`🆔 UID do usuário: ${currentUser.uid}`);
+            console.log(`📅 Conta criada em: ${currentUser.metadata.creationTime}`);
+            console.log(`🔄 Iniciando processo de migração...`);
             
             // 🆘 FALLBACK: Criar perfil para usuário existente
             await createProfileForExistingUser();
@@ -416,20 +437,46 @@ async function loadRestaurantInfo(restaurantId) {
 // Criar perfil para usuário existente (migração)
 async function createProfileForExistingUser() {
     try {
-        console.log('🔄 Criando perfil para usuário existente...');
+        console.log('� === MIGRAÇÃO AUTOMÁTICA DE USUÁRIO ===');
+        console.log(`👤 Usuário: ${currentUser.email}`);
+        console.log(`🆔 UID: ${currentUser.uid}`);
         
-        // Para usuários antigos, criar um novo restaurante
-        const userName = currentUser.displayName || 
-                        currentUser.email.split('@')[0] || 
-                        'Meu Restaurante';
+        // Mostrar mensagem na interface
+        showAuthMessage('Preparando sua conta... Isso pode levar alguns segundos.', 'info');
         
-        await createRestaurantAndUser(currentUser.uid, userName, currentUser.email);
+        // Determinar nome do restaurante baseado no usuário
+        let restaurantName = 'Meu Restaurante';
+        
+        if (currentUser.displayName) {
+            restaurantName = currentUser.displayName;
+        } else if (currentUser.email) {
+            const emailPart = currentUser.email.split('@')[0];
+            restaurantName = `Restaurante ${emailPart.charAt(0).toUpperCase() + emailPart.slice(1)}`;
+        }
+        
+        console.log(`🏢 Criando restaurante: ${restaurantName}`);
+        
+        // Criar restaurante e usuário admin
+        await createRestaurantAndUser(currentUser.uid, restaurantName, currentUser.email);
+        
+        console.log('✅ Migração concluída - recarregando dados...');
+        
+        // Aguardar um momento para garantir que os dados foram salvos
+        await new Promise(resolve => setTimeout(resolve, 1000));
         
         // Recarregar perfil
         await loadUserProfile();
         
+        console.log('🎉 Usuário migrado com sucesso!');
+        
+        // Remover mensagem de loading
+        setTimeout(() => {
+            hideAuthMessage();
+        }, 2000);
+        
     } catch (error) {
-        logError('Erro ao criar perfil para usuário existente', error);
+        console.error('❌ Erro na migração do usuário:', error);
+        showAuthMessage('Erro ao configurar sua conta. Tente fazer login novamente.', 'error');
         throw error;
     }
 }
