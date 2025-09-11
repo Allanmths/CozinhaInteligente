@@ -1,0 +1,319 @@
+rules_version = '2';
+
+// 🔐 REGRAS DE SEGURANÇA FIREBASE - COZINHA INTELIGENTE
+// Sistema Multi-usuário com Isolamento Total por Restaurante
+// Versão: 3.0 - Otimizada para Performance Máxima e Segurança Absoluta
+// Data: 11 de setembro de 2025
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================
+    // 🛡️ FUNÇÕES DE SEGURANÇA GLOBAIS
+    // ===============================
+    
+    // Verificar se usuário está autenticado
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+    
+    // Obter dados do usuário atual
+    function getCurrentUser() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+    
+    // Verificar se usuário pertence ao restaurante
+    function belongsToRestaurant(restaurantId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getCurrentUser().data.restaurantId == restaurantId;
+    }
+    
+    // Verificar se usuário é admin do restaurante
+    function isAdmin() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getCurrentUser().data.role == 'admin';
+    }
+    
+    // Verificar se usuário é admin ou gerente
+    function isAdminOrManager() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getCurrentUser().data.role in ['admin', 'manager'];
+    }
+    
+    // Verificar se usuário é chef, admin ou gerente
+    function canManageKitchen() {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getCurrentUser().data.role in ['admin', 'manager', 'chef'];
+    }
+    
+    // Verificar se é o próprio usuário
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Verificar se usuário pode criar dados (qualquer usuário autenticado do restaurante)
+    function canCreate(restaurantId) {
+      return isAuthenticated() && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getCurrentUser().data.restaurantId == restaurantId;
+    }
+    
+    // ===============================
+    // 🏢 COLEÇÃO DE RESTAURANTES
+    // ===============================
+    match /restaurants/{restaurantId} {
+      // LEITURA: Usuários do restaurante podem ler os dados
+      allow read: if belongsToRestaurant(restaurantId);
+      
+      // CRIAÇÃO: Apenas usuários autenticados podem criar (para migração automática)
+      allow create: if isAuthenticated() && 
+                    request.resource.data.ownerId == request.auth.uid &&
+                    request.resource.data.keys().hasAll(['name', 'ownerId', 'createdAt', 'status']) &&
+                    request.resource.data.status == 'active';
+      
+      // ATUALIZAÇÃO: Apenas admin pode atualizar dados do restaurante
+      allow update: if belongsToRestaurant(restaurantId) && 
+                    isAdmin() &&
+                    request.resource.data.ownerId == resource.data.ownerId; // Não permitir mudança de dono
+      
+      // EXCLUSÃO: Apenas owner original pode deletar restaurante
+      allow delete: if isAuthenticated() && 
+                    resource.data.ownerId == request.auth.uid &&
+                    isAdmin();
+    }
+    
+    // ===============================
+    // 👥 COLEÇÃO DE USUÁRIOS
+    // ===============================
+    match /users/{userId} {
+      // LEITURA: Próprio usuário ou usuários do mesmo restaurante
+      allow read: if isOwner(userId) || 
+                     (isAuthenticated() && 
+                      exists(/databases/$(database)/documents/users/$(userId)) &&
+                      belongsToRestaurant(get(/databases/$(database)/documents/users/$(userId)).data.restaurantId));
+      
+      // CRIAÇÃO: Usuário pode criar seu próprio perfil (migração automática)
+      allow create: if isAuthenticated() && 
+                    request.auth.uid == userId &&
+                    request.resource.data.keys().hasAll(['name', 'email', 'restaurantId', 'role', 'createdAt']) &&
+                    request.resource.data.email == request.auth.token.email;
+      
+      // ATUALIZAÇÃO: Próprio usuário (dados básicos) ou admin/gerente (papel e status)
+      allow update: if (isOwner(userId) && 
+                        // Usuário só pode alterar dados básicos, não role
+                        !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role', 'restaurantId', 'permissions'])) ||
+                       (belongsToRestaurant(resource.data.restaurantId) && 
+                        isAdminOrManager() &&
+                        // Admin/Gerente pode alterar qualquer coisa exceto próprio role se não for admin
+                        (isAdmin() || !request.resource.data.diff(resource.data).affectedKeys().hasAny(['role'])));
+      
+      // EXCLUSÃO: Admin pode remover usuários do restaurante (exceto a si mesmo)
+      allow delete: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdmin() && 
+                    request.auth.uid != userId;
+    }
+    
+    // ===============================
+    // 📦 COLEÇÃO DE INSUMOS
+    // ===============================
+    match /insumos/{insumoId} {
+      // LEITURA: Usuários do mesmo restaurante
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      
+      // CRIAÇÃO: Qualquer usuário do restaurante
+      allow create: if canCreate(request.resource.data.restaurantId) &&
+                    request.resource.data.keys().hasAll(['nome', 'categoria', 'unidade', 'restaurantId']) &&
+                    request.resource.data.restaurantId == getCurrentUser().data.restaurantId;
+      
+      // ATUALIZAÇÃO: Chef, Gerente ou Admin
+      allow update: if belongsToRestaurant(resource.data.restaurantId) && 
+                    canManageKitchen() &&
+                    request.resource.data.restaurantId == resource.data.restaurantId; // Não permitir mudança de restaurante
+      
+      // EXCLUSÃO: Gerente ou Admin
+      allow delete: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdminOrManager();
+    }
+    
+    // ===============================
+    // 🍽️ COLEÇÃO DE PRATOS
+    // ===============================
+    match /pratos/{pratoId} {
+      // LEITURA: Usuários do mesmo restaurante
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      
+      // CRIAÇÃO: Chef, Gerente ou Admin
+      allow create: if canManageKitchen() &&
+                    request.resource.data.restaurantId == getCurrentUser().data.restaurantId &&
+                    request.resource.data.keys().hasAll(['nome', 'categoria', 'ingredientes', 'restaurantId']);
+      
+      // ATUALIZAÇÃO: Chef, Gerente ou Admin
+      allow update: if belongsToRestaurant(resource.data.restaurantId) && 
+                    canManageKitchen() &&
+                    request.resource.data.restaurantId == resource.data.restaurantId;
+      
+      // EXCLUSÃO: Gerente ou Admin
+      allow delete: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdminOrManager();
+    }
+    
+    // ===============================
+    // 📋 COLEÇÃO DE FICHAS TÉCNICAS
+    // ===============================
+    match /fichasTecnicas/{fichaId} {
+      // LEITURA: Usuários do mesmo restaurante
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      
+      // CRIAÇÃO: Chef, Gerente ou Admin
+      allow create: if canManageKitchen() &&
+                    request.resource.data.restaurantId == getCurrentUser().data.restaurantId &&
+                    request.resource.data.keys().hasAll(['nome', 'categoria', 'ingredientes', 'restaurantId']);
+      
+      // ATUALIZAÇÃO: Chef, Gerente ou Admin
+      allow update: if belongsToRestaurant(resource.data.restaurantId) && 
+                    canManageKitchen() &&
+                    request.resource.data.restaurantId == resource.data.restaurantId;
+      
+      // EXCLUSÃO: Gerente ou Admin
+      allow delete: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdminOrManager();
+    }
+    
+    // ===============================
+    // 🛒 COLEÇÃO DE COMPRAS
+    // ===============================
+    match /compras/{compraId} {
+      // LEITURA: Usuários do mesmo restaurante
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      
+      // CRIAÇÃO: Qualquer usuário do restaurante
+      allow create: if canCreate(request.resource.data.restaurantId) &&
+                    request.resource.data.keys().hasAll(['fornecedor', 'itens', 'total', 'data', 'restaurantId']) &&
+                    request.resource.data.restaurantId == getCurrentUser().data.restaurantId;
+      
+      // ATUALIZAÇÃO: Chef, Gerente ou Admin
+      allow update: if belongsToRestaurant(resource.data.restaurantId) && 
+                    canManageKitchen() &&
+                    request.resource.data.restaurantId == resource.data.restaurantId;
+      
+      // EXCLUSÃO: Gerente ou Admin
+      allow delete: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdminOrManager();
+    }
+    
+    // ===============================
+    // 🏪 COLEÇÃO DE FORNECEDORES
+    // ===============================
+    match /fornecedores/{fornecedorId} {
+      // LEITURA: Usuários do mesmo restaurante
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      
+      // CRIAÇÃO: Gerente ou Admin
+      allow create: if isAdminOrManager() &&
+                    request.resource.data.restaurantId == getCurrentUser().data.restaurantId &&
+                    request.resource.data.keys().hasAll(['nome', 'contato', 'restaurantId']);
+      
+      // ATUALIZAÇÃO: Gerente ou Admin
+      allow update: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdminOrManager() &&
+                    request.resource.data.restaurantId == resource.data.restaurantId;
+      
+      // EXCLUSÃO: Gerente ou Admin
+      allow delete: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdminOrManager();
+    }
+    
+    // ===============================
+    // ⚙️ COLEÇÃO DE CONFIGURAÇÕES
+    // ===============================
+    match /configuracoes/{configId} {
+      // LEITURA: Usuários do mesmo restaurante
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      
+      // CRIAÇÃO: Apenas Admin
+      allow create: if isAdmin() &&
+                    request.resource.data.restaurantId == getCurrentUser().data.restaurantId;
+      
+      // ATUALIZAÇÃO: Apenas Admin
+      allow update: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdmin() &&
+                    request.resource.data.restaurantId == resource.data.restaurantId;
+      
+      // EXCLUSÃO: Apenas Admin
+      allow delete: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdmin();
+    }
+    
+    // ===============================
+    // 📊 COLEÇÃO DE RELATÓRIOS (Futura Expansão)
+    // ===============================
+    match /relatorios/{relatorioId} {
+      // LEITURA: Usuários do mesmo restaurante
+      allow read: if belongsToRestaurant(resource.data.restaurantId);
+      
+      // CRIAÇÃO: Gerente ou Admin
+      allow create: if isAdminOrManager() &&
+                    request.resource.data.restaurantId == getCurrentUser().data.restaurantId;
+      
+      // ATUALIZAÇÃO: Gerente ou Admin
+      allow update: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdminOrManager() &&
+                    request.resource.data.restaurantId == resource.data.restaurantId;
+      
+      // EXCLUSÃO: Apenas Admin
+      allow delete: if belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdmin();
+    }
+    
+    // ===============================
+    // 🔔 COLEÇÃO DE NOTIFICAÇÕES (Futura Expansão)
+    // ===============================
+    match /notificacoes/{notificacaoId} {
+      // LEITURA: Apenas o usuário destinatário
+      allow read: if isAuthenticated() && 
+                  resource.data.userId == request.auth.uid;
+      
+      // CRIAÇÃO: Sistema interno ou Admin
+      allow create: if isAdmin() &&
+                    request.resource.data.keys().hasAll(['userId', 'titulo', 'mensagem', 'createdAt']);
+      
+      // ATUALIZAÇÃO: Apenas o usuário destinatário (para marcar como lida)
+      allow update: if isAuthenticated() && 
+                    resource.data.userId == request.auth.uid &&
+                    request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lida', 'lidaEm']);
+      
+      // EXCLUSÃO: Usuário destinatário ou Admin
+      allow delete: if isAuthenticated() && 
+                    (resource.data.userId == request.auth.uid || isAdmin());
+    }
+    
+    // ===============================
+    // 📝 COLEÇÃO DE LOGS DE AUDITORIA (Futura Expansão)
+    // ===============================
+    match /logs/{logId} {
+      // LEITURA: Apenas Admin
+      allow read: if isAdmin();
+      
+      // CRIAÇÃO: Sistema interno apenas (sem permissão manual)
+      allow create: if false;
+      
+      // ATUALIZAÇÃO: Proibida
+      allow update: if false;
+      
+      // EXCLUSÃO: Apenas Admin (para limpeza de logs antigos)
+      allow delete: if isAdmin();
+    }
+    
+    // ===============================
+    // 🚫 NEGAÇÃO GLOBAL
+    // ===============================
+    // Negar acesso a qualquer outra coleção não especificada
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
