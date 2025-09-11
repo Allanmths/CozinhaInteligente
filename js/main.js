@@ -278,10 +278,13 @@ async function createRestaurantAndUser(userId, restaurantName, email) {
         const restaurantId = generateId();
         
         // 1. Criar restaurante
+        const accessCode = generateRestaurantCode();
+        console.log(`🔑 Gerando código de acesso: ${accessCode}`);
+        
         const restaurantRef = fbDoc(db, 'restaurants', restaurantId);
-        await setDoc(restaurantRef, {
+        const restaurantData = {
             name: restaurantName,
-            accessCode: generateRestaurantCode(),
+            accessCode: accessCode,
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             ownerId: userId,
@@ -295,7 +298,10 @@ async function createRestaurantAndUser(userId, restaurantName, email) {
                     inventory: true
                 }
             }
-        });
+        };
+        
+        console.log('🏢 Dados do restaurante a serem salvos:', restaurantData);
+        await setDoc(restaurantRef, restaurantData);
         
         // 2. Criar usuário como admin do restaurante
         const userRef = fbDoc(db, 'users', userId);
@@ -394,11 +400,7 @@ async function loadUserProfile() {
             // 🏢 CARREGAR INFORMAÇÕES DO RESTAURANTE
             await loadRestaurantInfo(userData.restaurantId);
             
-            // 👥 CARREGAR DADOS PARA CONFIGURAÇÕES
-            setTimeout(() => {
-                carregarUsuarios();
-                carregarCodigoRestaurante();
-            }, 1000);
+            // 👥 DADOS DAS CONFIGURAÇÕES SERÃO CARREGADOS QUANDO A ABA FOR ACESSADA
             
         } else {
             console.warn('⚠️ === USUÁRIO NÃO ENCONTRADO - INICIANDO MIGRAÇÃO ===');
@@ -2362,6 +2364,14 @@ function showView(viewId) {
         setTimeout(() => {
             gerarRelatorios();
         }, 100);
+    }
+    
+    // Carregar dados das configurações quando a aba é aberta
+    if (viewId === 'configuracoes') {
+        setTimeout(() => {
+            carregarUsuarios();
+            carregarCodigoRestaurante();
+        }, 200);
     }
     
     // Renderizar pratos quando a aba é aberta
@@ -4396,46 +4406,84 @@ function generateRestaurantCode() {
 
 // Carregar código do restaurante
 async function carregarCodigoRestaurante() {
-    if (!firebaseServices || !currentRestaurant?.id) return;
+    console.log('🔄 === CARREGANDO CÓDIGO DO RESTAURANTE ===');
+    
+    if (!firebaseServices) {
+        console.error('❌ Firebase services não disponível');
+        return;
+    }
+    
+    if (!currentRestaurant?.id) {
+        console.error('❌ ID do restaurante não disponível:', currentRestaurant);
+        return;
+    }
     
     try {
-        const { db, doc: fbDoc, getDoc } = firebaseServices;
+        const { db, doc: fbDoc, getDoc, updateDoc } = firebaseServices;
         
+        console.log(`🏢 Carregando restaurante: ${currentRestaurant.id}`);
         const restaurantRef = fbDoc(db, 'restaurants', currentRestaurant.id);
         const restaurantSnap = await getDoc(restaurantRef);
         
         if (restaurantSnap.exists()) {
             const data = restaurantSnap.data();
             
-            console.log('🔍 Dados do restaurante carregados:', data);
+            console.log('🔍 Dados completos do restaurante:', data);
             
-            // Verificar se existe código de acesso, senão gerar um
+            // Verificar se existe código de acesso
             let accessCode = data.accessCode;
-            if (!accessCode) {
-                console.log('⚠️ Código de acesso não encontrado, gerando novo...');
+            
+            if (!accessCode || accessCode === '') {
+                console.log('⚠️ Código de acesso vazio ou inexistente, gerando novo...');
                 accessCode = generateRestaurantCode();
                 
+                console.log(`🔄 Gerando código: ${accessCode}`);
+                
                 // Atualizar no Firebase
-                const { updateDoc } = firebaseServices;
                 await updateDoc(restaurantRef, {
                     accessCode: accessCode,
                     updatedAt: new Date().toISOString()
                 });
+                
+                console.log('✅ Código salvo no Firebase');
+            } else {
+                console.log(`✅ Código existente encontrado: ${accessCode}`);
             }
             
-            // Atualizar campos na interface
+            // Verificar se os elementos da interface existem
             const codeInput = document.getElementById('restaurantCode');
             const nameInput = document.getElementById('restaurantName');
             
+            console.log('🔍 Elementos da interface:');
+            console.log('  - restaurantCode:', codeInput ? 'Encontrado' : 'NÃO ENCONTRADO');
+            console.log('  - restaurantName:', nameInput ? 'Encontrado' : 'NÃO ENCONTRADO');
+            
+            // Atualizar campos na interface
             if (codeInput) {
                 codeInput.value = accessCode;
-                console.log('✅ Código do restaurante definido:', accessCode);
+                console.log(`✅ Campo código atualizado com: "${accessCode}"`);
+                
+                // Forçar atualização visual
+                codeInput.setAttribute('value', accessCode);
+                codeInput.dispatchEvent(new Event('input'));
+            } else {
+                console.error('❌ Campo restaurantCode não encontrado na página');
             }
-            if (nameInput) nameInput.value = data.name || '';
+            
+            if (nameInput) {
+                nameInput.value = data.name || '';
+                console.log(`✅ Campo nome atualizado com: "${data.name}"`);
+            } else {
+                console.error('❌ Campo restaurantName não encontrado na página');
+            }
+            
+        } else {
+            console.error('❌ Documento do restaurante não encontrado no Firebase');
         }
         
     } catch (error) {
         console.error('❌ Erro ao carregar código do restaurante:', error);
+        console.error('📋 Stack trace:', error.stack);
     }
 }
 
