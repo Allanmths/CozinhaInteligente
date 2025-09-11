@@ -400,7 +400,14 @@ async function loadUserProfile() {
             // 🏢 CARREGAR INFORMAÇÕES DO RESTAURANTE
             await loadRestaurantInfo(userData.restaurantId);
             
-            // 👥 DADOS DAS CONFIGURAÇÕES SERÃO CARREGADOS QUANDO A ABA FOR ACESSADA
+            // � CARREGAR CÓDIGO DO RESTAURANTE PREEMPTIVAMENTE 
+            if (userRole === 'admin' || userRole === 'manager') {
+                setTimeout(() => {
+                    carregarCodigoRestaurante();
+                }, 500);
+            }
+            
+            // �👥 DADOS DAS CONFIGURAÇÕES SERÃO CARREGADOS QUANDO A ABA FOR ACESSADA
             
         } else {
             console.warn('⚠️ === USUÁRIO NÃO ENCONTRADO - INICIANDO MIGRAÇÃO ===');
@@ -435,6 +442,9 @@ async function loadRestaurantInfo(restaurantId) {
             
             // Atualizar título da página se necessário
             document.title = `${restaurantData.name} - Cozinha Inteligente`;
+            
+            // 🎨 ATUALIZAR INTERFACE COM NOME DO RESTAURANTE
+            updateUserDisplayInfo();
             
         } else {
             console.warn('⚠️ Dados do restaurante não encontrados');
@@ -4576,4 +4586,28 @@ function updateUIBasedOnRole(role) {
     
     // Aplicar outras regras de UI baseadas no papel
     // ... outras regras podem ser adicionadas aqui
+}
+
+// 🎨 Atualizar informações do usuário na interface
+function updateUserDisplayInfo() {
+    const currentUserNameElement = document.getElementById('currentUserName');
+    if (!currentUserNameElement || !currentUser || !currentRestaurant) return;
+    
+    try {
+        // Obter dados do usuário
+        const userName = currentUser.displayName || currentUser.email;
+        const roleDisplay = getRoleDisplayName(userRole);
+        
+        // Texto mais compacto para evitar overflow
+        const displayName = userName.length > 25 ? userName.substring(0, 22) + '...' : userName;
+        
+        // Atualizar elemento com nome do restaurante correto
+        currentUserNameElement.innerHTML = 
+            `${displayName}<br><span class="text-xs text-orange-600">${roleDisplay} • ${currentRestaurant.name || 'Sem restaurante'}</span>`;
+            
+        console.log(`🎨 Interface atualizada: ${displayName} - ${roleDisplay} - ${currentRestaurant.name}`);
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar interface do usuário:', error);
+    }
 }
