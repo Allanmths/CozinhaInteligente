@@ -40,17 +40,36 @@ let charts = {};
 function setupAuthListener() {
     if (!auth) return;
     
-    onAuthStateChanged(auth, (user) => {
+    onAuthStateChanged(auth, async (user) => {
         if (user) {
-            // Usuário logado
+            // 👤 USUÁRIO LOGADO
             currentUser = user;
+            console.log(`🔐 Usuário autenticado: ${user.email}`);
+            
             showApp();
-            document.getElementById('currentUserName').textContent = user.displayName || user.email;
-            loadUserData();
+            
+            // 🔄 CARREGAR DADOS DO USUÁRIO E RESTAURANTE
+            try {
+                await loadUserData();
+                console.log('✅ Dados do usuário carregados com sucesso');
+            } catch (error) {
+                console.error('❌ Erro ao carregar dados do usuário:', error);
+                showAuthMessage('Erro ao carregar dados. Tente fazer login novamente.', 'error');
+            }
         } else {
-            // Usuário não logado
+            // 🚪 USUÁRIO NÃO LOGADO
             currentUser = null;
+            currentRestaurant = null;
+            userRole = 'user';
+            
+            // Limpar dados
+            insumosDB = [];
+            fichasTecnicasDB = [];
+            pratosDB = [];
+            comprasDB = [];
+            
             showAuth();
+            console.log('🚪 Usuário deslogado - dados limpos');
         }
     });
 }
@@ -319,29 +338,114 @@ async function loadUserProfile() {
     if (!firebaseServices || !currentUser) return;
     
     try {
-        const { db } = firebaseServices;
-        const userRef = doc(db, 'users', currentUser.uid);
-        const userSnap = await getDocs(query(collection(db, 'users'), where('__name__', '==', currentUser.uid)));
+        const { db, doc: fbDoc, getDoc } = firebaseServices;
         
-        if (!userSnap.empty) {
-            const userData = userSnap.docs[0].data();
-            currentRestaurant = { id: userData.restaurantId };
+        // 🔍 BUSCAR DADOS DO USUÁRIO NO FIREBASE
+        console.log(`🔍 Carregando perfil do usuário: ${currentUser.uid}`);
+        
+        const userRef = fbDoc(db, 'users', currentUser.uid);
+        const userSnap = await getDoc(userRef);
+        
+        if (userSnap.exists()) {
+            const userData = userSnap.data();
+            
+            // 🏢 DEFINIR RESTAURANTE E PAPEL DO USUÁRIO
+            currentRestaurant = { 
+                id: userData.restaurantId,
+                name: userData.restaurantName || 'Carregando...'
+            };
             userRole = userData.role || 'user';
             
-            console.log(`✅ Usuário carregado - Restaurante: ${userData.restaurantId}, Papel: ${userRole}`);
+            console.log(`✅ Usuário carregado:`);
+            console.log(`   - Nome: ${userData.name}`);
+            console.log(`   - Restaurante ID: ${userData.restaurantId}`);
+            console.log(`   - Papel: ${userRole}`);
             
-            // Atualizar UI com informações do usuário
+            // 🎨 ATUALIZAR INTERFACE COM INFORMAÇÕES DO USUÁRIO
+            const userName = userData.name || currentUser.displayName || currentUser.email;
+            const roleDisplay = getRoleDisplayName(userRole);
+            
             document.getElementById('currentUserName').textContent = 
-                `${userData.name} (${getRoleDisplayName(userRole)})`;
+                `${userName} (${roleDisplay})`;
+            
+            // 🔐 MOSTRAR/OCULTAR MENUS BASEADO NO PAPEL
+            updateUIBasedOnRole(userRole);
+            
+            // 🏢 CARREGAR INFORMAÇÕES DO RESTAURANTE
+            await loadRestaurantInfo(userData.restaurantId);
             
         } else {
-            console.error('❌ Dados do usuário não encontrados');
+            console.error('❌ Dados do usuário não encontrados - pode ser usuário antigo');
+            
+            // 🆘 FALLBACK: Criar perfil para usuário existente
+            await createProfileForExistingUser();
         }
         
     } catch (error) {
         logError('Erro ao carregar perfil do usuário', error);
         throw error;
     }
+}
+
+// Carregar informações do restaurante
+async function loadRestaurantInfo(restaurantId) {
+    try {
+        const { db, doc: fbDoc, getDoc } = firebaseServices;
+        
+        const restaurantRef = fbDoc(db, 'restaurants', restaurantId);
+        const restaurantSnap = await getDoc(restaurantRef);
+        
+        if (restaurantSnap.exists()) {
+            const restaurantData = restaurantSnap.data();
+            currentRestaurant.name = restaurantData.name;
+            
+            console.log(`🏢 Restaurante carregado: ${restaurantData.name}`);
+            
+            // Atualizar título da página se necessário
+            document.title = `${restaurantData.name} - Cozinha Inteligente`;
+            
+        } else {
+            console.warn('⚠️ Dados do restaurante não encontrados');
+        }
+        
+    } catch (error) {
+        logError('Erro ao carregar informações do restaurante', error);
+    }
+}
+
+// Criar perfil para usuário existente (migração)
+async function createProfileForExistingUser() {
+    try {
+        console.log('🔄 Criando perfil para usuário existente...');
+        
+        // Para usuários antigos, criar um novo restaurante
+        const userName = currentUser.displayName || 
+                        currentUser.email.split('@')[0] || 
+                        'Meu Restaurante';
+        
+        await createRestaurantAndUser(currentUser.uid, userName, currentUser.email);
+        
+        // Recarregar perfil
+        await loadUserProfile();
+        
+    } catch (error) {
+        logError('Erro ao criar perfil para usuário existente', error);
+        throw error;
+    }
+}
+
+// Atualizar interface baseada no papel do usuário
+function updateUIBasedOnRole(role) {
+    const menuUsuarios = document.getElementById('menuUsuarios');
+    
+    // 👥 MOSTRAR MENU USUÁRIOS APENAS PARA ADMIN/MANAGER
+    if (role === 'admin' || role === 'manager') {
+        menuUsuarios?.classList.remove('hidden');
+    } else {
+        menuUsuarios?.classList.add('hidden');
+    }
+    
+    console.log(`🎨 Interface atualizada para papel: ${role}`);
 }
 
 // Converter role para nome amigável

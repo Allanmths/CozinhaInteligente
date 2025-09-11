@@ -16,10 +16,22 @@ window.debugFirebase = function() {
         console.log('User Name:', currentUser.displayName);
     }
     
+    // 🏢 INFO DO RESTAURANTE
+    console.log('=== DEBUG RESTAURANTE ===');
+    console.log('Current Restaurant:', currentRestaurant ? '🏢 Definido' : '❌ Não definido');
+    console.log('User Role:', userRole);
+    
+    if (currentRestaurant) {
+        console.log('Restaurant ID:', currentRestaurant.id);
+        console.log('Restaurant Name:', currentRestaurant.name);
+    }
+    
     return {
         services: window.firebaseServices,
         user: currentUser,
-        ready: isFirebaseReady
+        ready: isFirebaseReady,
+        restaurant: currentRestaurant,
+        role: userRole
     };
 };
 
@@ -94,7 +106,47 @@ window.debugErrors = function() {
     console.log('✅ Monitor de erros ativado');
 };
 
-// 7. Teste completo automático
+// 7. Teste de sistema multiusuário
+window.debugMultiuser = function() {
+    console.log('=== DEBUG SISTEMA MULTIUSUÁRIO ===');
+    
+    if (!currentUser) {
+        console.log('❌ Usuário não logado');
+        return;
+    }
+    
+    if (!currentRestaurant) {
+        console.log('❌ Restaurante não definido');
+        return;
+    }
+    
+    console.log('✅ CONFIGURAÇÃO MULTIUSUÁRIO:');
+    console.log(`   👤 Usuário: ${currentUser.email}`);
+    console.log(`   🏢 Restaurante: ${currentRestaurant.name} (${currentRestaurant.id})`);
+    console.log(`   🎭 Papel: ${userRole}`);
+    console.log('');
+    
+    console.log('📊 DADOS COMPARTILHADOS:');
+    console.log(`   🥕 Insumos: ${insumosDB.length} itens`);
+    console.log(`   📝 Fichas: ${fichasTecnicasDB.length} itens`);
+    console.log(`   🍽️ Pratos: ${pratosDB.length} itens`);
+    
+    // Verificar se dados têm restaurantId correto
+    const insumosCorretos = insumosDB.filter(item => item.restaurantId === currentRestaurant.id);
+    console.log(`   ✅ Insumos corretos: ${insumosCorretos.length}/${insumosDB.length}`);
+    
+    return {
+        user: currentUser.email,
+        restaurant: currentRestaurant,
+        role: userRole,
+        dataIntegrity: {
+            insumos: `${insumosCorretos.length}/${insumosDB.length}`,
+            restaurant: currentRestaurant.id
+        }
+    };
+};
+
+// 8. Teste completo automático
 window.debugFullTest = function() {
     console.log('🚀 EXECUTANDO TESTE COMPLETO...');
     
@@ -111,6 +163,10 @@ window.debugFullTest = function() {
     }, 300);
     
     setTimeout(() => {
+        console.log('4️⃣ Multiusuário:', debugMultiuser());
+    }, 400);
+    
+    setTimeout(() => {
         console.log('✅ TESTE COMPLETO FINALIZADO');
     }, 500);
 };
@@ -122,6 +178,7 @@ window.da = window.debugAuth;
 window.dc = window.debugClear;
 window.dt = window.debugCreateTestUser;
 window.de = window.debugErrors;
+window.dm = window.debugMultiuser;
 window.dft = window.debugFullTest;
 
 // Executar teste inicial
@@ -130,6 +187,7 @@ console.log('📋 COMANDOS DISPONÍVEIS:');
 console.log('• debugFirebase() ou df() - Estado do Firebase');
 console.log('• debugData() ou dd() - Dados locais'); 
 console.log('• debugAuth() ou da() - Estado da autenticação');
+console.log('• debugMultiuser() ou dm() - Sistema multiusuário');
 console.log('• debugClear() ou dc() - Limpar dados');
 console.log('• debugCreateTestUser() ou dt() - Criar usuário teste');
 console.log('• debugErrors() ou de() - Monitor de erros');
