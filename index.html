@@ -457,8 +457,8 @@
  <div class="flex items-center">
  <input type="checkbox" id="acceptTerms" required class="mr-2 h-4 w-4 text-orange-600 focus:ring-orange-500 border-gray-300 rounded">
  <label for="acceptTerms" class="text-sm text-gray-600">
- Aceito os <a href="#" class="text-orange-600 hover:underline">termos de uso</a> e 
- <a href="#" class="text-orange-600 hover:underline">política de privacidade</a>
+ Aceito os <a href="#" onclick="openTermsOfService(); return false;" class="text-orange-600 hover:underline">termos de uso</a> e 
+ <a href="#" onclick="openPrivacyPolicy(); return false;" class="text-orange-600 hover:underline">política de privacidade</a>
  </label>
  </div>
  <button onclick="registerUser()" class="w-full bg-orange-600 text-white py-2 px-4 rounded-lg hover:bg-orange-700 transition-colors font-medium">
@@ -1859,8 +1859,31 @@
     </div>
 </div>
 
-<!-- Print Area -->
+ <!-- Print Area -->
  <div id="printableArea" style="display: none;"></div>
+
+ <!-- 📄 Rodapé com Links Legais -->
+ <footer class="bg-gray-50 border-t border-gray-200 py-6 mt-8">
+     <div class="max-w-7xl mx-auto px-6 sm:px-8">
+         <div class="flex flex-col sm:flex-row justify-between items-center text-sm text-gray-600">
+             <div class="mb-4 sm:mb-0">
+                 <p>&copy; 2025 Cozinha Inteligente. Sistema de Gestão Gastronômica.</p>
+             </div>
+             <div class="flex space-x-6">
+                 <a href="termos-de-uso.html" target="_blank" class="hover:text-orange-600 transition-colors">
+                     Termos de Uso
+                 </a>
+                 <a href="politica-privacidade.html" target="_blank" class="hover:text-orange-600 transition-colors">
+                     Política de Privacidade
+                 </a>
+                 <a href="https://github.com/Allanmths/CozinhaInteligente" target="_blank" class="hover:text-orange-600 transition-colors">
+                     <i data-lucide="github" class="h-4 w-4 inline mr-1"></i>
+                     GitHub
+                 </a>
+             </div>
+         </div>
+     </div>
+ </footer>
 
  <!-- Include the main JavaScript here -->
  <script src="js/main.js"></script>

@@ -208,7 +208,9 @@ async function registerUser() {
     }
     
     if (!acceptTerms) {
-        showAuthMessage('Você deve aceitar os termos de uso.', 'error');
+        if (!validateTermsAcceptance()) {
+            showAuthMessage('Você deve aceitar os Termos de Uso e Política de Privacidade para prosseguir.', 'error');
+        }
         return;
     }
     
@@ -4768,4 +4770,38 @@ function updateUserDisplayInfo() {
     } catch (error) {
         console.error('❌ Erro ao atualizar interface do usuário:', error);
     }
+}
+
+// =====================================================
+// 📄 FUNCÇÕES PARA DOCUMENTOS LEGAIS
+// =====================================================
+
+// Abrir termos de uso
+function openTermsOfService() {
+    window.open('termos-de-uso.html', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
+}
+
+// Abrir política de privacidade
+function openPrivacyPolicy() {
+    window.open('politica-privacidade.html', '_blank', 'width=900,height=700,scrollbars=yes,resizable=yes');
+}
+
+// Validar aceitação dos termos com feedback visual
+function validateTermsAcceptance() {
+    const termsCheckbox = document.getElementById('acceptTerms');
+    if (!termsCheckbox) return true;
+    
+    if (!termsCheckbox.checked) {
+        // Destacar visualmente o checkbox
+        termsCheckbox.parentElement.classList.add('ring-2', 'ring-red-500', 'rounded');
+        
+        // Remover destaque após alguns segundos
+        setTimeout(() => {
+            termsCheckbox.parentElement.classList.remove('ring-2', 'ring-red-500', 'rounded');
+        }, 3000);
+        
+        return false;
+    }
+    
+    return true;
 }
