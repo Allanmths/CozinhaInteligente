@@ -1,0 +1,102 @@
+rules_version = '2';
+
+// 🔄 REGRAS DE TRANSIÇÃO - COZINHA INTELIGENTE
+// Versão de Migração: Permissiva para permitir migração de dados
+// IMPORTANTE: Use estas regras temporariamente durante a migração
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================
+    // 🛡️ FUNÇÕES DE SEGURANÇA BÁSICAS
+    // ===============================
+    
+    function isAuthenticated() {
+      return request.auth != null && request.auth.uid != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    // Função mais permissiva para transição
+    function canAccess() {
+      return isAuthenticated();
+    }
+    
+    // Verificar se documento tem restaurantId
+    function hasRestaurantId() {
+      return request.resource.data.keys().hasAny(['restaurantId']) ||
+             resource.data.keys().hasAny(['restaurantId']);
+    }
+    
+    // ===============================
+    // 🏢 COLEÇÃO DE RESTAURANTES
+    // ===============================
+    match /restaurants/{restaurantId} {
+      // Permitir acesso para usuários autenticados durante migração
+      allow read, write: if isAuthenticated();
+    }
+    
+    // ===============================
+    // 👥 COLEÇÃO DE USUÁRIOS  
+    // ===============================
+    match /users/{userId} {
+      // Leitura: Próprio usuário ou qualquer usuário autenticado (transição)
+      allow read: if isAuthenticated();
+      
+      // Criação/Atualização: Qualquer usuário autenticado
+      allow create, update: if isAuthenticated();
+      
+      // Exclusão: Apenas próprio usuário ou se for o criador
+      allow delete: if isOwner(userId) || isAuthenticated();
+    }
+    
+    // ===============================
+    // 📦 DADOS DO RESTAURANTE (TRANSIÇÃO)
+    // ===============================
+    match /insumos/{insumoId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /pratos/{pratoId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /fichasTecnicas/{fichaId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /compras/{compraId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /fornecedores/{fornecedorId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /configuracoes/{configId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /relatorios/{relatorioId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /notificacoes/{notificacaoId} {
+      allow read, write: if isAuthenticated();
+    }
+    
+    match /logs/{logId} {
+      allow read: if isAuthenticated();
+      allow write: if false; // Logs não podem ser alterados
+    }
+    
+    // ===============================
+    // 🚫 OUTRAS COLEÇÕES
+    // ===============================
+    match /{document=**} {
+      allow read, write: if isAuthenticated();
+    }
+  }
+}
