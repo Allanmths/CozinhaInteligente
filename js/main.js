@@ -597,7 +597,7 @@ function toggleRegistrationFields() {
         
         // Tornar campos obrigatórios
         document.getElementById('registerName').required = true;
-        document.getElementById('restaurantCode').required = false;
+        document.getElementById('joinRestaurantCode').required = false;
         document.getElementById('staffName').required = false;
     } else {
         newFields.classList.add('hidden');
@@ -605,7 +605,7 @@ function toggleRegistrationFields() {
         
         // Tornar campos obrigatórios
         document.getElementById('registerName').required = false;
-        document.getElementById('restaurantCode').required = true;
+        document.getElementById('joinRestaurantCode').required = true;
         document.getElementById('staffName').required = true;
     }
 }
