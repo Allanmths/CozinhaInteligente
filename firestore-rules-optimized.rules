@@ -1,0 +1,172 @@
+rules_version = '2';
+
+// 🔐 REGRAS DE SEGURANÇA FIREBASE - COZINHA INTELIGENTE
+// Sistema Multi-usuário com Isolamento por Restaurante
+// Versão: 2.0 - Otimizada para Performance e Segurança
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // 👤 FUNÇÕES DE VALIDAÇÃO
+    
+    // Verificar se usuário pertence ao restaurante
+    function belongsToRestaurant(restaurantId) {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId == restaurantId;
+    }
+    
+    // Verificar se usuário é admin ou gerente
+    function isAdminOrManager() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['admin', 'manager'];
+    }
+    
+    // Verificar se usuário é admin
+    function isAdmin() {
+      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+    
+    // Verificar se é o próprio usuário
+    function isOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+    
+    // 🏢 COLEÇÃO DE RESTAURANTES
+    match /restaurants/{restaurantId} {
+      // Leitura: Usuários do restaurante podem ler os dados
+      allow read: if request.auth != null && belongsToRestaurant(restaurantId);
+      
+      // Criação: Apenas usuários autenticados podem criar (para migração)
+      allow create: if request.auth != null && 
+                    request.resource.data.ownerId == request.auth.uid;
+      
+      // Atualização: Apenas admin pode atualizar dados do restaurante
+      allow update: if request.auth != null && 
+                    belongsToRestaurant(restaurantId) && 
+                    isAdmin();
+      
+      // Exclusão: Apenas owner pode deletar restaurante
+      allow delete: if request.auth != null && 
+                    resource.data.ownerId == request.auth.uid;
+    }
+    
+    // 👥 COLEÇÃO DE USUÁRIOS
+    match /users/{userId} {
+      // Leitura: Próprio usuário ou usuários do mesmo restaurante
+      allow read: if request.auth != null && (
+        isOwner(userId) || 
+        belongsToRestaurant(resource.data.restaurantId)
+      );
+      
+      // Criação: Usuário pode criar seu próprio perfil
+      allow create: if request.auth != null && 
+                    request.auth.uid == userId;
+      
+      // Atualização: Próprio usuário ou admin/gerente do restaurante
+      allow update: if request.auth != null && (
+        isOwner(userId) || 
+        (belongsToRestaurant(resource.data.restaurantId) && isAdminOrManager())
+      );
+      
+      // Exclusão: Admin pode remover usuários do restaurante
+      allow delete: if request.auth != null && 
+                    belongsToRestaurant(resource.data.restaurantId) && 
+                    isAdminOrManager();
+    }
+    
+    // 📦 COLEÇÃO DE INSUMOS
+    match /insumos/{insumoId} {
+      // Leitura/Escrita: Usuários do mesmo restaurante
+      allow read, write: if request.auth != null && 
+                         belongsToRestaurant(resource.data.restaurantId);
+      
+      // Criação: Deve incluir restaurantId do usuário
+      allow create: if request.auth != null && 
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    request.resource.data.restaurantId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId;
+    }
+    
+    // 🍽️ COLEÇÃO DE PRATOS
+    match /pratos/{pratoId} {
+      // Leitura/Escrita: Usuários do mesmo restaurante
+      allow read, write: if request.auth != null && 
+                         belongsToRestaurant(resource.data.restaurantId);
+      
+      // Criação: Deve incluir restaurantId do usuário
+      allow create: if request.auth != null && 
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    request.resource.data.restaurantId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId;
+    }
+    
+    // 📋 COLEÇÃO DE FICHAS TÉCNICAS
+    match /fichasTecnicas/{fichaId} {
+      // Leitura/Escrita: Usuários do mesmo restaurante
+      allow read, write: if request.auth != null && 
+                         belongsToRestaurant(resource.data.restaurantId);
+      
+      // Criação: Deve incluir restaurantId do usuário
+      allow create: if request.auth != null && 
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    request.resource.data.restaurantId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId;
+    }
+    
+    // 🛒 COLEÇÃO DE COMPRAS
+    match /compras/{compraId} {
+      // Leitura/Escrita: Usuários do mesmo restaurante
+      allow read, write: if request.auth != null && 
+                         belongsToRestaurant(resource.data.restaurantId);
+      
+      // Criação: Deve incluir restaurantId do usuário
+      allow create: if request.auth != null && 
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    request.resource.data.restaurantId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId;
+    }
+    
+    // 🏪 COLEÇÃO DE FORNECEDORES
+    match /fornecedores/{fornecedorId} {
+      // Leitura/Escrita: Usuários do mesmo restaurante
+      allow read, write: if request.auth != null && 
+                         belongsToRestaurant(resource.data.restaurantId);
+      
+      // Criação: Deve incluir restaurantId do usuário
+      allow create: if request.auth != null && 
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    request.resource.data.restaurantId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId;
+    }
+    
+    // ⚙️ COLEÇÃO DE CONFIGURAÇÕES
+    match /configuracoes/{configId} {
+      // Leitura: Usuários do mesmo restaurante
+      allow read: if request.auth != null && 
+                  belongsToRestaurant(resource.data.restaurantId);
+      
+      // Escrita: Apenas admin e gerentes
+      allow write: if request.auth != null && 
+                   belongsToRestaurant(resource.data.restaurantId) && 
+                   isAdminOrManager();
+      
+      // Criação: Deve incluir restaurantId do usuário
+      allow create: if request.auth != null && 
+                    exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                    request.resource.data.restaurantId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.restaurantId;
+    }
+    
+    // 📊 COLEÇÃO DE RELATÓRIOS (futura expansão)
+    match /relatorios/{relatorioId} {
+      // Leitura: Usuários do mesmo restaurante
+      allow read: if request.auth != null && 
+                  belongsToRestaurant(resource.data.restaurantId);
+      
+      // Escrita: Apenas admin e gerentes
+      allow write: if request.auth != null && 
+                   belongsToRestaurant(resource.data.restaurantId) && 
+                   isAdminOrManager();
+    }
+    
+    // 🚫 NEGAR ACESSO A OUTRAS COLEÇÕES
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

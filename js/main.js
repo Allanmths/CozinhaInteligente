@@ -274,13 +274,14 @@ async function createRestaurantAndUser(userId, restaurantName, email) {
     try {
         if (!firebaseServices?.db) return;
         
-        const { db } = firebaseServices;
+        const { db, doc: fbDoc, setDoc } = firebaseServices;
         const restaurantId = generateId();
         
         // 1. Criar restaurante
-        const restaurantRef = doc(db, 'restaurants', restaurantId);
+        const restaurantRef = fbDoc(db, 'restaurants', restaurantId);
         await setDoc(restaurantRef, {
             name: restaurantName,
+            accessCode: generateRestaurantCode(),
             createdAt: new Date().toISOString(),
             updatedAt: new Date().toISOString(),
             ownerId: userId,
@@ -297,7 +298,7 @@ async function createRestaurantAndUser(userId, restaurantName, email) {
         });
         
         // 2. Criar usuário como admin do restaurante
-        const userRef = doc(db, 'users', userId);
+        const userRef = fbDoc(db, 'users', userId);
         await setDoc(userRef, {
             name: restaurantName,
             email: email,
@@ -390,6 +391,12 @@ async function loadUserProfile() {
             
             // 🏢 CARREGAR INFORMAÇÕES DO RESTAURANTE
             await loadRestaurantInfo(userData.restaurantId);
+            
+            // 👥 CARREGAR DADOS PARA CONFIGURAÇÕES
+            setTimeout(() => {
+                carregarUsuarios();
+                carregarCodigoRestaurante();
+            }, 1000);
             
         } else {
             console.warn('⚠️ === USUÁRIO NÃO ENCONTRADO - INICIANDO MIGRAÇÃO ===');
@@ -4217,3 +4224,286 @@ function deleteSelectedInsumos() {
 document.addEventListener('DOMContentLoaded', function() {
     inicializarEventosVinculacao();
 });
+
+// =====================================================
+// 👥 SISTEMA DE GERENCIAMENTO DE USUÁRIOS
+// =====================================================
+
+// Carregar lista de usuários do restaurante
+async function carregarUsuarios() {
+    if (!firebaseServices || !currentRestaurant?.id) return;
+    
+    try {
+        const { db, collection, query, where, getDocs } = firebaseServices;
+        
+        const usersQuery = query(
+            collection(db, 'users'),
+            where('restaurantId', '==', currentRestaurant.id)
+        );
+        
+        const querySnapshot = await getDocs(usersQuery);
+        const usuarios = [];
+        
+        querySnapshot.forEach((doc) => {
+            const userData = doc.data();
+            usuarios.push({
+                id: doc.id,
+                ...userData
+            });
+        });
+        
+        renderUsuarios(usuarios);
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar usuários:', error);
+    }
+}
+
+// Renderizar lista de usuários
+function renderUsuarios(usuarios) {
+    const container = document.getElementById('listaUsuarios');
+    if (!container) return;
+    
+    container.innerHTML = '';
+    
+    usuarios.forEach(usuario => {
+        const roleDisplay = getRoleDisplayName(usuario.role);
+        const isCurrentUser = usuario.id === currentUser?.uid;
+        
+        const userCard = document.createElement('div');
+        userCard.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
+        
+        userCard.innerHTML = `
+            <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 bg-orange-600 text-white rounded-full flex items-center justify-center font-medium">
+                    ${usuario.name.charAt(0).toUpperCase()}
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-900">
+                        ${usuario.name} ${isCurrentUser ? '(Você)' : ''}
+                    </p>
+                    <p class="text-xs text-gray-500">${usuario.email}</p>
+                    <p class="text-xs text-orange-600 font-medium">${roleDisplay}</p>
+                </div>
+            </div>
+            <div class="flex space-x-2">
+                ${!isCurrentUser && (userRole === 'admin' || userRole === 'manager') ? `
+                    <select onchange="alterarRoleUsuario('${usuario.id}', this.value)" 
+                            class="text-xs px-2 py-1 border border-gray-300 rounded">
+                        <option value="user" ${usuario.role === 'user' ? 'selected' : ''}>Usuário</option>
+                        <option value="chef" ${usuario.role === 'chef' ? 'selected' : ''}>Chef</option>
+                        <option value="manager" ${usuario.role === 'manager' ? 'selected' : ''}>Gerente</option>
+                        ${userRole === 'admin' ? `<option value="admin" ${usuario.role === 'admin' ? 'selected' : ''}>Admin</option>` : ''}
+                    </select>
+                    <button onclick="removerUsuario('${usuario.id}', '${usuario.name}')" 
+                            class="text-red-600 hover:text-red-800 text-xs p-1">
+                        <i data-lucide="trash-2" class="h-3 w-3"></i>
+                    </button>
+                ` : ''}
+            </div>
+        `;
+        
+        container.appendChild(userCard);
+    });
+    
+    // Re-renderizar ícones do Lucide
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+}
+
+// Convidar novo usuário
+async function convidarUsuario() {
+    const email = document.getElementById('novoUsuarioEmail')?.value?.trim();
+    const role = document.getElementById('novoUsuarioRole')?.value;
+    
+    if (!email) {
+        showAlert('Erro', 'Digite o email do usuário', 'error');
+        return;
+    }
+    
+    if (!currentRestaurant?.id) {
+        showAlert('Erro', 'Restaurante não identificado', 'error');
+        return;
+    }
+    
+    try {
+        // Por enquanto, apenas salvar o convite (implementar sistema de convites depois)
+        showAlert('Convite Enviado', `Convite enviado para ${email} como ${getRoleDisplayName(role)}`, 'success');
+        
+        // Limpar campos
+        document.getElementById('novoUsuarioEmail').value = '';
+        document.getElementById('novoUsuarioRole').value = 'user';
+        
+    } catch (error) {
+        console.error('❌ Erro ao convidar usuário:', error);
+        showAlert('Erro', 'Erro ao enviar convite', 'error');
+    }
+}
+
+// Alterar role do usuário
+async function alterarRoleUsuario(userId, newRole) {
+    if (!firebaseServices) return;
+    
+    try {
+        const { db, doc: fbDoc, updateDoc } = firebaseServices;
+        
+        await updateDoc(fbDoc(db, 'users', userId), {
+            role: newRole,
+            updatedAt: new Date().toISOString()
+        });
+        
+        showAlert('Sucesso', `Papel do usuário alterado para ${getRoleDisplayName(newRole)}`, 'success');
+        carregarUsuarios(); // Recarregar lista
+        
+    } catch (error) {
+        console.error('❌ Erro ao alterar papel do usuário:', error);
+        showAlert('Erro', 'Erro ao alterar papel do usuário', 'error');
+    }
+}
+
+// Remover usuário
+async function removerUsuario(userId, userName) {
+    if (!confirm(`Tem certeza que deseja remover ${userName} do restaurante?`)) return;
+    
+    if (!firebaseServices) return;
+    
+    try {
+        const { db, doc: fbDoc, deleteDoc } = firebaseServices;
+        
+        await deleteDoc(fbDoc(db, 'users', userId));
+        
+        showAlert('Sucesso', `${userName} foi removido do restaurante`, 'success');
+        carregarUsuarios(); // Recarregar lista
+        
+    } catch (error) {
+        console.error('❌ Erro ao remover usuário:', error);
+        showAlert('Erro', 'Erro ao remover usuário', 'error');
+    }
+}
+
+// =====================================================
+// 🔑 SISTEMA DE CÓDIGO DO RESTAURANTE
+// =====================================================
+
+// Gerar código do restaurante
+function generateRestaurantCode() {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+}
+
+// Carregar código do restaurante
+async function carregarCodigoRestaurante() {
+    if (!firebaseServices || !currentRestaurant?.id) return;
+    
+    try {
+        const { db, doc: fbDoc, getDoc } = firebaseServices;
+        
+        const restaurantRef = fbDoc(db, 'restaurants', currentRestaurant.id);
+        const restaurantSnap = await getDoc(restaurantRef);
+        
+        if (restaurantSnap.exists()) {
+            const data = restaurantSnap.data();
+            
+            // Atualizar campos na interface
+            const codeInput = document.getElementById('restaurantCode');
+            const nameInput = document.getElementById('restaurantName');
+            
+            if (codeInput) codeInput.value = data.accessCode || '';
+            if (nameInput) nameInput.value = data.name || '';
+        }
+        
+    } catch (error) {
+        console.error('❌ Erro ao carregar código do restaurante:', error);
+    }
+}
+
+// Copiar código para clipboard
+async function copiarCodigo() {
+    const codeInput = document.getElementById('restaurantCode');
+    if (!codeInput) return;
+    
+    try {
+        await navigator.clipboard.writeText(codeInput.value);
+        showAlert('Copiado', 'Código copiado para a área de transferência', 'success');
+    } catch (error) {
+        // Fallback para browsers antigos
+        codeInput.select();
+        document.execCommand('copy');
+        showAlert('Copiado', 'Código copiado para a área de transferência', 'success');
+    }
+}
+
+// Gerar novo código
+async function gerarNovoCodigo() {
+    if (!confirm('Tem certeza que deseja gerar um novo código? O código atual será invalidado.')) return;
+    
+    if (!firebaseServices || !currentRestaurant?.id) return;
+    
+    try {
+        const { db, doc: fbDoc, updateDoc } = firebaseServices;
+        
+        const newCode = generateRestaurantCode();
+        
+        await updateDoc(fbDoc(db, 'restaurants', currentRestaurant.id), {
+            accessCode: newCode,
+            updatedAt: new Date().toISOString()
+        });
+        
+        document.getElementById('restaurantCode').value = newCode;
+        showAlert('Sucesso', 'Novo código gerado com sucesso', 'success');
+        
+    } catch (error) {
+        console.error('❌ Erro ao gerar novo código:', error);
+        showAlert('Erro', 'Erro ao gerar novo código', 'error');
+    }
+}
+
+// Atualizar nome do restaurante
+async function atualizarNomeRestaurante() {
+    const nameInput = document.getElementById('restaurantName');
+    if (!nameInput) return;
+    
+    const newName = nameInput.value.trim();
+    if (!newName) {
+        showAlert('Erro', 'Digite um nome para o restaurante', 'error');
+        return;
+    }
+    
+    if (!firebaseServices || !currentRestaurant?.id) return;
+    
+    try {
+        const { db, doc: fbDoc, updateDoc } = firebaseServices;
+        
+        await updateDoc(fbDoc(db, 'restaurants', currentRestaurant.id), {
+            name: newName,
+            updatedAt: new Date().toISOString()
+        });
+        
+        // Atualizar dados locais
+        currentRestaurant.name = newName;
+        document.title = `${newName} - Cozinha Inteligente`;
+        
+        showAlert('Sucesso', 'Nome do restaurante atualizado', 'success');
+        
+    } catch (error) {
+        console.error('❌ Erro ao atualizar nome do restaurante:', error);
+        showAlert('Erro', 'Erro ao atualizar nome do restaurante', 'error');
+    }
+}
+
+// Mostrar/ocultar gerenciamento de usuários baseado no papel
+function updateUIBasedOnRole(role) {
+    const userManagementCard = document.getElementById('userManagementCard');
+    
+    if (userManagementCard) {
+        // Apenas admins e gerentes podem ver o gerenciamento de usuários
+        if (role === 'admin' || role === 'manager') {
+            userManagementCard.style.display = 'block';
+        } else {
+            userManagementCard.style.display = 'none';
+        }
+    }
+    
+    // Aplicar outras regras de UI baseadas no papel
+    // ... outras regras podem ser adicionadas aqui
+}
