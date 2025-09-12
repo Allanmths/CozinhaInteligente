@@ -4065,7 +4065,7 @@ function excluirImportacao(historicoId) {
             
             // Atualizar interface
             renderHistoricoImportacoes();
-            showSuccessMessage('Importação excluída com sucesso!');
+            showAlert('Sucesso', 'Importação excluída com sucesso!', 'success');
         }
     }
 }
@@ -4211,7 +4211,7 @@ function adicionarCategoria() {
     input.value = '';
     salvarDados();
     carregarCategorias();
-    showSuccessMessage('Categoria adicionada com sucesso!');
+    showAlert('Sucesso', 'Categoria adicionada com sucesso!', 'success');
 }
 
 function removerCategoria(index) {
@@ -4219,7 +4219,7 @@ function removerCategoria(index) {
         categoriasDB.splice(index, 1);
         salvarDados();
         carregarCategorias();
-        showSuccessMessage('Categoria removida com sucesso!');
+        showAlert('Sucesso', 'Categoria removida com sucesso!', 'success');
     }
 }
 
@@ -4377,7 +4377,7 @@ function inicializarEventosVinculacao() {
                     }
                     this.classList.add('hidden');
                     this.value = '';
-                    showSuccessMessage('Categoria adicionada: ' + categoria);
+                    showAlert('Sucesso', 'Categoria adicionada: ' + categoria, 'success');
                 }
             }
         });
