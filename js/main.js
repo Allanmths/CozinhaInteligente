@@ -992,6 +992,12 @@ async function saveToFirebase(collection_name, data, docId = null) {
         }
         
         if (docId) {
+            // Validar se docId é uma string válida
+            if (typeof docId !== 'string' || docId.trim() === '') {
+                console.warn(`ID inválido para ${collection_name}:`, docId);
+                return null;
+            }
+            
             // Usar setDoc ao invés de updateDoc para criar o documento se não existir
             await setDoc(doc(db, collection_name, docId), secureData, { merge: true });
             return docId;
@@ -1252,7 +1258,7 @@ async function saveData() {
             
             // Salvar compras
             comprasDB.forEach(compra => {
-                if (compra.id) {
+                if (compra.id && typeof compra.id === 'string' && compra.id.trim() !== '') {
                     savePromises.push(saveToFirebase('compras', compra, compra.id));
                 }
             });
@@ -1286,7 +1292,7 @@ async function saveData() {
             
             // Salvar fornecedores
             fornecedoresDB.forEach(fornecedor => {
-                if (fornecedor.id) {
+                if (fornecedor.id && typeof fornecedor.id === 'string' && fornecedor.id.trim() !== '') {
                     savePromises.push(saveToFirebase('fornecedores', fornecedor, fornecedor.id));
                 }
             });
@@ -3070,7 +3076,7 @@ function saveInsumo(event) {
             
             // Se tiver dados de compra, criar novo registro de compra
             if (valorUnitario > 0 && fornecedorNome && dataCompra) {
-                const compraId = comprasDB.length > 0 ? Math.max(...comprasDB.map(c => c.id)) + 1 : 1;
+                const compraId = 'compra_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
                 const novaCompra = {
                     id: compraId,
                     insumoMestreId: id,
@@ -3090,7 +3096,7 @@ function saveInsumo(event) {
                 
                 // Adicionar fornecedor ao banco se não existir
                 if (fornecedorNome && !fornecedoresDB.find(f => f.nome === fornecedorNome)) {
-                    const fornecedorId = fornecedoresDB.length > 0 ? Math.max(...fornecedoresDB.map(f => f.id)) + 1 : 1;
+                    const fornecedorId = 'fornecedor_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
                     fornecedoresDB.push({
                         id: fornecedorId,
                         nome: fornecedorNome,
@@ -3109,7 +3115,7 @@ function saveInsumo(event) {
         
         // Criar registro de compra se houver dados
         if (valorUnitario > 0 && fornecedorNome && dataCompra) {
-            const compraId = comprasDB.length > 0 ? Math.max(...comprasDB.map(c => c.id)) + 1 : 1;
+            const compraId = 'compra_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
             const novaCompra = {
                 id: compraId,
                 insumoMestreId: insumo.id,
@@ -3129,7 +3135,7 @@ function saveInsumo(event) {
             
             // Adicionar fornecedor ao banco se não existir
             if (fornecedorNome && !fornecedoresDB.find(f => f.nome === fornecedorNome)) {
-                const fornecedorId = fornecedoresDB.length > 0 ? Math.max(...fornecedoresDB.map(f => f.id)) + 1 : 1;
+                const fornecedorId = 'fornecedor_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5);
                 fornecedoresDB.push({
                     id: fornecedorId,
                     nome: fornecedorNome,
