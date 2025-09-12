@@ -2033,8 +2033,9 @@ function addIngrediente() {
             </select>
             <input type="number" class="ingrediente-quantidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
                 placeholder="Quantidade" step="0.01" min="0">
-            <input type="text" class="ingrediente-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
-                placeholder="Unidade (kg, g, L, ml...)">
+            <select class="ingrediente-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                ${getUnidadesOptions()}
+            </select>
             <button type="button" onclick="removeIngrediente(this)" 
                 class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
                 <i data-lucide="trash-2" class="h-4 w-4"></i>
@@ -2537,8 +2538,9 @@ function addIngredienteFicha() {
             </select>
             <input type="number" class="ingrediente-ficha-quantidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
                 placeholder="Quantidade" step="0.01" min="0">
-            <input type="text" class="ingrediente-ficha-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                placeholder="Unidade (kg, g, L, ml...)">
+            <select class="ingrediente-ficha-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                ${getUnidadesOptions()}
+            </select>
             <button type="button" onclick="removeIngredienteFicha(this)" 
                 class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
                 <i data-lucide="trash-2" class="h-4 w-4"></i>
@@ -2744,6 +2746,47 @@ function renderInsumos() {
         </tr>`;
     }).join('');
     lucide.createIcons();
+}
+
+// Função para gerar opções de unidades para selects
+function getUnidadesOptions() {
+    const unidadesPadrao = [
+        { value: '', text: 'Selecione uma unidade' },
+        { value: 'kg', text: 'kg - Quilograma' },
+        { value: 'g', text: 'g - Grama' },
+        { value: 'l', text: 'L - Litro' },
+        { value: 'ml', text: 'ml - Mililitro' },
+        { value: 'un', text: 'un - Unidade' },
+        { value: 'dz', text: 'dz - Dúzia' },
+        { value: 'cx', text: 'cx - Caixa' },
+        { value: 'pc', text: 'pc - Peça' },
+        { value: 'sc', text: 'sc - Saco' },
+        { value: 'bd', text: 'bd - Bandeja' },
+        { value: 'fr', text: 'fr - Frasco' },
+        { value: 'pt', text: 'pt - Pote' },
+        { value: 'tb', text: 'tb - Tubo' },
+        { value: 'lt', text: 'lt - Lata' },
+        { value: 'gl', text: 'gl - Galão' },
+        { value: 'm', text: 'm - Metro' },
+        { value: 'cm', text: 'cm - Centímetro' }
+    ];
+    
+    // Coletar unidades únicas dos insumos existentes
+    const unidadesExistentes = [...new Set(insumosDB.map(insumo => insumo.unidade))]
+        .filter(unidade => unidade && unidade.trim() !== '')
+        .map(unidade => ({ value: unidade, text: unidade }));
+    
+    // Combinar unidades padrão com existentes (evitar duplicatas)
+    const todasUnidades = [...unidadesPadrao];
+    unidadesExistentes.forEach(unidadeExistente => {
+        if (!unidadesPadrao.some(up => up.value === unidadeExistente.value)) {
+            todasUnidades.push(unidadeExistente);
+        }
+    });
+    
+    return todasUnidades.map(unidade => 
+        `<option value="${unidade.value}">${unidade.text}</option>`
+    ).join('');
 }
 
 // Função para calcular valores em unidades convertidas
