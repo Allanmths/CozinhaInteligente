@@ -1071,7 +1071,11 @@ function updateConnectionStatus(status) {
 function loadLocalData() {
     insumosDB = JSON.parse(localStorage.getItem('insumosDB')) || [];
     
-    categoriasDB = JSON.parse(localStorage.getItem('categoriasDB')) || [];
+    const storedCategorias = localStorage.getItem('categoriasDB');
+    console.log('🔍 localStorage categoriasDB raw:', storedCategorias);
+    
+    categoriasDB = JSON.parse(storedCategorias) || [];
+    console.log('📂 categoriasDB carregadas:', [...categoriasDB]);
     
     comprasDB = JSON.parse(localStorage.getItem('comprasDB')) || [];
     
@@ -1092,13 +1096,27 @@ function loadLocalData() {
 }
 
 function saveToLocalStorage() {
-    localStorage.setItem('insumosDB', JSON.stringify(insumosDB));
-    localStorage.setItem('comprasDB', JSON.stringify(comprasDB));
-    localStorage.setItem('fichasTecnicasDB', JSON.stringify(fichasTecnicasDB));
-    localStorage.setItem('pratosDB', JSON.stringify(pratosDB));
-    localStorage.setItem('configuracoesDB', JSON.stringify(configuracoesDB));
-    localStorage.setItem('fornecedoresDB', JSON.stringify(fornecedoresDB));
-    localStorage.setItem('categoriasDB', JSON.stringify(categoriasDB));
+    console.log('💾 saveToLocalStorage() iniciada');
+    console.log('📊 Salvando categoriasDB:', [...categoriasDB]);
+    
+    try {
+        localStorage.setItem('insumosDB', JSON.stringify(insumosDB));
+        localStorage.setItem('comprasDB', JSON.stringify(comprasDB));
+        localStorage.setItem('fichasTecnicasDB', JSON.stringify(fichasTecnicasDB));
+        localStorage.setItem('pratosDB', JSON.stringify(pratosDB));
+        localStorage.setItem('configuracoesDB', JSON.stringify(configuracoesDB));
+        localStorage.setItem('fornecedoresDB', JSON.stringify(fornecedoresDB));
+        localStorage.setItem('categoriasDB', JSON.stringify(categoriasDB));
+        
+        console.log('✅ Dados salvos no localStorage com sucesso');
+        
+        // Verificar se realmente foi salvo
+        const saved = localStorage.getItem('categoriasDB');
+        console.log('✔️ Verificação categoriasDB salva:', saved);
+        
+    } catch (error) {
+        console.error('❌ Erro ao salvar no localStorage:', error);
+    }
 }
 
 // Função de atalho para salvar dados
@@ -4145,10 +4163,21 @@ function atualizarResumoItem() {
 
 // === GESTÃO DE CATEGORIAS ===
 function carregarCategorias() {
+    console.log('🔄 carregarCategorias() iniciada');
+    console.log('📊 categoriasDB atual:', [...categoriasDB]);
+    
     const listaCategorias = document.getElementById('listaCategorias');
     const selectCategoria = document.getElementById('insumoCategoria');
     
-    if (!listaCategorias || !selectCategoria) return;
+    console.log('🎯 Elementos encontrados:', {
+        listaCategorias: !!listaCategorias,
+        selectCategoria: !!selectCategoria
+    });
+    
+    if (!listaCategorias || !selectCategoria) {
+        console.warn('⚠️ Elementos não encontrados, saindo...');
+        return;
+    }
     
     // Categorias padrão se não existir nenhuma
     if (categoriasDB.length === 0) {
@@ -4195,8 +4224,13 @@ function carregarCategorias() {
 }
 
 function adicionarCategoria() {
+    console.log('🔧 adicionarCategoria() iniciada');
+    
     const input = document.getElementById('novaCategoria');
     const categoria = input.value.trim();
+    
+    console.log('📝 Categoria digitada:', categoria);
+    console.log('📊 categoriasDB antes:', [...categoriasDB]);
     
     if (!categoria) {
         showAlert('Erro', 'Digite o nome da categoria', 'error');
@@ -4209,8 +4243,20 @@ function adicionarCategoria() {
     }
     
     categoriasDB.push(categoria);
+    console.log('📊 categoriasDB depois:', [...categoriasDB]);
+    
     input.value = '';
+    
+    // Verificar localStorage antes de salvar
+    const beforeSave = localStorage.getItem('categoriasDB');
+    console.log('💾 localStorage antes do save:', beforeSave);
+    
     salvarDados();
+    
+    // Verificar localStorage depois de salvar
+    const afterSave = localStorage.getItem('categoriasDB');
+    console.log('💾 localStorage depois do save:', afterSave);
+    
     carregarCategorias();
     showAlert('Sucesso', 'Categoria adicionada com sucesso!', 'success');
 }
