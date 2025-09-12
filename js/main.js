@@ -1428,12 +1428,12 @@ function toggleAutoSync() {
         'info', 
         2000
     );
-        
-        console.log(`🔄 Sincronização automática ${autoSyncEnabled ? 'ativada' : 'desativada'}`);
-        
-        // Atualizar interface
-        updateSyncControlUI();
-    }
+    
+    console.log(`🔄 Sincronização automática ${autoSyncEnabled ? 'ativada' : 'desativada'}`);
+    
+    // Atualizar interface
+    updateSyncControlUI();
+}
     
     // Iniciar intervalo de sincronização
     autoSyncInterval = setInterval(async () => {
