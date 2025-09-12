@@ -1434,54 +1434,6 @@ function toggleAutoSync() {
     // Atualizar interface
     updateSyncControlUI();
 }
-    
-    // Iniciar intervalo de sincronização
-    autoSyncInterval = setInterval(async () => {
-        try {
-            // Atualizar informação de tempo
-            updateLastSyncInfo();
-            
-            // Verificar se a sincronização automática está habilitada
-            if (!autoSyncEnabled) {
-                return;
-            }
-            
-            // Verificar se é hora de sincronizar (para evitar sincronizações muito frequentes)
-            const now = Date.now();
-            if (now - lastSyncTime < SYNC_INTERVAL / 2) {
-                console.log('⏱️ Sincronização ignorada - muito recente');
-                return;
-            }
-            
-            // Verificar se está online
-            if (!navigator.onLine) {
-                console.log('📵 Dispositivo offline - sincronização adiada');
-                return;
-            }
-            
-            // Verificar se Firebase está pronto
-            if (!isFirebaseReady) {
-                console.log('🔥 Firebase não está pronto - sincronização adiada');
-                return;
-            }
-            
-            console.log('🔄 Sincronização automática iniciada...');
-            await saveData();
-            lastSyncTime = Date.now();
-            updateLastSyncInfo(); // Atualizar imediatamente após sincronização
-            
-            // Notificação discreta
-            showToast('Dados sincronizados com sucesso', 'success', 2000);
-            
-        } catch (error) {
-            console.error('❌ Erro na sincronização automática:', error);
-            // Notificar erro apenas se for grave
-            if (error.code !== 'permission-denied' && error.code !== 'unavailable') {
-                showToast('Falha na sincronização automática', 'error', 3000);
-            }
-        }
-    }, SYNC_INTERVAL);
-}
 
 // Função para exibir notificações discretas
 function showToast(message, type = 'info', duration = 3000) {
