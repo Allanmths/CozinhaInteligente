@@ -902,12 +902,14 @@ async function loadFirebaseData() {
         const restaurantId = currentRestaurant.id;
         
         // 🔐 CARREGAR DADOS COMPARTILHADOS DO RESTAURANTE
-        const [insumosSnap, comprasSnap, fichasSnap, pratosSnap, configSnap] = await Promise.all([
+        const [insumosSnap, comprasSnap, fichasSnap, pratosSnap, configSnap, categoriasSnap, fornecedoresSnap] = await Promise.all([
             getDocs(query(collection(db, 'insumos'), where('restaurantId', '==', restaurantId))),
             getDocs(query(collection(db, 'compras'), where('restaurantId', '==', restaurantId))),
             getDocs(query(collection(db, 'fichasTecnicas'), where('restaurantId', '==', restaurantId))),
             getDocs(query(collection(db, 'pratos'), where('restaurantId', '==', restaurantId))),
-            getDocs(query(collection(db, 'configuracoes'), where('restaurantId', '==', restaurantId)))
+            getDocs(query(collection(db, 'configuracoes'), where('restaurantId', '==', restaurantId))),
+            getDocs(query(collection(db, 'categorias'), where('restaurantId', '==', restaurantId))),
+            getDocs(query(collection(db, 'fornecedores'), where('restaurantId', '==', restaurantId)))
         ]);
         
         // Processar dados
@@ -916,6 +918,17 @@ async function loadFirebaseData() {
                        .sort((a, b) => new Date(b.data) - new Date(a.data)); // Ordenar por data desc
         fichasTecnicasDB = fichasSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         pratosDB = pratosSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Processar categorias
+        if (categoriasSnap.docs.length > 0) {
+            const categoriasDoc = categoriasSnap.docs[0].data();
+            categoriasDB = categoriasDoc.categorias || [];
+        } else {
+            categoriasDB = [];
+        }
+        
+        // Processar fornecedores
+        fornecedoresDB = fornecedoresSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
         // Configurações (documento único)
         if (configSnap.docs.length > 0) {
@@ -1121,7 +1134,8 @@ function saveToLocalStorage() {
 
 // Função de atalho para salvar dados
 function salvarDados() {
-    saveToLocalStorage();
+    console.log('🔄 salvarDados() - usando saveData() para Firebase/localStorage');
+    saveData(); // Usar função completa que decide entre Firebase e localStorage
 }
 
 // --- FUNÇÕES PRINCIPAIS ---
@@ -1262,8 +1276,23 @@ async function saveData() {
                 savePromises.push(saveToFirebase('configuracoes', configuracoesDB, configuracoesDB.id));
             }
             
+            // Salvar categorias (importante para persistência)
+            if (categoriasDB.length > 0) {
+                savePromises.push(saveToFirebase('categorias', { 
+                    categorias: categoriasDB, 
+                    restaurantId: currentRestaurant.id 
+                }, 'categorias'));
+            }
+            
+            // Salvar fornecedores
+            fornecedoresDB.forEach(fornecedor => {
+                if (fornecedor.id) {
+                    savePromises.push(saveToFirebase('fornecedores', fornecedor, fornecedor.id));
+                }
+            });
+            
             await Promise.all(savePromises);
-            console.log('Dados sincronizados com Firebase');
+            console.log('Dados sincronizados com Firebase (incluindo categorias)');
         } catch (error) {
             console.error('Erro ao sincronizar com Firebase:', error);
             saveToLocalStorage(); // Fallback
