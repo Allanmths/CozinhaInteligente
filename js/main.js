@@ -1142,6 +1142,70 @@ function saveToLocalStorage() {
 function salvarDados() {
     console.log('🔄 salvarDados() - usando saveData() para Firebase/localStorage');
     saveData(); // Usar função completa que decide entre Firebase e localStorage
+    // Atualizar hora da última sincronização
+    lastSyncTime = Date.now();
+    
+    // Mostrar feedback
+    showToast('Dados salvos com sucesso', 'success');
+}
+
+// Função para sincronização manual com feedback visual
+async function sincronizarManualmente() {
+    try {
+        // Verificar se está online
+        if (!navigator.onLine) {
+            showToast('Dispositivo offline. Não é possível sincronizar.', 'error');
+            return;
+        }
+        
+        // Verificar se Firebase está pronto
+        if (!isFirebaseReady) {
+            showToast('Firebase não está disponível. Salvando apenas localmente.', 'info');
+            saveToLocalStorage();
+            return;
+        }
+        
+        // Mostrar indicador de carregamento
+        const syncBtn = document.getElementById('sync-button');
+        if (syncBtn) {
+            syncBtn.innerHTML = '<i data-lucide="loader" class="h-5 w-5 animate-spin"></i>';
+            syncBtn.disabled = true;
+        }
+        
+        // Sincronizar dados
+        await saveData();
+        lastSyncTime = Date.now();
+        
+        // Atualizar interface
+        if (syncBtn) {
+            syncBtn.innerHTML = '<i data-lucide="check" class="h-5 w-5"></i>';
+            setTimeout(() => {
+                syncBtn.innerHTML = '<i data-lucide="refresh-cw" class="h-5 w-5"></i>';
+                syncBtn.disabled = false;
+                lucide.createIcons();
+            }, 1500);
+        }
+        
+        // Mostrar feedback
+        showToast('Sincronização concluída com sucesso', 'success');
+        
+    } catch (error) {
+        console.error('❌ Erro na sincronização manual:', error);
+        
+        // Atualizar interface
+        const syncBtn = document.getElementById('sync-button');
+        if (syncBtn) {
+            syncBtn.innerHTML = '<i data-lucide="alert-circle" class="h-5 w-5"></i>';
+            setTimeout(() => {
+                syncBtn.innerHTML = '<i data-lucide="refresh-cw" class="h-5 w-5"></i>';
+                syncBtn.disabled = false;
+                lucide.createIcons();
+            }, 1500);
+        }
+        
+        // Mostrar feedback de erro
+        showToast('Falha na sincronização: ' + (error.message || 'Erro desconhecido'), 'error');
+    }
 }
 
 // --- FUNÇÕES PRINCIPAIS ---
@@ -1231,15 +1295,251 @@ function validateAndFixData() {
     });
 }
 
+// Variável para controlar o intervalo de sincronização automática
+let autoSyncInterval;
+let lastSyncTime = 0;
+const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutos em milissegundos
+
+// Controle de estado da sincronização automática
+let autoSyncEnabled = true;
+
+// Função para sincronização automática em segundo plano
+function startAutoSync() {
+    if (autoSyncInterval) {
+        clearInterval(autoSyncInterval);
+    }
+    
+    // Verificar configuração salva
+    // Primeiro verificar no objeto de configurações, depois no localStorage
+    if (configuracoesDB && typeof configuracoesDB.autoSyncEnabled !== 'undefined') {
+        autoSyncEnabled = configuracoesDB.autoSyncEnabled;
+    } else {
+        const savedPreference = localStorage.getItem('autoSyncEnabled');
+        if (savedPreference !== null) {
+            autoSyncEnabled = savedPreference === 'true';
+        }
+    }
+    
+    console.log('🔄 Iniciando sincronização automática a cada 5 minutos - Estado: ' + 
+                (autoSyncEnabled ? 'Ativada' : 'Desativada'));
+    
+    // Atualizar controle na interface se existir
+    updateSyncControlUI();
+    
+    // Atualizar informação de última sincronização
+    function updateLastSyncInfo() {
+        const syncButton = document.getElementById('sync-button');
+        if (!syncButton) return;
+        
+        if (lastSyncTime === 0) {
+            syncButton.setAttribute('title', 'Sincronizar dados - Nunca sincronizado');
+            return;
+        }
+        
+        const now = Date.now();
+        const diff = now - lastSyncTime;
+        
+        let timeText = '';
+        if (diff < 60000) { // menos de 1 minuto
+            timeText = 'há alguns segundos';
+        } else if (diff < 3600000) { // menos de 1 hora
+            const minutes = Math.floor(diff / 60000);
+            timeText = `há ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
+        } else if (diff < 86400000) { // menos de 1 dia
+            const hours = Math.floor(diff / 3600000);
+            timeText = `há ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+        } else {
+            const days = Math.floor(diff / 86400000);
+            timeText = `há ${days} ${days === 1 ? 'dia' : 'dias'}`;
+        }
+        
+        syncButton.setAttribute('title', `Sincronizar dados (última: ${timeText})`);
+    }
+    
+    // Atualizar a cada minuto
+    setInterval(updateLastSyncInfo, 60000);
+    
+    // Função para atualizar controle na interface
+    function updateSyncControlUI() {
+        const syncToggle = document.getElementById('auto-sync-toggle');
+        if (syncToggle) {
+            syncToggle.checked = autoSyncEnabled;
+        }
+    }
+    
+    // Função para alternar estado da sincronização automática
+    function toggleAutoSync() {
+        autoSyncEnabled = !autoSyncEnabled;
+        
+        // Salvar preferência
+        localStorage.setItem('autoSyncEnabled', autoSyncEnabled);
+        
+        // Notificar usuário
+        showToast(
+            `Sincronização automática ${autoSyncEnabled ? 'ativada' : 'desativada'}`, 
+            'info', 
+            2000
+        );
+        
+        console.log(`🔄 Sincronização automática ${autoSyncEnabled ? 'ativada' : 'desativada'}`);
+        
+        // Atualizar interface
+        updateSyncControlUI();
+    }
+    
+    // Iniciar intervalo de sincronização
+    autoSyncInterval = setInterval(async () => {
+        try {
+            // Atualizar informação de tempo
+            updateLastSyncInfo();
+            
+            // Verificar se a sincronização automática está habilitada
+            if (!autoSyncEnabled) {
+                return;
+            }
+            
+            // Verificar se é hora de sincronizar (para evitar sincronizações muito frequentes)
+            const now = Date.now();
+            if (now - lastSyncTime < SYNC_INTERVAL / 2) {
+                console.log('⏱️ Sincronização ignorada - muito recente');
+                return;
+            }
+            
+            // Verificar se está online
+            if (!navigator.onLine) {
+                console.log('📵 Dispositivo offline - sincronização adiada');
+                return;
+            }
+            
+            // Verificar se Firebase está pronto
+            if (!isFirebaseReady) {
+                console.log('🔥 Firebase não está pronto - sincronização adiada');
+                return;
+            }
+            
+            console.log('🔄 Sincronização automática iniciada...');
+            await saveData();
+            lastSyncTime = Date.now();
+            updateLastSyncInfo(); // Atualizar imediatamente após sincronização
+            
+            // Notificação discreta
+            showToast('Dados sincronizados com sucesso', 'success', 2000);
+            
+        } catch (error) {
+            console.error('❌ Erro na sincronização automática:', error);
+            // Notificar erro apenas se for grave
+            if (error.code !== 'permission-denied' && error.code !== 'unavailable') {
+                showToast('Falha na sincronização automática', 'error', 3000);
+            }
+        }
+    }, SYNC_INTERVAL);
+}
+
+// Função para exibir notificações discretas
+function showToast(message, type = 'info', duration = 3000) {
+    // Verificar se já existe um toast container
+    let toastContainer = document.getElementById('toast-container');
+    
+    if (!toastContainer) {
+        toastContainer = document.createElement('div');
+        toastContainer.id = 'toast-container';
+        toastContainer.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 9999;
+        `;
+        document.body.appendChild(toastContainer);
+    }
+    
+    // Criar elemento toast
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        background-color: ${type === 'error' ? '#f44336' : type === 'success' ? '#4caf50' : '#2196f3'};
+        color: white;
+        padding: 12px 16px;
+        border-radius: 4px;
+        margin-top: 10px;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        display: flex;
+        align-items: center;
+        min-width: 250px;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    `;
+    
+    // Adicionar ícone
+    const icon = document.createElement('span');
+    icon.innerHTML = type === 'error' ? '⚠️' : type === 'success' ? '✅' : 'ℹ️';
+    icon.style.marginRight = '8px';
+    toast.appendChild(icon);
+    
+    // Adicionar mensagem
+    const messageEl = document.createElement('span');
+    messageEl.textContent = message;
+    toast.appendChild(messageEl);
+    
+    // Adicionar ao container
+    toastContainer.appendChild(toast);
+    
+    // Animação de entrada
+    setTimeout(() => {
+        toast.style.opacity = '1';
+    }, 10);
+    
+    // Remover após duração
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => {
+            if (toastContainer.contains(toast)) {
+                toastContainer.removeChild(toast);
+            }
+            
+            // Remover container se não tiver mais toasts
+            if (toastContainer.children.length === 0) {
+                document.body.removeChild(toastContainer);
+            }
+        }, 300);
+    }, duration);
+}
+
 document.addEventListener('DOMContentLoaded', () => { 
     // Verificar se o Firebase está disponível
     if (window.firebaseServices) {
         initializeFirebase();
+        // Iniciar sincronização automática após 1 minuto (para dar tempo ao sistema inicializar)
+        setTimeout(() => {
+            startAutoSync();
+            updateLastSyncInfo(); // Inicializar informação de sincronização
+        }, 60000); // 1 minuto
     } else {
         // Se Firebase não carregou, usar localStorage
         console.warn('Firebase não disponível, usando localStorage');
         loadLocalData();
     }
+    
+    // Monitorar status de conexão
+    window.addEventListener('online', () => {
+        console.log('🌐 Conexão restabelecida');
+        showToast('Conexão restabelecida', 'success');
+        // Tentar sincronizar se estiver online
+        if (isFirebaseReady) {
+            saveData();
+        }
+    });
+    
+    // Monitorar status de conexão offline
+    window.addEventListener('offline', () => {
+        console.log('📵 Conexão perdida');
+        showToast('Conexão perdida - Trabalhando offline', 'info');
+        
+        // Atualizar botão de sincronização
+        const syncBtn = document.getElementById('sync-button');
+        if (syncBtn) {
+            syncBtn.classList.add('opacity-50');
+            syncBtn.setAttribute('title', 'Dispositivo offline - Sincronização indisponível');
+        }
+    });
 });
 
 // --- PERSISTÊNCIA DE DADOS ATUALIZADA ---
@@ -2026,16 +2326,19 @@ function addIngrediente() {
     const index = container.children.length;
     
     const ingredienteHtml = `
-        <div class="ingrediente-item grid grid-cols-1 md:grid-cols-4 gap-3 p-3 bg-gray-50 rounded-lg">
-            <select class="ingrediente-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+        <div class="ingrediente-item grid grid-cols-1 md:grid-cols-5 gap-3 p-3 bg-gray-50 rounded-lg">
+            <select class="ingrediente-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" onchange="atualizarPrecoIngrediente(this)">
                 <option value="">Selecione um insumo</option>
                 ${insumosDB.map(insumo => `<option value="${insumo.id}">${insumo.nome}</option>`).join('')}
             </select>
             <input type="number" class="ingrediente-quantidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
-                placeholder="Quantidade" step="0.01" min="0">
-            <select class="ingrediente-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+                placeholder="Quantidade" step="0.01" min="0" oninput="atualizarPrecoIngrediente(this.parentElement)">
+            <select class="ingrediente-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" onchange="atualizarPrecoIngrediente(this.parentElement)">
                 ${getUnidadesOptions()}
             </select>
+            <div class="ingrediente-preco px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-center font-semibold text-green-700">
+                R$ 0,00
+            </div>
             <button type="button" onclick="removeIngrediente(this)" 
                 class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
                 <i data-lucide="trash-2" class="h-4 w-4"></i>
@@ -2531,16 +2834,19 @@ function addIngredienteFicha() {
     const container = document.getElementById('fichaIngredientesList');
     
     const ingredienteHtml = `
-        <div class="ingrediente-ficha-item grid grid-cols-1 md:grid-cols-4 gap-3 p-3 bg-gray-50 rounded-lg">
-            <select class="ingrediente-ficha-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+        <div class="ingrediente-ficha-item grid grid-cols-1 md:grid-cols-5 gap-3 p-3 bg-gray-50 rounded-lg">
+            <select class="ingrediente-ficha-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="atualizarPrecoIngredienteFicha(this)">
                 <option value="">Selecione um insumo</option>
                 ${insumosDB.map(insumo => `<option value="${insumo.id}">${insumo.nome}</option>`).join('')}
             </select>
             <input type="number" class="ingrediente-ficha-quantidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" 
-                placeholder="Quantidade" step="0.01" min="0">
-            <select class="ingrediente-ficha-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500">
+                placeholder="Quantidade" step="0.01" min="0" oninput="atualizarPrecoIngredienteFicha(this.parentElement)">
+            <select class="ingrediente-ficha-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="atualizarPrecoIngredienteFicha(this.parentElement)">
                 ${getUnidadesOptions()}
             </select>
+            <div class="ingrediente-ficha-preco px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-center font-semibold text-green-700">
+                R$ 0,00
+            </div>
             <button type="button" onclick="removeIngredienteFicha(this)" 
                 class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
                 <i data-lucide="trash-2" class="h-4 w-4"></i>
@@ -2875,6 +3181,18 @@ function renderConfiguracoes() {
         if (defaultCustoFinalizacao) defaultCustoFinalizacao.value = configuracoesDB.custoFinalizacao || 10;
         if (defaultMargemLucro) defaultMargemLucro.value = configuracoesDB.margemLucro || 200;
     }
+    
+    // Configurações de sincronização
+    const syncToggle = document.getElementById('auto-sync-toggle');
+    if (syncToggle) {
+        syncToggle.checked = autoSyncEnabled;
+        
+        // Atualizar estado visual do botão de sincronização manual
+        const syncButton = document.getElementById('sync-button');
+        if (syncButton) {
+            updateLastSyncInfo(); // Atualizar informação de última sincronização
+        }
+    }
 }
 
 async function salvarConfiguracoes() {
@@ -2884,15 +3202,32 @@ async function salvarConfiguracoes() {
     configuracoesDB.custoFinalizacao = custoFinalizacao;
     configuracoesDB.margemLucro = margemLucro;
     
+    // Salvar também configurações de sincronização no objeto principal
+    configuracoesDB.autoSyncEnabled = autoSyncEnabled;
+    
     try {
-        await saveToFirebase('configuracoes', { custoFinalizacao, margemLucro }, configuracoesDB.id);
-        showAlert('Sucesso', 'Configurações salvas com sucesso!', 'success');
+        if (isFirebaseReady && configuracoesDB.id) {
+            await saveToFirebase('configuracoes', {
+                custoFinalizacao, 
+                margemLucro,
+                autoSyncEnabled
+            }, configuracoesDB.id);
+            showToast('Configurações salvas com sucesso!', 'success');
+        } else {
+            saveToLocalStorage();
+            showToast('Configurações salvas localmente', 'info');
+        }
     } catch (error) {
         console.error('Erro ao salvar configurações:', error);
-        showAlert('Erro', 'Erro ao salvar configurações', 'error');
+        showToast('Erro ao salvar configurações: ' + error.message, 'error');
+        saveToLocalStorage(); // Fallback para local
     }
     
-    saveData();
+    // Atualizar configurações localmente
+    localStorage.setItem('autoSyncEnabled', autoSyncEnabled);
+    
+    // Salvar todos os dados
+    await saveData();
     renderAll();
 }
 

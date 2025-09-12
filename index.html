@@ -497,14 +497,22 @@
  
  <!-- Info do Usuário -->
  <div class="p-4 bg-orange-50 border-b border-gray-200">
- <div class="flex items-start space-x-3">
- <div class="w-8 h-8 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0">
- <i data-lucide="user" class="h-4 w-4 text-orange-700"></i>
- </div>
- <div class="min-w-0 flex-1">
- <p class="text-xs text-gray-600">Logado como:</p>
- <p id="currentUserName" class="text-sm font-medium text-gray-900 break-words leading-tight">Carregando...</p>
- </div>
+ <div class="flex items-start justify-between">
+   <div class="flex items-start space-x-3">
+     <div class="w-8 h-8 bg-orange-200 rounded-full flex items-center justify-center flex-shrink-0">
+       <i data-lucide="user" class="h-4 w-4 text-orange-700"></i>
+     </div>
+     <div class="min-w-0 flex-1">
+       <p class="text-xs text-gray-600">Logado como:</p>
+       <p id="currentUserName" class="text-sm font-medium text-gray-900 break-words leading-tight">Carregando...</p>
+     </div>
+   </div>
+   <button id="sync-button" 
+     onclick="sincronizarManualmente()" 
+     class="bg-orange-100 hover:bg-orange-200 text-orange-700 p-1.5 rounded-full transition-colors"
+     title="Sincronizar dados com Firebase">
+     <i data-lucide="refresh-cw" class="h-4 w-4"></i>
+   </button>
  </div>
  </div>
  <nav class="mt-6 flex-grow">
@@ -1362,6 +1370,29 @@
                      <div>
                          <label for="defaultMargemLucro" class="block text-sm font-medium text-gray-700">Margem de Lucro Padrão (%) - Apenas para Pratos</label>
                          <input type="number" id="defaultMargemLucro" class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 focus:ring-orange-500 focus:border-orange-500">
+                     </div>
+                     
+                     <!-- Sincronização automática -->
+                     <div class="mt-6 pt-6 border-t border-gray-100">
+                         <h4 class="font-medium text-gray-900">Sincronização de Dados</h4>
+                         
+                         <div class="mt-4 flex items-center justify-between">
+                             <div>
+                                 <label for="auto-sync-toggle" class="text-sm font-medium text-gray-700">Sincronização Automática</label>
+                                 <p class="text-sm text-gray-500">Sincronizar dados automaticamente a cada 5 minutos</p>
+                             </div>
+                             <label class="relative inline-flex items-center cursor-pointer">
+                                 <input type="checkbox" id="auto-sync-toggle" class="sr-only peer" checked onchange="toggleAutoSync()">
+                                 <div class="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-orange-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                             </label>
+                         </div>
+                         
+                         <div class="mt-4">
+                             <button type="button" onclick="sincronizarManualmente()" class="w-full inline-flex items-center justify-center px-4 py-2 border border-orange-300 shadow-sm text-sm font-medium rounded-md text-orange-700 bg-orange-50 hover:bg-orange-100">
+                                 <i data-lucide="refresh-cw" class="h-4 w-4 mr-2"></i>
+                                 Sincronizar Agora
+                             </button>
+                         </div>
                      </div>
                  </div>
              </div>
