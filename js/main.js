@@ -2743,10 +2743,82 @@ function showAlert(title, message, type = 'info') {
 }
 
 // --- FUNÇÕES DE INSUMOS ---
+function populateFornecedores() {
+    const fornecedorSelect = document.getElementById('insumoFornecedor');
+    if (!fornecedorSelect) {
+        console.log('Select de fornecedor não encontrado');
+        return;
+    }
+    
+    console.log('Populando fornecedores...');
+    // Obter fornecedores únicos das compras e do banco de fornecedores
+    const fornecedoresUnicos = new Set();
+    
+    // Adicionar fornecedores das compras
+    comprasDB.forEach(compra => {
+        if (compra.fornecedor?.nome) {
+            fornecedoresUnicos.add(compra.fornecedor.nome);
+        }
+    });
+    
+    // Adicionar fornecedores do banco
+    fornecedoresDB.forEach(fornecedor => {
+        if (fornecedor.nome) {
+            fornecedoresUnicos.add(fornecedor.nome);
+        }
+    });
+    
+    // Manter seleção atual
+    const selectedValue = fornecedorSelect.value;
+    
+    // Limpar e repopular
+    fornecedorSelect.innerHTML = '<option value="">Selecione um fornecedor</option>';
+    
+    // Adicionar opção para novo fornecedor
+    fornecedorSelect.innerHTML += '<option value="__novo__">+ Adicionar novo fornecedor</option>';
+    
+    // Adicionar fornecedores existentes
+    Array.from(fornecedoresUnicos).sort().forEach(nome => {
+        fornecedorSelect.innerHTML += `<option value="${nome}">${nome}</option>`;
+    });
+    
+    // Restaurar seleção
+    fornecedorSelect.value = selectedValue;
+}
+
+function handleFornecedorChange(select) {
+    if (select.value === '__novo__') {
+        const novoFornecedor = prompt('Digite o nome do novo fornecedor:');
+        if (novoFornecedor && novoFornecedor.trim() !== '') {
+            const nome = novoFornecedor.trim();
+            
+            // Adicionar à lista se não existir
+            const optionExists = Array.from(select.options).some(option => option.value === nome);
+            if (!optionExists) {
+                const newOption = new Option(nome, nome);
+                select.add(newOption, select.options.length - 1); // Adicionar antes da opção "novo"
+            }
+            
+            // Selecionar o novo fornecedor
+            select.value = nome;
+        } else {
+            // Voltar para vazio se cancelou
+            select.value = '';
+        }
+    }
+}
+
 function showAddInsumoModal() {
+    console.log('Abrindo modal de adicionar insumo...');
     document.getElementById('insumoModalTitle').textContent = 'Adicionar Insumo';
     document.getElementById('insumoForm').reset();
     document.getElementById('insumoId').value = '';
+    
+    // Definir data atual por padrão
+    document.getElementById('insumoDataCompra').value = new Date().toISOString().split('T')[0];
+    
+    // Popular fornecedores
+    populateFornecedores();
     
     showModal('insumoModal');
 }
@@ -2757,6 +2829,18 @@ function saveInsumo(event) {
     const id = document.getElementById('insumoId').value;
     const valorUnitario = parseFloat(document.getElementById('insumoValorUnitario').value) || 0;
     const taxaCorrecao = parseFloat(document.getElementById('insumoTaxaCorrecao').value) || 0;
+    let fornecedorNome = document.getElementById('insumoFornecedor').value;
+    const dataCompra = document.getElementById('insumoDataCompra').value;
+    
+    // Verificar se usuário escolheu "Adicionar novo fornecedor"
+    if (fornecedorNome === '__novo__') {
+        fornecedorNome = prompt('Digite o nome do novo fornecedor:');
+        if (!fornecedorNome || fornecedorNome.trim() === '') {
+            showAlert('Erro', 'Nome do fornecedor é obrigatório.', 'error');
+            return;
+        }
+        fornecedorNome = fornecedorNome.trim();
+    }
     
     const insumo = {
         nome: document.getElementById('insumoNome').value,
@@ -2772,17 +2856,84 @@ function saveInsumo(event) {
         const index = insumosDB.findIndex(i => i.id === id);
         if (index !== -1) {
             insumosDB[index] = { ...insumosDB[index], ...insumo };
-            showAlert('Insumo Atualizado', 'Insumo atualizado com sucesso!', 'success');
+            
+            // Se tiver dados de compra, criar novo registro de compra
+            if (valorUnitario > 0 && fornecedorNome && dataCompra) {
+                const compraId = comprasDB.length > 0 ? Math.max(...comprasDB.map(c => c.id)) + 1 : 1;
+                const novaCompra = {
+                    id: compraId,
+                    insumoMestreId: id,
+                    data: dataCompra,
+                    preco: valorUnitario,
+                    quantidade: 1, // Quantidade padrão para cadastro manual
+                    fornecedor: {
+                        nome: fornecedorNome,
+                        cnpj: '' // CNPJ não disponível no cadastro manual
+                    },
+                    notaFiscal: 'Manual',
+                    codigoFornecedor: '',
+                    dataRegistro: new Date().toISOString().split('T')[0]
+                };
+                
+                comprasDB.push(novaCompra);
+                
+                // Adicionar fornecedor ao banco se não existir
+                if (fornecedorNome && !fornecedoresDB.find(f => f.nome === fornecedorNome)) {
+                    const fornecedorId = fornecedoresDB.length > 0 ? Math.max(...fornecedoresDB.map(f => f.id)) + 1 : 1;
+                    fornecedoresDB.push({
+                        id: fornecedorId,
+                        nome: fornecedorNome,
+                        cnpj: '',
+                        tipo: 'manual'
+                    });
+                }
+            }
+            
+            showAlert('Insumo Atualizado', 'Insumo e histórico de compra atualizados com sucesso!', 'success');
         }
     } else {
         // Adicionar novo insumo
         insumo.id = 'insumo_' + Date.now();
         insumosDB.push(insumo);
-        showAlert('Insumo Criado', 'Insumo adicionado com sucesso!', 'success');
+        
+        // Criar registro de compra se houver dados
+        if (valorUnitario > 0 && fornecedorNome && dataCompra) {
+            const compraId = comprasDB.length > 0 ? Math.max(...comprasDB.map(c => c.id)) + 1 : 1;
+            const novaCompra = {
+                id: compraId,
+                insumoMestreId: insumo.id,
+                data: dataCompra,
+                preco: valorUnitario,
+                quantidade: 1, // Quantidade padrão para cadastro manual
+                fornecedor: {
+                    nome: fornecedorNome,
+                    cnpj: '' // CNPJ não disponível no cadastro manual
+                },
+                notaFiscal: 'Manual',
+                codigoFornecedor: '',
+                dataRegistro: new Date().toISOString().split('T')[0]
+            };
+            
+            comprasDB.push(novaCompra);
+            
+            // Adicionar fornecedor ao banco se não existir
+            if (fornecedorNome && !fornecedoresDB.find(f => f.nome === fornecedorNome)) {
+                const fornecedorId = fornecedoresDB.length > 0 ? Math.max(...fornecedoresDB.map(f => f.id)) + 1 : 1;
+                fornecedoresDB.push({
+                    id: fornecedorId,
+                    nome: fornecedorNome,
+                    cnpj: '',
+                    tipo: 'manual'
+                });
+            }
+        }
+        
+        showAlert('Insumo Criado', 'Insumo criado com sucesso' + (valorUnitario > 0 && fornecedorNome && dataCompra ? ' e registro de compra adicionado!' : '!'), 'success');
     }
     
     saveData();
     renderInsumos();
+    populateFilters(); // Atualizar filtros com novos fornecedores
     hideModal('insumoModal');
 }
 
@@ -2790,14 +2941,24 @@ function editInsumo(id) {
     const insumo = insumosDB.find(i => i.id === id);
     if (!insumo) return;
     
+    // Buscar última compra para preencher dados de fornecedor
+    const ultimaCompra = getUltimaCompra(id);
+    
     document.getElementById('insumoModalTitle').textContent = 'Editar Insumo';
     document.getElementById('insumoId').value = insumo.id;
     document.getElementById('insumoNome').value = insumo.nome;
     document.getElementById('insumoUnidade').value = insumo.unidade || '';
     document.getElementById('insumoCategoria').value = insumo.categoria || '';
     document.getElementById('insumoObservacoes').value = insumo.observacoes || '';
-    document.getElementById('insumoValorUnitario').value = insumo.valorUnitario || '';
+    document.getElementById('insumoValorUnitario').value = ultimaCompra ? ultimaCompra.preco : (insumo.valorUnitario || '');
     document.getElementById('insumoTaxaCorrecao').value = insumo.taxaCorrecao || '';
+    
+    // Popular fornecedores
+    populateFornecedores();
+    
+    // Preencher dados da última compra se existir
+    document.getElementById('insumoFornecedor').value = ultimaCompra ? (ultimaCompra.fornecedor?.nome || '') : '';
+    document.getElementById('insumoDataCompra').value = ultimaCompra ? ultimaCompra.data : new Date().toISOString().split('T')[0];
     
     showModal('insumoModal');
 }
