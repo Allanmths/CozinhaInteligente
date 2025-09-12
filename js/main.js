@@ -1588,29 +1588,17 @@ function renderPratos() {
 function calcularCustoPrato(prato) {
     let custoTotal = 0;
     
-    // Calcular custo dos ingredientes individuais
+    // Calcular custo dos ingredientes individuais usando preço com taxa de correção
     if (prato.ingredientes && prato.ingredientes.length > 0) {
         custoTotal += prato.ingredientes.reduce((total, ingrediente) => {
             const insumo = insumosDB.find(i => i.id === ingrediente.insumoId);
             if (!insumo) return total;
             
-            // Buscar última compra para obter preço atual
-            const ultimaCompra = comprasDB
-                .filter(c => c.insumoMestreId === insumo.id)
-                .sort((a, b) => new Date(b.data) - new Date(a.data))[0];
+            // Usar a função que calcula preço com taxa de correção
+            const precoComTaxa = getPrecoComTaxaCorrecao(insumo.id);
+            if (precoComTaxa <= 0) return total;
             
-            if (!ultimaCompra) return total;
-            
-            // Calcular custo baseado na quantidade usada
-            let custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
-            
-            // Aplicar taxa de correção do insumo (se houver)
-            if (insumo.taxaCorrecao && insumo.taxaCorrecao > 0) {
-                const fatorCorrecaoInsumo = insumo.taxaCorrecao / 100;
-                custoUnitario = custoUnitario * (1 + fatorCorrecaoInsumo);
-            }
-            
-            return total + (custoUnitario * ingrediente.quantidade);
+            return total + (precoComTaxa * ingrediente.quantidade);
         }, 0);
     }
     
@@ -1632,28 +1620,17 @@ function calcularCustoPrato(prato) {
 function calcularCustoFichaTecnica(ficha) {
     if (!ficha.ingredientes || ficha.ingredientes.length === 0) return 0;
     
-    // Calcular custo base dos ingredientes
+    // Calcular custo base dos ingredientes usando preço com taxa de correção
     const custoBase = ficha.ingredientes.reduce((total, ingrediente) => {
         const insumo = insumosDB.find(i => i.id === ingrediente.insumoId);
         if (!insumo) return total;
         
-        // Buscar última compra para obter preço atual
-        const ultimaCompra = comprasDB
-            .filter(c => c.insumoMestreId === insumo.id)
-            .sort((a, b) => new Date(b.data) - new Date(a.data))[0];
+        // Usar a função que calcula preço com taxa de correção
+        const precoComTaxa = getPrecoComTaxaCorrecao(insumo.id);
+        if (precoComTaxa <= 0) return total;
         
-        if (!ultimaCompra) return total;
-        
-        // Calcular custo baseado na quantidade usada
-        let custoUnitario = ultimaCompra.preco / ultimaCompra.quantidade;
-        
-        // Aplicar taxa de correção do insumo (se houver)
-        if (insumo.taxaCorrecao && insumo.taxaCorrecao > 0) {
-            const fatorCorrecaoInsumo = insumo.taxaCorrecao / 100;
-            custoUnitario = custoUnitario * (1 + fatorCorrecaoInsumo);
-        }
-        
-        const custoIngrediente = custoUnitario * ingrediente.quantidade;
+        // O preço já inclui a taxa de correção do insumo
+        const custoIngrediente = precoComTaxa * ingrediente.quantidade;
         
         return total + custoIngrediente;
     }, 0);
@@ -2530,6 +2507,22 @@ function getUltimaCompra(insumoId) {
     return compras.length ? compras.sort((a, b) => new Date(b.data) - new Date(a.data))[0] : null;
 }
 
+function getPrecoComTaxaCorrecao(insumoId) {
+    const insumo = insumosDB.find(i => i.id === insumoId);
+    const ultimaCompra = getUltimaCompra(insumoId);
+    
+    if (!ultimaCompra || !insumo) return 0;
+    
+    const precoBase = ultimaCompra.preco;
+    const taxaCorrecao = parseFloat(insumo.taxaCorrecao) || 0;
+    
+    // Aplicar taxa de correção (percentual de acréscimo)
+    // Se taxa é 0, o preço permanece o mesmo
+    const precoComTaxa = precoBase * (1 + (taxaCorrecao / 100));
+    
+    return precoComTaxa;
+}
+
 function renderInsumos() {
     const s = document.getElementById('searchInput')?.value?.toLowerCase() || '';
     const f = document.getElementById('filterFornecedor')?.value || '';
@@ -2546,12 +2539,13 @@ function renderInsumos() {
     });
     
     if (filtrados.length === 0) { 
-        tbody.innerHTML = `<tr><td colspan="7" class="text-center p-4 text-gray-500">Nenhum insumo encontrado.</td></tr>`; 
+        tbody.innerHTML = `<tr><td colspan="8" class="text-center p-4 text-gray-500">Nenhum insumo encontrado.</td></tr>`; 
         return; 
     }
     
     tbody.innerHTML = filtrados.map(insumo => {
         const uc = getUltimaCompra(insumo.id);
+        const precoComTaxa = getPrecoComTaxaCorrecao(insumo.id);
         
         return `<tr class="border-b border-gray-200 hover:bg-gray-50">
             <td class="p-4">
@@ -2561,6 +2555,7 @@ function renderInsumos() {
             <td class="p-4">${insumo.unidade}</td>
             <td class="p-4">${uc ? uc.fornecedor?.nome || 'N/A' : 'N/A'}</td>
             <td class="p-4 font-semibold text-green-700">${uc ? `R$ ${uc.preco.toFixed(2)}` : 'N/A'}</td>
+            <td class="p-4 font-bold text-orange-700">${precoComTaxa > 0 ? `R$ ${precoComTaxa.toFixed(2)}` : 'N/A'}</td>
             <td class="p-4">${uc ? new Date(uc.data + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</td>
             <td class="p-4">
                 <div class="flex items-center space-x-2">
@@ -2685,15 +2680,17 @@ function createChart(canvasId, type, labels, data, label) {
 
 function exportarInsumosCSV() {
     let csvContent = "data:text/csv;charset=utf-8,";
-    csvContent += "ID,Nome,Unidade,Ultimo Fornecedor,Ultimo Preco,Data Ultima Compra\r\n";
+    csvContent += "ID,Nome,Unidade,Ultimo Fornecedor,Ultimo Preco,Preco com Taxa,Data Ultima Compra\r\n";
     insumosDB.forEach(insumo => {
         const uc = getUltimaCompra(insumo.id);
+        const precoComTaxa = getPrecoComTaxaCorrecao(insumo.id);
         const row = [
             insumo.id, 
             insumo.nome, 
             insumo.unidade, 
             uc ? uc.fornecedor?.nome || 'N/A' : 'N/A', 
-            uc ? uc.preco.toFixed(2) : 'N/A', 
+            uc ? uc.preco.toFixed(2) : 'N/A',
+            precoComTaxa > 0 ? precoComTaxa.toFixed(2) : 'N/A',
             uc ? uc.data : 'N/A'
         ].join(",");
         csvContent += row + "\r\n";
