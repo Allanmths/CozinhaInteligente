@@ -899,6 +899,13 @@ async function loadFirebaseData() {
     const { db, collection, addDoc, getDocs, query, orderBy, where } = firebaseServices;
     
     try {
+        // Verificar se o restaurante está definido
+        if (!currentRestaurant || !currentRestaurant.id) {
+            console.error('Erro: Restaurante não definido ou sem ID');
+            loadLocalData(); // Carrega apenas dados locais como fallback
+            return;
+        }
+        
         const restaurantId = currentRestaurant.id;
         
         // 🔐 CARREGAR DADOS COMPARTILHADOS DO RESTAURANTE
@@ -960,8 +967,24 @@ async function loadFirebaseData() {
 }
 
 async function saveToFirebase(collection_name, data, docId = null) {
-    if (!isFirebaseReady || !firebaseServices || !currentUser || !currentRestaurant) {
-        console.warn('Firebase não está pronto, usuário não logado ou restaurante não definido, salvando localmente');
+    // Verificações mais detalhadas
+    if (!isFirebaseReady) {
+        console.warn('Firebase não está inicializado, salvando localmente');
+        return saveToLocalStorage();
+    }
+    
+    if (!firebaseServices) {
+        console.warn('Serviços do Firebase não estão disponíveis, salvando localmente');
+        return saveToLocalStorage();
+    }
+    
+    if (!currentUser) {
+        console.warn('Usuário não está logado, salvando localmente');
+        return saveToLocalStorage();
+    }
+    
+    if (!currentRestaurant || !currentRestaurant.id) {
+        console.warn('Restaurante não definido ou sem ID, salvando localmente');
         return saveToLocalStorage();
     }
     
@@ -1105,8 +1128,8 @@ function loadLocalData() {
     configuracoesDB = JSON.parse(localStorage.getItem('configuracoesDB')) || { custoFinalizacao: 10, margemLucro: 200 };
     fornecedoresDB = JSON.parse(localStorage.getItem('fornecedoresDB')) || [];
     
-    // Salvar dados atualizados para garantir consistência
-    saveData();
+    // Não chamamos saveData() aqui para evitar loop recursivo
+    // quando o Firebase não está disponível
     
     console.log('Dados carregados do localStorage (fallback)');
     updateConnectionStatus('offline');
@@ -1544,68 +1567,71 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- PERSISTÊNCIA DE DADOS ATUALIZADA ---
 async function saveData() {
-    if (isFirebaseReady) {
-        try {
-            // Salvar cada item individualmente
-            const savePromises = [];
-            
-            // Salvar insumos
-            insumosDB.forEach(insumo => {
-                if (insumo.id) {
-                    savePromises.push(saveToFirebase('insumos', insumo, insumo.id));
-                }
-            });
-            
-            // Salvar compras
-            comprasDB.forEach(compra => {
-                if (compra.id && typeof compra.id === 'string' && compra.id.trim() !== '') {
-                    savePromises.push(saveToFirebase('compras', compra, compra.id));
-                }
-            });
-            
-            // Salvar fichas técnicas
-            fichasTecnicasDB.forEach(ficha => {
-                if (ficha.id) {
-                    savePromises.push(saveToFirebase('fichasTecnicas', ficha, ficha.id));
-                }
-            });
-            
-            // Salvar pratos
-            pratosDB.forEach(prato => {
-                if (prato.id) {
-                    savePromises.push(saveToFirebase('pratos', prato, prato.id));
-                }
-            });
-            
-            // Salvar configurações
-            if (configuracoesDB.id) {
-                savePromises.push(saveToFirebase('configuracoes', configuracoesDB, configuracoesDB.id));
-            }
-            
-            // Salvar categorias (importante para persistência)
-            if (categoriasDB.length > 0) {
-                savePromises.push(saveToFirebase('categorias', { 
-                    categorias: categoriasDB, 
-                    restaurantId: currentRestaurant.id 
-                }, 'categorias'));
-            }
-            
-            // Salvar fornecedores
-            fornecedoresDB.forEach(fornecedor => {
-                if (fornecedor.id && typeof fornecedor.id === 'string' && fornecedor.id.trim() !== '') {
-                    savePromises.push(saveToFirebase('fornecedores', fornecedor, fornecedor.id));
-                }
-            });
-            
-            await Promise.all(savePromises);
-            console.log('Dados sincronizados com Firebase (incluindo categorias)');
-        } catch (error) {
-            console.error('Erro ao sincronizar com Firebase:', error);
-            saveToLocalStorage(); // Fallback
-        }
-    } else {
-        // Fallback para localStorage
+    // Verificar se podemos usar o Firebase ou se precisamos cair para localStorage
+    if (!isFirebaseReady || !firebaseServices || !currentUser || !currentRestaurant || !currentRestaurant.id) {
+        console.warn('Firebase não disponível ou dados de usuário/restaurante faltando. Usando localStorage.');
         saveToLocalStorage();
+        return;
+    }
+    
+    // Firebase está disponível, tentar salvar
+    try {
+        // Salvar cada item individualmente
+        const savePromises = [];
+        
+        // Salvar insumos
+        insumosDB.forEach(insumo => {
+            if (insumo.id) {
+                savePromises.push(saveToFirebase('insumos', insumo, insumo.id));
+            }
+        });
+        
+        // Salvar compras
+        comprasDB.forEach(compra => {
+            if (compra.id && typeof compra.id === 'string' && compra.id.trim() !== '') {
+                savePromises.push(saveToFirebase('compras', compra, compra.id));
+            }
+        });
+        
+        // Salvar fichas técnicas
+        fichasTecnicasDB.forEach(ficha => {
+            if (ficha.id) {
+                savePromises.push(saveToFirebase('fichasTecnicas', ficha, ficha.id));
+            }
+        });
+        
+        // Salvar pratos
+        pratosDB.forEach(prato => {
+            if (prato.id) {
+                savePromises.push(saveToFirebase('pratos', prato, prato.id));
+            }
+        });
+        
+        // Salvar configurações
+        if (configuracoesDB.id) {
+            savePromises.push(saveToFirebase('configuracoes', configuracoesDB, configuracoesDB.id));
+        }
+        
+        // Salvar categorias (importante para persistência)
+        if (categoriasDB.length > 0) {
+            savePromises.push(saveToFirebase('categorias', { 
+                categorias: categoriasDB, 
+                restaurantId: currentRestaurant.id 
+            }, 'categorias'));
+        }
+        
+        // Salvar fornecedores
+        fornecedoresDB.forEach(fornecedor => {
+            if (fornecedor.id && typeof fornecedor.id === 'string' && fornecedor.id.trim() !== '') {
+                savePromises.push(saveToFirebase('fornecedores', fornecedor, fornecedor.id));
+            }
+        });
+        
+        await Promise.all(savePromises);
+        console.log('Dados sincronizados com Firebase (incluindo categorias)');
+    } catch (error) {
+        console.error('Erro ao sincronizar com Firebase:', error);
+        saveToLocalStorage(); // Fallback
     }
 }
 
