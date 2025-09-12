@@ -2339,10 +2339,14 @@ function addIngrediente() {
             <div class="ingrediente-preco px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-center font-semibold text-green-700">
                 R$ 0,00
             </div>
-            <button type="button" onclick="removeIngrediente(this)" 
-                class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
-                <i data-lucide="trash-2" class="h-4 w-4"></i>
-            </button>
+            <div class="flex gap-2">
+                <div class="preco-convertido px-3 py-2 text-xs bg-blue-50 border border-blue-200 rounded-lg text-center text-blue-700 flex-1 flex items-center justify-center">
+                </div>
+                <button type="button" onclick="removeIngrediente(this)" 
+                    class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
+                    <i data-lucide="trash-2" class="h-4 w-4"></i>
+                </button>
+            </div>
         </div>
     `;
     
@@ -2847,8 +2851,11 @@ function addIngredienteFicha() {
             <div class="ingrediente-ficha-preco px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-center font-semibold text-green-700">
                 R$ 0,00
             </div>
-            <button type="button" onclick="removeIngredienteFicha(this)" 
-                class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
+            <div class="flex gap-2">
+                <div class="preco-ficha-convertido px-3 py-2 text-xs bg-blue-50 border border-blue-200 rounded-lg text-center text-blue-700 flex-1 flex items-center justify-center">
+                </div>
+                <button type="button" onclick="removeIngredienteFicha(this)" 
+                    class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
                 <i data-lucide="trash-2" class="h-4 w-4"></i>
             </button>
         </div>
