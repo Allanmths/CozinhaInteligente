@@ -1303,6 +1303,36 @@ const SYNC_INTERVAL = 5 * 60 * 1000; // 5 minutos em milissegundos
 // Controle de estado da sincronização automática
 let autoSyncEnabled = true;
 
+// Função para atualizar informação de última sincronização
+function updateLastSyncInfo() {
+    const syncButton = document.getElementById('sync-button');
+    if (!syncButton) return;
+    
+    if (lastSyncTime === 0) {
+        syncButton.setAttribute('title', 'Sincronizar dados - Nunca sincronizado');
+        return;
+    }
+    
+    const now = Date.now();
+    const diff = now - lastSyncTime;
+    
+    let timeText = '';
+    if (diff < 60000) { // menos de 1 minuto
+        timeText = 'há alguns segundos';
+    } else if (diff < 3600000) { // menos de 1 hora
+        const minutes = Math.floor(diff / 60000);
+        timeText = `há ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
+    } else if (diff < 86400000) { // menos de 1 dia
+        const hours = Math.floor(diff / 3600000);
+        timeText = `há ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
+    } else {
+        const days = Math.floor(diff / 86400000);
+        timeText = `há ${days} ${days === 1 ? 'dia' : 'dias'}`;
+    }
+    
+    syncButton.setAttribute('title', `Sincronizar dados (última: ${timeText})`);
+}
+
 // Função para sincronização automática em segundo plano
 function startAutoSync() {
     if (autoSyncInterval) {
@@ -1326,60 +1356,78 @@ function startAutoSync() {
     // Atualizar controle na interface se existir
     updateSyncControlUI();
     
-    // Atualizar informação de última sincronização
-    function updateLastSyncInfo() {
-        const syncButton = document.getElementById('sync-button');
-        if (!syncButton) return;
-        
-        if (lastSyncTime === 0) {
-            syncButton.setAttribute('title', 'Sincronizar dados - Nunca sincronizado');
-            return;
-        }
-        
-        const now = Date.now();
-        const diff = now - lastSyncTime;
-        
-        let timeText = '';
-        if (diff < 60000) { // menos de 1 minuto
-            timeText = 'há alguns segundos';
-        } else if (diff < 3600000) { // menos de 1 hora
-            const minutes = Math.floor(diff / 60000);
-            timeText = `há ${minutes} ${minutes === 1 ? 'minuto' : 'minutos'}`;
-        } else if (diff < 86400000) { // menos de 1 dia
-            const hours = Math.floor(diff / 3600000);
-            timeText = `há ${hours} ${hours === 1 ? 'hora' : 'horas'}`;
-        } else {
-            const days = Math.floor(diff / 86400000);
-            timeText = `há ${days} ${days === 1 ? 'dia' : 'dias'}`;
-        }
-        
-        syncButton.setAttribute('title', `Sincronizar dados (última: ${timeText})`);
-    }
-    
     // Atualizar a cada minuto
     setInterval(updateLastSyncInfo, 60000);
     
-    // Função para atualizar controle na interface
-    function updateSyncControlUI() {
-        const syncToggle = document.getElementById('auto-sync-toggle');
-        if (syncToggle) {
-            syncToggle.checked = autoSyncEnabled;
+    // Iniciar intervalo de sincronização
+    autoSyncInterval = setInterval(async () => {
+        try {
+            // Atualizar informação de tempo
+            updateLastSyncInfo();
+            
+            // Verificar se a sincronização automática está habilitada
+            if (!autoSyncEnabled) {
+                return;
+            }
+            
+            // Verificar se é hora de sincronizar (para evitar sincronizações muito frequentes)
+            const now = Date.now();
+            if (now - lastSyncTime < SYNC_INTERVAL / 2) {
+                console.log('⏱️ Sincronização ignorada - muito recente');
+                return;
+            }
+            
+            // Verificar se está online
+            if (!navigator.onLine) {
+                console.log('📵 Dispositivo offline - sincronização adiada');
+                return;
+            }
+            
+            // Verificar se Firebase está pronto
+            if (!isFirebaseReady) {
+                console.log('🔥 Firebase não está pronto - sincronização adiada');
+                return;
+            }
+            
+            console.log('🔄 Sincronização automática iniciada...');
+            await saveData();
+            lastSyncTime = Date.now();
+            updateLastSyncInfo(); // Atualizar imediatamente após sincronização
+            
+            // Notificação discreta
+            showToast('Dados sincronizados com sucesso', 'success', 2000);
+            
+        } catch (error) {
+            console.error('❌ Erro na sincronização automática:', error);
+            // Notificar erro apenas se for grave
+            if (error.code !== 'permission-denied' && error.code !== 'unavailable') {
+                showToast('Falha na sincronização automática', 'error', 3000);
+            }
         }
+    }, SYNC_INTERVAL);
+}
+
+// Função para atualizar controle na interface
+function updateSyncControlUI() {
+    const syncToggle = document.getElementById('auto-sync-toggle');
+    if (syncToggle) {
+        syncToggle.checked = autoSyncEnabled;
     }
+}
+
+// Função para alternar estado da sincronização automática
+function toggleAutoSync() {
+    autoSyncEnabled = !autoSyncEnabled;
     
-    // Função para alternar estado da sincronização automática
-    function toggleAutoSync() {
-        autoSyncEnabled = !autoSyncEnabled;
-        
-        // Salvar preferência
-        localStorage.setItem('autoSyncEnabled', autoSyncEnabled);
-        
-        // Notificar usuário
-        showToast(
-            `Sincronização automática ${autoSyncEnabled ? 'ativada' : 'desativada'}`, 
-            'info', 
-            2000
-        );
+    // Salvar preferência
+    localStorage.setItem('autoSyncEnabled', autoSyncEnabled);
+    
+    // Notificar usuário
+    showToast(
+        `Sincronização automática ${autoSyncEnabled ? 'ativada' : 'desativada'}`, 
+        'info', 
+        2000
+    );
         
         console.log(`🔄 Sincronização automática ${autoSyncEnabled ? 'ativada' : 'desativada'}`);
         
@@ -3044,9 +3092,12 @@ function renderInsumos() {
                     <button onclick="editInsumo('${insumo.id}')" class="text-blue-500 hover:text-blue-700 font-semibold flex items-center text-sm">
                         <i data-lucide="edit-3" class="h-4 w-4 mr-1"></i>Editar
                     </button>
-                    <button onclick="deleteInsumo('${insumo.id}')" class="text-red-500 hover:text-red-700 font-semibold flex items-center text-sm">
-                        <i data-lucide="trash-2" class="h-4 w-4 mr-1"></i>Excluir
-                    </button>
+                    <div class="flex items-center">
+                        <span class="text-xs text-gray-500 mr-2">${getPrecoConvertido(insumo, precoComTaxa)}</span>
+                        <button onclick="deleteInsumo('${insumo.id}')" class="text-red-500 hover:text-red-700 font-semibold flex items-center text-sm">
+                            <i data-lucide="trash-2" class="h-4 w-4 mr-1"></i>Excluir
+                        </button>
+                    </div>
                 </div>
             </td>
         </tr>`;
@@ -3106,10 +3157,22 @@ function getUnidadesConvertidas(insumo, precoComTaxa) {
         if (precoGrama >= 0.001) {
             conversoes.push(`R$ ${precoGrama.toFixed(3)}/g`);
         }
+        
+        // Adicionar conversão para 100g (comum em receitas)
+        const preco100g = precoComTaxa / 10;
+        if (preco100g >= 0.01) {
+            conversoes.push(`R$ ${preco100g.toFixed(2)}/100g`);
+        }
     } else if (unidade === 'g') {
         const precoKg = precoComTaxa * 1000;
         if (precoKg < 9999) {
             conversoes.push(`R$ ${precoKg.toFixed(2)}/kg`);
+        }
+        
+        // Adicionar conversão para 100g
+        const preco100g = precoComTaxa * 100;
+        if (preco100g < 999) {
+            conversoes.push(`R$ ${preco100g.toFixed(2)}/100g`);
         }
     }
     
@@ -3119,10 +3182,22 @@ function getUnidadesConvertidas(insumo, precoComTaxa) {
         if (precoMl >= 0.001) {
             conversoes.push(`R$ ${precoMl.toFixed(3)}/ml`);
         }
+        
+        // Adicionar conversão para 100ml (comum em receitas)
+        const preco100ml = precoComTaxa / 10;
+        if (preco100ml >= 0.01) {
+            conversoes.push(`R$ ${preco100ml.toFixed(2)}/100ml`);
+        }
     } else if (unidade === 'ml') {
         const precoLitro = precoComTaxa * 1000;
         if (precoLitro < 9999) {
             conversoes.push(`R$ ${precoLitro.toFixed(2)}/L`);
+        }
+        
+        // Adicionar conversão para 100ml
+        const preco100ml = precoComTaxa * 100;
+        if (preco100ml < 999) {
+            conversoes.push(`R$ ${preco100ml.toFixed(2)}/100ml`);
         }
     }
     
@@ -3137,8 +3212,59 @@ function getUnidadesConvertidas(insumo, precoComTaxa) {
         }
     }
     
-    // Mostrar apenas a primeira conversão mais relevante para economizar espaço
-    return conversoes.length > 0 ? ` → ${conversoes[0]}` : '';
+    // Exibir até duas conversões mais relevantes
+    if (conversoes.length > 1) {
+        return ` → ${conversoes[0]} | ${conversoes[1]}`;
+    } else if (conversoes.length === 1) {
+        return ` → ${conversoes[0]}`;
+    } else {
+        return '';
+    }
+}
+
+// Função para formatar o preço convertido para a visualização ao lado do botão excluir
+function getPrecoConvertido(insumo, precoComTaxa) {
+    const unidade = insumo.unidade.toLowerCase();
+    let conversao = '';
+    
+    // Escolher a conversão mais útil dependendo da unidade do insumo
+    if (unidade === 'kg') {
+        // Para kg, mostrar o preço por 100g
+        const preco100g = precoComTaxa / 10;
+        if (preco100g >= 0.01) {
+            conversao = `100g: R$${preco100g.toFixed(2)}`;
+        }
+    } else if (unidade === 'g') {
+        // Para g, mostrar o preço por kg
+        const precoKg = precoComTaxa * 1000;
+        if (precoKg < 9999) {
+            conversao = `kg: R$${precoKg.toFixed(2)}`;
+        }
+    } else if (unidade === 'l') {
+        // Para l, mostrar o preço por 100ml
+        const preco100ml = precoComTaxa / 10;
+        if (preco100ml >= 0.01) {
+            conversao = `100ml: R$${preco100ml.toFixed(2)}`;
+        }
+    } else if (unidade === 'ml') {
+        // Para ml, mostrar o preço por litro
+        const precoLitro = precoComTaxa * 1000;
+        if (precoLitro < 9999) {
+            conversao = `L: R$${precoLitro.toFixed(2)}`;
+        }
+    } else if (unidade === 'dz' || unidade === 'duzia') {
+        // Para dúzia, mostrar o preço por unidade
+        const precoUnidade = precoComTaxa / 12;
+        conversao = `un: R$${precoUnidade.toFixed(2)}`;
+    } else if (unidade === 'un' || unidade === 'unidade') {
+        // Para unidade, mostrar o preço por dúzia
+        const precoDuzia = precoComTaxa * 12;
+        if (precoDuzia < 999) {
+            conversao = `dz: R$${precoDuzia.toFixed(2)}`;
+        }
+    }
+    
+    return conversao;
 }
 
 // --- FUNÇÕES BÁSICAS PARA COMPLETAR O SISTEMA ---
