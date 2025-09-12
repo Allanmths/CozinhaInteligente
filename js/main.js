@@ -1650,16 +1650,39 @@ function calcularCustoPrato(prato) {
         }, 0);
     }
     
-    // Calcular custo das fichas técnicas
-    if (prato.fichasTecnicas && prato.fichasTecnicas.length > 0) {
-        custoTotal += prato.fichasTecnicas.reduce((total, fichaItem) => {
+    // Calcular custo das fichas técnicas (suporte para ambas estruturas)
+    const fichasParaProcessar = prato.fichasTecnicas || prato.fichas;
+    if (fichasParaProcessar && fichasParaProcessar.length > 0) {
+        custoTotal += fichasParaProcessar.reduce((total, fichaItem) => {
             const ficha = fichasTecnicasDB.find(f => f.id === fichaItem.fichaId);
             if (!ficha) return total;
             
             // Calcular o custo da ficha técnica baseado nos seus ingredientes
             const custoFicha = calcularCustoFichaTecnica(ficha);
-            return total + (custoFicha * fichaItem.quantidade);
+            
+            // Calcular custo proporcional baseado na quantidade e unidade
+            let custoFichaUsada = 0;
+            if (ficha.rendimento && ficha.unidade) {
+                // Se tem rendimento definido, calcular proporcionalmente
+                const rendimentoNumerico = parseFloat(ficha.rendimento) || 1;
+                const quantidadeUsada = fichaItem.quantidade || 1;
+                
+                // Custo por unidade de rendimento
+                const custoPorUnidade = custoFicha / rendimentoNumerico;
+                custoFichaUsada = custoPorUnidade * quantidadeUsada;
+            } else {
+                // Se não tem rendimento, usar quantidade diretamente
+                custoFichaUsada = custoFicha * (fichaItem.quantidade || 1);
+            }
+            
+            return total + custoFichaUsada;
         }, 0);
+    }
+    
+    // Adicionar custos de produção se definidos
+    if (prato.custoFinalizacao && prato.custoFinalizacao > 0) {
+        const custoProducao = custoTotal * (prato.custoFinalizacao / 100);
+        custoTotal += custoProducao;
     }
     
     return custoTotal;
@@ -2695,7 +2718,12 @@ function renderInsumos() {
             <td class="p-4">${insumo.unidade}</td>
             <td class="p-4">${uc ? uc.fornecedor?.nome || 'N/A' : 'N/A'}</td>
             <td class="p-4 font-semibold text-green-700">${uc ? `R$ ${uc.preco.toFixed(2)}` : 'N/A'}</td>
-            <td class="p-4 font-bold text-orange-700">${precoComTaxa > 0 ? `R$ ${precoComTaxa.toFixed(2)}` : 'N/A'}</td>
+            <td class="p-4">
+                <div class="font-bold text-orange-700">${precoComTaxa > 0 ? `R$ ${precoComTaxa.toFixed(2)}` : 'N/A'}</div>
+                ${precoComTaxa > 0 ? `<div class="text-xs text-gray-500">
+                    ${insumo.unidade}${getUnidadesConvertidas(insumo, precoComTaxa)}
+                </div>` : ''}
+            </td>
             <td class="p-4">${uc ? new Date(uc.data + 'T00:00:00').toLocaleDateString('pt-BR') : 'N/A'}</td>
             <td class="p-4">
                 <div class="flex items-center space-x-2">
@@ -2710,6 +2738,52 @@ function renderInsumos() {
         </tr>`;
     }).join('');
     lucide.createIcons();
+}
+
+// Função para calcular valores em unidades convertidas
+function getUnidadesConvertidas(insumo, precoComTaxa) {
+    const unidade = insumo.unidade.toLowerCase();
+    const conversoes = [];
+    
+    // Conversões de peso
+    if (unidade === 'kg') {
+        const precoGrama = precoComTaxa / 1000;
+        if (precoGrama >= 0.001) {
+            conversoes.push(`R$ ${precoGrama.toFixed(3)}/g`);
+        }
+    } else if (unidade === 'g') {
+        const precoKg = precoComTaxa * 1000;
+        if (precoKg < 9999) {
+            conversoes.push(`R$ ${precoKg.toFixed(2)}/kg`);
+        }
+    }
+    
+    // Conversões de volume
+    if (unidade === 'l') {
+        const precoMl = precoComTaxa / 1000;
+        if (precoMl >= 0.001) {
+            conversoes.push(`R$ ${precoMl.toFixed(3)}/ml`);
+        }
+    } else if (unidade === 'ml') {
+        const precoLitro = precoComTaxa * 1000;
+        if (precoLitro < 9999) {
+            conversoes.push(`R$ ${precoLitro.toFixed(2)}/L`);
+        }
+    }
+    
+    // Conversões de unidades
+    if (unidade === 'dz' || unidade === 'duzia') {
+        const precoUnidade = precoComTaxa / 12;
+        conversoes.push(`R$ ${precoUnidade.toFixed(2)}/un`);
+    } else if (unidade === 'un' || unidade === 'unidade') {
+        const precoDuzia = precoComTaxa * 12;
+        if (precoDuzia < 999) {
+            conversoes.push(`R$ ${precoDuzia.toFixed(2)}/dz`);
+        }
+    }
+    
+    // Mostrar apenas a primeira conversão mais relevante para economizar espaço
+    return conversoes.length > 0 ? ` → ${conversoes[0]}` : '';
 }
 
 // --- FUNÇÕES BÁSICAS PARA COMPLETAR O SISTEMA ---
