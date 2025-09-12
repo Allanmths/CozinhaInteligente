@@ -1816,9 +1816,26 @@ function viewPratoDetails(id) {
     if (prato.ingredientes && prato.ingredientes.length > 0) {
         ingredientesHtml = prato.ingredientes.map(ing => {
             const insumo = insumosDB.find(i => i.id === ing.insumoId);
-            return `<li class="flex justify-between">
-                <span>${insumo ? insumo.nome : 'Insumo não encontrado'}</span>
-                <span>${ing.quantidade} ${ing.unidade || ''}</span>
+            if (!insumo) {
+                return `<li class="flex justify-between">
+                    <span>Insumo não encontrado</span>
+                    <span>${ing.quantidade} ${ing.unidade || ''}</span>
+                </li>`;
+            }
+            
+            // Calcular o custo do insumo considerando quantidade e unidade
+            const precoComTaxa = getPrecoComTaxaCorrecao(insumo.id);
+            const custoIngrediente = precoComTaxa * ing.quantidade;
+            
+            return `<li class="flex justify-between items-center">
+                <div>
+                    <span class="font-medium">${insumo.nome}</span>
+                    <div class="text-sm text-gray-500">${ing.quantidade} ${ing.unidade || insumo.unidade}</div>
+                </div>
+                <div class="text-right">
+                    <span class="font-semibold text-green-700">R$ ${custoIngrediente.toFixed(2)}</span>
+                    <div class="text-sm text-gray-500">R$ ${precoComTaxa.toFixed(2)}/${insumo.unidade}</div>
+                </div>
             </li>`;
         }).join('');
     } else {
@@ -1826,13 +1843,62 @@ function viewPratoDetails(id) {
     }
     
     let fichasHtml = '';
-    if (prato.fichasTecnicas && prato.fichasTecnicas.length > 0) {
-        fichasHtml = prato.fichasTecnicas.map(fichaItem => {
+    
+    // Verificar se usa a estrutura nova (fichasTecnicas) ou antiga (fichas)
+    const fichasParaProcessar = prato.fichasTecnicas || prato.fichas;
+    
+    if (fichasParaProcessar && fichasParaProcessar.length > 0) {
+        fichasHtml = fichasParaProcessar.map(fichaItem => {
             const ficha = fichasTecnicasDB.find(f => f.id === fichaItem.fichaId);
-            const custoFicha = ficha ? calcularCustoFichaTecnica(ficha) : 0;
-            return `<li class="flex justify-between">
-                <span>${ficha ? ficha.nome : 'Ficha não encontrada'}</span>
-                <span>${fichaItem.quantidade}x (R$ ${custoFicha.toFixed(2)} cada)</span>
+            if (!ficha) {
+                return `<li class="flex justify-between">
+                    <span>Ficha não encontrada</span>
+                    <span>${fichaItem.quantidade || 1}${fichaItem.unidade || 'x'}</span>
+                </li>`;
+            }
+            
+            // Calcular custo da ficha técnica
+            const custoFichaTecnica = calcularCustoFichaTecnica(ficha);
+            
+            // Calcular custo proporcional baseado na quantidade/unidade usada no prato
+            let custoFichaUsada = 0;
+            let quantidadeFormatada = '';
+            
+            if (ficha.rendimento && ficha.unidade) {
+                // Se tem rendimento definido, calcular proporcionalmente
+                const rendimentoNumerico = parseFloat(ficha.rendimento) || 1;
+                const quantidadeUsada = fichaItem.quantidade || 1;
+                
+                // Custo por unidade de rendimento
+                const custoPorUnidade = custoFichaTecnica / rendimentoNumerico;
+                custoFichaUsada = custoPorUnidade * quantidadeUsada;
+                
+                // Formatação da quantidade (estrutura antiga vs nova)
+                if (fichaItem.unidade) {
+                    // Estrutura antiga com unidade separada
+                    quantidadeFormatada = `${quantidadeUsada} ${fichaItem.unidade} de ${ficha.rendimento} ${ficha.unidade}`;
+                } else {
+                    // Estrutura nova
+                    quantidadeFormatada = `${quantidadeUsada} ${ficha.unidade || 'porção'} de ${ficha.rendimento} ${ficha.unidade || ''}`;
+                }
+            } else {
+                // Se não tem rendimento, usar quantidade diretamente
+                custoFichaUsada = custoFichaTecnica * (fichaItem.quantidade || 1);
+                quantidadeFormatada = `${fichaItem.quantidade || 1}${fichaItem.unidade || 'x'}`;
+            }
+            
+            return `<li class="flex justify-between items-center">
+                <div>
+                    <span class="font-medium">${ficha.nome}</span>
+                    <div class="text-sm text-gray-500">${quantidadeFormatada}</div>
+                </div>
+                <div class="text-right">
+                    <span class="font-semibold text-blue-700">R$ ${custoFichaUsada.toFixed(2)}</span>
+                    <div class="text-sm text-gray-500">
+                        R$ ${custoFichaTecnica.toFixed(2)} total
+                        ${ficha.rendimento ? ` / ${ficha.rendimento} ${ficha.unidade || ''}` : ' (custo total)'}
+                    </div>
+                </div>
             </li>`;
         }).join('');
     } else {
@@ -1883,16 +1949,42 @@ function viewPratoDetails(id) {
             
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Fichas Técnicas</label>
-                <ul class="bg-blue-50 rounded-lg p-4 space-y-2 mb-4">
+                <ul class="bg-blue-50 rounded-lg p-4 space-y-3 mb-4">
                     ${fichasHtml}
                 </ul>
             </div>
             
             <div>
                 <label class="block text-sm font-medium text-gray-700 mb-2">Insumos Individuais</label>
-                <ul class="bg-gray-50 rounded-lg p-4 space-y-2">
+                <ul class="bg-gray-50 rounded-lg p-4 space-y-3 mb-4">
                     ${ingredientesHtml}
                 </ul>
+            </div>
+            
+            <!-- Resumo dos Custos -->
+            <div class="bg-gradient-to-r from-green-50 to-blue-50 rounded-lg p-4 border border-gray-200">
+                <h4 class="text-sm font-medium text-gray-700 mb-3 flex items-center">
+                    <i class="h-4 w-4 mr-2" data-lucide="calculator"></i>
+                    Resumo de Custos
+                </h4>
+                <div class="grid grid-cols-2 gap-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Custo Base:</span>
+                        <span class="font-medium">R$ ${custo.toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-600">Margem:</span>
+                        <span class="font-medium ${margem >= 30 ? 'text-green-600' : margem >= 15 ? 'text-yellow-600' : 'text-red-600'}">${margem.toFixed(1)}%</span>
+                    </div>
+                    <div class="flex justify-between font-semibold text-base pt-2 border-t">
+                        <span class="text-gray-700">Preço de Venda:</span>
+                        <span class="text-green-700">R$ ${(prato.preco || 0).toFixed(2)}</span>
+                    </div>
+                    <div class="flex justify-between font-semibold text-base pt-2 border-t">
+                        <span class="text-gray-700">Lucro por Prato:</span>
+                        <span class="text-blue-700">R$ ${((prato.preco || 0) - custo).toFixed(2)}</span>
+                    </div>
+                </div>
             </div>
         </div>
     `;
