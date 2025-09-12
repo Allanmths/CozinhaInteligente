@@ -115,8 +115,8 @@ function showApp() {
     document.getElementById('appContainer').classList.remove('hidden');
     
     // Inicializar dados da aplicação
+    carregarCategorias(); // Sempre carregar categorias
     if (!insumosDB.length) {
-        carregarCategorias();
         renderDashboard();
     }
 }
@@ -1119,6 +1119,7 @@ function renderAll() {
     renderPratos();
     renderFichas();
     renderConfiguracoes();
+    carregarCategorias(); // Garantir que categorias sejam sempre carregadas
     updateStats();
     lucide.createIcons();
 }
@@ -4198,12 +4199,12 @@ function adicionarCategoria() {
     const categoria = input.value.trim();
     
     if (!categoria) {
-        showErrorMessage('Digite o nome da categoria');
+        showAlert('Erro', 'Digite o nome da categoria', 'error');
         return;
     }
     
     if (categoriasDB.includes(categoria)) {
-        showErrorMessage('Esta categoria já existe');
+        showAlert('Erro', 'Esta categoria já existe', 'error');
         return;
     }
     
