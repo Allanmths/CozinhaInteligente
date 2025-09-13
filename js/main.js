@@ -5907,26 +5907,17 @@ function atualizarPrecoIngrediente(container) {
 
 // Função para atualizar o total de todos os insumos
 function atualizarTotalInsumos() {
-    console.log('🔍 === INÍCIO DEBUG TOTAL INSUMOS ===');
+    console.log('🔍 === INÍCIO CÁLCULO TOTAL INSUMOS ===');
     
     const container = document.getElementById('ingredientesList');
-    const totalElement = document.getElementById('totalInsumos');
+    const totalElement = document.getElementById('totalInsumos'); // Pode não existir (removido da UI)
     
     console.log('Container encontrado:', !!container);
     console.log('TotalElement encontrado:', !!totalElement);
     
-    if (container) {
-        console.log('Container HTML:', container.outerHTML.substring(0, 200) + '...');
-    }
-    
-    if (!container || !totalElement) {
-        console.error('❌ Elementos não encontrados para atualizar total:', { 
-            container: !!container, 
-            totalElement: !!totalElement,
-            containerEl: container,
-            totalEl: totalElement
-        });
-        return;
+    if (!container) {
+        console.warn('⚠️ Container de ingredientes não encontrado');
+        return 0;
     }
     
     let total = 0;
@@ -5961,22 +5952,46 @@ function atualizarTotalInsumos() {
     console.log(`💰 Total final calculado: ${total}`);
     console.log(`💰 Total formatado: R$ ${total.toFixed(2)}`);
     
-    // Tentar diferentes formas de atualizar o elemento
-    try {
-        totalElement.textContent = `R$ ${total.toFixed(2)}`;
-        console.log('✅ Elemento atualizado via textContent');
-        console.log('Elemento após atualização:', totalElement.outerHTML);
-    } catch (error) {
-        console.error('❌ Erro ao atualizar elemento:', error);
+    // Atualizar elemento se existir (opcional - foi removido da UI)
+    if (totalElement) {
         try {
-            totalElement.innerHTML = `R$ ${total.toFixed(2)}`;
-            console.log('✅ Elemento atualizado via innerHTML (fallback)');
-        } catch (error2) {
-            console.error('❌ Erro no fallback:', error2);
+            totalElement.textContent = `R$ ${total.toFixed(2)}`;
+            console.log('✅ Elemento visual atualizado');
+        } catch (error) {
+            console.warn('⚠️ Erro ao atualizar elemento visual:', error);
         }
+    } else {
+        console.log('ℹ️ Elemento visual não existe (removido da UI)');
     }
     
-    console.log('🔍 === FIM DEBUG TOTAL INSUMOS ===');
+    console.log('🔍 === FIM CÁLCULO TOTAL INSUMOS ===');
+    
+    // Retornar o total calculado para outras funções poderem usar
+    return total;
+}
+
+// Função para obter o total dos insumos individuais sem atualizar UI
+function obterTotalInsumos() {
+    const container = document.getElementById('ingredientesList');
+    
+    if (!container) {
+        return 0;
+    }
+    
+    let total = 0;
+    const ingredientes = container.querySelectorAll('.ingrediente-item');
+    
+    ingredientes.forEach((item) => {
+        const precoDiv = item.querySelector('.ingrediente-preco');
+        if (precoDiv) {
+            const precoText = precoDiv.textContent;
+            const precoLimpo = precoText.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+            const preco = parseFloat(precoLimpo) || 0;
+            total += preco;
+        }
+    });
+    
+    return total;
 }
 
 // Função para selecionar insumo em ficha técnica
@@ -6112,7 +6127,7 @@ function debugTotais() {
     const totalElement = document.getElementById('totalInsumos');
     
     console.log('Container existe:', !!container);
-    console.log('Total element existe:', !!totalElement);
+    console.log('Total element existe:', !!totalElement, '(elemento visual foi removido da UI)');
     
     if (container) {
         const ingredientes = container.querySelectorAll('.ingrediente-item');
@@ -6131,9 +6146,14 @@ function debugTotais() {
         });
     }
     
-    // Tentar atualizar
-    console.log('Chamando atualizarTotalInsumos...');
-    atualizarTotalInsumos();
+    // Calcular total
+    console.log('Calculando total...');
+    const totalCalculado = atualizarTotalInsumos();
+    console.log(`📊 Total final: R$ ${totalCalculado.toFixed(2)}`);
+    
+    // Testar função alternativa
+    const totalAlternativo = obterTotalInsumos();
+    console.log(`📊 Total alternativo: R$ ${totalAlternativo.toFixed(2)}`);
     
     console.log('🧪 === FIM TESTE ===');
 }
