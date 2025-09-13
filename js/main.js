@@ -1955,7 +1955,8 @@ function renderPratos() {
     tbody.innerHTML = pratosDB.map(prato => {
         const custo = calcularCustoPrato(prato);
         const preco = prato.preco || 0;
-        const margem = preco > 0 ? (((preco - custo) / preco) * 100) : 0;
+        // Margem corrigida: (Preço - Custo) / Custo * 100 = margem sobre o custo
+        const margem = custo > 0 && preco > 0 ? (((preco - custo) / custo) * 100) : 0;
         const statusClass = prato.status === 'ativo' ? 'bg-green-100 text-green-800' : 
                            prato.status === 'sazonal' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800';
         
@@ -2231,7 +2232,8 @@ function viewPratoDetails(id) {
     if (!prato) return;
     
     const custo = calcularCustoPrato(prato);
-    const margem = prato.preco > 0 ? (((prato.preco - custo) / prato.preco) * 100) : 0;
+    // Margem corrigida: (Preço - Custo) / Custo * 100 = margem sobre o custo
+    const margem = custo > 0 && prato.preco > 0 ? (((prato.preco - custo) / custo) * 100) : 0;
     
     let ingredientesHtml = '';
     if (prato.ingredientes && prato.ingredientes.length > 0) {
@@ -2419,13 +2421,13 @@ function addIngrediente() {
     
     const ingredienteHtml = `
         <div class="ingrediente-item grid grid-cols-1 md:grid-cols-5 gap-3 p-3 bg-gray-50 rounded-lg">
-            <select class="ingrediente-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" onchange="selecionarInsumo(this)">
+            <select class="ingrediente-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" onchange="selecionarInsumo(this); calcularPrecoSugerido()"
                 <option value="">Selecione um insumo</option>
                 ${insumosDB.map(insumo => `<option value="${insumo.id}">${insumo.nome}</option>`).join('')}
             </select>
             <input type="number" class="ingrediente-quantidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
-                placeholder="Quantidade" step="0.01" min="0" oninput="atualizarPrecoIngrediente(this.parentElement)">
-            <select class="ingrediente-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" onchange="atualizarPrecoIngrediente(this.parentElement)">
+                placeholder="Quantidade" step="0.01" min="0" oninput="atualizarPrecoIngrediente(this.parentElement); calcularPrecoSugerido()">
+            <select class="ingrediente-unidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" onchange="atualizarPrecoIngrediente(this.parentElement); calcularPrecoSugerido()"
                 ${getUnidadesOptions()}
             </select>
             <div class="ingrediente-preco px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-center font-semibold text-green-700">
@@ -2474,12 +2476,12 @@ function addFichaTecnica() {
     
     const fichaHtml = `
         <div class="ficha-item grid grid-cols-1 md:grid-cols-3 gap-3 p-3 bg-blue-50 rounded-lg">
-            <select class="ficha-tecnica px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500">
+            <select class="ficha-tecnica px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" onchange="calcularPrecoSugerido()">
                 <option value="">Selecione uma ficha técnica</option>
                 ${fichasTecnicasDB.map(ficha => `<option value="${ficha.id}">${ficha.nome}</option>`).join('')}
             </select>
             <input type="number" class="ficha-quantidade px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" 
-                placeholder="Quantidade" step="0.01" min="0" value="1">
+                placeholder="Quantidade" step="0.01" min="0" value="1" oninput="calcularPrecoSugerido()">
             <button type="button" onclick="removeFichaTecnica(this)" 
                 class="px-3 py-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200 transition-colors">
                 <i data-lucide="trash-2" class="h-4 w-4"></i>
@@ -2493,6 +2495,8 @@ function addFichaTecnica() {
 
 function removeFichaTecnica(button) {
     button.closest('.ficha-item').remove();
+    // Recalcular preço sugerido
+    setTimeout(calcularPrecoSugerido, 100);
 }
 
 function removeIngrediente(button) {
@@ -5903,6 +5907,9 @@ function atualizarPrecoIngrediente(container) {
     
     // Atualizar o total
     atualizarTotalInsumos();
+    
+    // Recalcular preço sugerido
+    setTimeout(calcularPrecoSugerido, 100);
 }
 
 // Função para atualizar o total de todos os insumos
@@ -6160,6 +6167,121 @@ function debugTotais() {
 
 // Disponibilizar função globalmente
 window.debugTotais = debugTotais;
+
+// =====================================================
+// 💰 CÁLCULO DE PREÇO SUGERIDO
+// =====================================================
+
+// Função para calcular o preço sugerido baseado na margem de lucro
+function calcularPrecoSugerido() {
+    console.log('💰 Calculando preço sugerido...');
+    
+    const margemInput = document.getElementById('pratoMargemLucro');
+    const precoSugeridoDisplay = document.getElementById('precoSugeridoDisplay');
+    
+    if (!margemInput || !precoSugeridoDisplay) {
+        console.warn('⚠️ Elementos não encontrados para cálculo de preço sugerido');
+        return;
+    }
+    
+    const margemDesejada = parseFloat(margemInput.value) || 0;
+    
+    if (margemDesejada <= 0) {
+        precoSugeridoDisplay.textContent = 'R$ 0,00';
+        precoSugeridoDisplay.className = 'w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-center font-semibold text-gray-500';
+        return;
+    }
+    
+    // Calcular custo total baseado nos ingredientes e fichas técnicas atuais
+    const custoTotal = calcularCustoAtualFormulario();
+    
+    if (custoTotal <= 0) {
+        precoSugeridoDisplay.textContent = 'R$ 0,00';
+        precoSugeridoDisplay.className = 'w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-center font-semibold text-gray-500';
+        console.log('⚠️ Custo total é zero - adicione ingredientes primeiro');
+        return;
+    }
+    
+    // Fórmula correta: Preço = Custo × (1 + Margem/100)
+    // Se margem é 30%, então: Preço = Custo × 1.30
+    const precoSugerido = custoTotal * (1 + (margemDesejada / 100));
+    
+    console.log(`📊 Cálculo do preço sugerido:`);
+    console.log(`   Custo total: R$ ${custoTotal.toFixed(2)}`);
+    console.log(`   Margem desejada: ${margemDesejada}%`);
+    console.log(`   Preço sugerido: R$ ${precoSugerido.toFixed(2)}`);
+    
+    // Atualizar display
+    precoSugeridoDisplay.textContent = `R$ ${precoSugerido.toFixed(2)}`;
+    
+    // Cor baseada na margem
+    if (margemDesejada >= 40) {
+        precoSugeridoDisplay.className = 'w-full px-3 py-2 bg-green-50 border border-green-200 rounded-lg text-center font-semibold text-green-700';
+    } else if (margemDesejada >= 20) {
+        precoSugeridoDisplay.className = 'w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-center font-semibold text-blue-700';
+    } else {
+        precoSugeridoDisplay.className = 'w-full px-3 py-2 bg-yellow-50 border border-yellow-200 rounded-lg text-center font-semibold text-yellow-700';
+    }
+}
+
+// Função para calcular o custo total baseado no formulário atual
+function calcularCustoAtualFormulario() {
+    let custoTotal = 0;
+    
+    // Somar custo dos ingredientes individuais
+    const totalInsumos = obterTotalInsumos();
+    custoTotal += totalInsumos;
+    
+    console.log(`💵 Custo ingredientes individuais: R$ ${totalInsumos.toFixed(2)}`);
+    
+    // Somar custo das fichas técnicas
+    const fichasList = document.getElementById('fichasList');
+    if (fichasList) {
+        const fichasItems = fichasList.querySelectorAll('.ficha-item');
+        let custoFichas = 0;
+        
+        fichasItems.forEach((item, index) => {
+            const fichaSelect = item.querySelector('.ficha-tecnica');
+            const quantidadeInput = item.querySelector('.ficha-quantidade');
+            
+            if (fichaSelect && quantidadeInput) {
+                const fichaId = fichaSelect.value;
+                const quantidade = parseFloat(quantidadeInput.value) || 0;
+                
+                if (fichaId && quantidade > 0) {
+                    const ficha = fichasTecnicasDB.find(f => f.id === fichaId);
+                    if (ficha) {
+                        const custoFicha = calcularCustoFichaTecnica(ficha);
+                        const custoFichaUsada = custoFicha * quantidade;
+                        custoFichas += custoFichaUsada;
+                        
+                        console.log(`🍽️ Ficha ${index + 1} (${ficha.nome}): ${quantidade}x = R$ ${custoFichaUsada.toFixed(2)}`);
+                    }
+                }
+            }
+        });
+        
+        console.log(`🍽️ Custo fichas técnicas: R$ ${custoFichas.toFixed(2)}`);
+        custoTotal += custoFichas;
+    }
+    
+    // Adicionar custo de finalização se definido
+    const custoFinalizacaoInput = document.getElementById('pratoCustoFinalizacao');
+    if (custoFinalizacaoInput) {
+        const custoFinalizacao = parseFloat(custoFinalizacaoInput.value) || 0;
+        if (custoFinalizacao > 0) {
+            const custoProducao = custoTotal * (custoFinalizacao / 100);
+            custoTotal += custoProducao;
+            console.log(`🔧 Custo de finalização (${custoFinalizacao}%): R$ ${custoProducao.toFixed(2)}`);
+        }
+    }
+    
+    console.log(`💎 Custo total final: R$ ${custoTotal.toFixed(2)}`);
+    return custoTotal;
+}
+
+// Disponibilizar função globalmente
+window.calcularPrecoSugerido = calcularPrecoSugerido;
 
 // Configurar observadores quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
