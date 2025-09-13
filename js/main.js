@@ -1530,11 +1530,19 @@ document.addEventListener('DOMContentLoaded', () => {
     // Verificar se o Firebase está disponível
     if (window.firebaseServices) {
         initializeFirebase();
-        // Iniciar sincronização automática após 1 minuto (para dar tempo ao sistema inicializar)
+        // Iniciar sincronização automática após 2 minutos (para dar tempo ao sistema inicializar)
         setTimeout(() => {
-            startAutoSync();
-            updateLastSyncInfo(); // Inicializar informação de sincronização
-        }, 60000); // 1 minuto
+            // Verificar novamente se o Firebase está disponível antes de iniciar sincronização
+            if (isFirebaseReady && firebaseServices && currentUser) {
+                console.log('🔄 Iniciando serviço de sincronização automática...');
+                startAutoSync();
+                updateLastSyncInfo(); // Inicializar informação de sincronização
+            } else {
+                console.warn('⚠️ Firebase ainda não está pronto. Sincronização automática não iniciada.');
+                // Mostrar mensagem ao usuário
+                showToast('Sincronização automática desativada - Firebase não disponível', 'warning', 5000);
+            }
+        }, 120000); // 2 minutos
     } else {
         // Se Firebase não carregou, usar localStorage
         console.warn('Firebase não disponível, usando localStorage');
