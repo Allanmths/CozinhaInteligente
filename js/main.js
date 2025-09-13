@@ -1568,9 +1568,36 @@ document.addEventListener('DOMContentLoaded', () => {
 // --- PERSISTÊNCIA DE DADOS ATUALIZADA ---
 async function saveData() {
     // Verificar se podemos usar o Firebase ou se precisamos cair para localStorage
-    if (!isFirebaseReady || !firebaseServices || !currentUser || !currentRestaurant || !currentRestaurant.id) {
-        console.warn('Firebase não disponível ou dados de usuário/restaurante faltando. Usando localStorage.');
+    if (!isFirebaseReady || !firebaseServices) {
+        console.warn('Firebase não disponível. Usando localStorage.');
         saveToLocalStorage();
+        return;
+    }
+    
+    // Verificar se estamos em modo offline deliberado
+    const offlineMode = localStorage.getItem('offlineMode') === 'true';
+    if (offlineMode) {
+        console.warn('Modo offline ativado pelo usuário. Usando localStorage.');
+        saveToLocalStorage();
+        return;
+    }
+    
+    // Verificar se há usuário e restaurante
+    // No modo de testes, permitimos salvar mesmo sem usuário/restaurante
+    if ((!currentUser || !currentRestaurant || !currentRestaurant.id) && !window.testMode) {
+        console.warn('Usuário ou restaurante não definidos. Usando localStorage.');
+        saveToLocalStorage();
+        
+        // Definir um restaurante temporário para testes
+        if (!window.testMode && !currentRestaurant) {
+            window.testMode = true;
+            currentRestaurant = {
+                id: 'local_' + Date.now(),
+                name: 'Restaurante Local',
+                isLocalOnly: true
+            };
+            console.info('Modo de teste local ativado temporariamente.');
+        }
         return;
     }
     
@@ -2353,7 +2380,7 @@ function addIngrediente() {
     
     const ingredienteHtml = `
         <div class="ingrediente-item grid grid-cols-1 md:grid-cols-5 gap-3 p-3 bg-gray-50 rounded-lg">
-            <select class="ingrediente-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" onchange="atualizarPrecoIngrediente(this)">
+            <select class="ingrediente-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500" onchange="selecionarInsumo(this)">
                 <option value="">Selecione um insumo</option>
                 ${insumosDB.map(insumo => `<option value="${insumo.id}">${insumo.nome}</option>`).join('')}
             </select>
@@ -2865,7 +2892,7 @@ function addIngredienteFicha() {
     
     const ingredienteHtml = `
         <div class="ingrediente-ficha-item grid grid-cols-1 md:grid-cols-5 gap-3 p-3 bg-gray-50 rounded-lg">
-            <select class="ingrediente-ficha-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="atualizarPrecoIngredienteFicha(this)">
+            <select class="ingrediente-ficha-insumo px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" onchange="selecionarInsumoFicha(this)">
                 <option value="">Selecione um insumo</option>
                 ${insumosDB.map(insumo => `<option value="${insumo.id}">${insumo.nome}</option>`).join('')}
             </select>
