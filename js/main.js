@@ -2524,6 +2524,9 @@ function loadIngredientesIntoForm(ingredientes) {
             // Atualizar preço após carregar os dados
             atualizarPrecoIngrediente(lastItem);
         });
+        
+        // Forçar atualização do total após carregar todos os ingredientes
+        setTimeout(atualizarTotalInsumos, 200);
     } else {
         // Atualizar total mesmo quando não há ingredientes
         atualizarTotalInsumos();
@@ -5876,20 +5879,32 @@ function atualizarTotalInsumos() {
     const container = document.getElementById('ingredientesList');
     const totalElement = document.getElementById('totalInsumos');
     
-    if (!container || !totalElement) return;
+    if (!container || !totalElement) {
+        console.warn('Elementos não encontrados para atualizar total:', { container, totalElement });
+        return;
+    }
     
     let total = 0;
     const ingredientes = container.querySelectorAll('.ingrediente-item');
     
-    ingredientes.forEach(item => {
+    console.log(`📊 Atualizando total - ${ingredientes.length} ingredientes encontrados`);
+    
+    ingredientes.forEach((item, index) => {
         const precoDiv = item.querySelector('.ingrediente-preco');
         if (precoDiv) {
-            const precoText = precoDiv.textContent.replace('R$', '').replace(',', '.').trim();
-            const preco = parseFloat(precoText) || 0;
+            const precoText = precoDiv.textContent;
+            console.log(`Ingrediente ${index + 1}: "${precoText}"`);
+            
+            // Remover "R$" e espaços, trocar vírgula por ponto
+            const precoLimpo = precoText.replace('R$', '').replace(/\s/g, '').replace(',', '.');
+            const preco = parseFloat(precoLimpo) || 0;
+            
+            console.log(`  Convertido: "${precoLimpo}" -> ${preco}`);
             total += preco;
         }
     });
     
+    console.log(`💰 Total calculado: R$ ${total.toFixed(2)}`);
     totalElement.textContent = `R$ ${total.toFixed(2)}`;
 }
 
@@ -5958,5 +5973,78 @@ function atualizarTotalFichaTecnica() {
     
     totalElement.textContent = `R$ ${total.toFixed(2)}`;
 }
+
+// =====================================================
+// 🔄 INICIALIZAÇÃO E OBSERVADORES DE TOTAIS
+// =====================================================
+
+// Função para configurar observadores de mudanças nos ingredientes
+function configurarObservadoresTotais() {
+    console.log('🔄 Configurando observadores de totais...');
+    
+    // Observar mudanças na lista de ingredientes dos pratos
+    const ingredientesList = document.getElementById('ingredientesList');
+    if (ingredientesList) {
+        const observer = new MutationObserver((mutations) => {
+            let shouldUpdate = false;
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    shouldUpdate = true;
+                }
+            });
+            
+            if (shouldUpdate) {
+                console.log('📝 Mudança detectada na lista de ingredientes');
+                setTimeout(atualizarTotalInsumos, 100); // Pequeno delay para garantir que o DOM foi atualizado
+            }
+        });
+        
+        observer.observe(ingredientesList, { childList: true, subtree: true });
+        console.log('✅ Observador configurado para ingredientes de pratos');
+    }
+    
+    // Observar mudanças na lista de ingredientes das fichas técnicas
+    const fichaIngredientesList = document.getElementById('fichaIngredientesList');
+    if (fichaIngredientesList) {
+        const observer = new MutationObserver((mutations) => {
+            let shouldUpdate = false;
+            mutations.forEach((mutation) => {
+                if (mutation.type === 'childList') {
+                    shouldUpdate = true;
+                }
+            });
+            
+            if (shouldUpdate) {
+                console.log('📝 Mudança detectada na lista de ingredientes da ficha');
+                setTimeout(atualizarTotalFichaTecnica, 100);
+            }
+        });
+        
+        observer.observe(fichaIngredientesList, { childList: true, subtree: true });
+        console.log('✅ Observador configurado para ingredientes de fichas técnicas');
+    }
+}
+
+// Função para forçar atualização de todos os totais
+function forcarAtualizacaoTotais() {
+    console.log('🔄 Forçando atualização de todos os totais...');
+    atualizarTotalInsumos();
+    atualizarTotalFichaTecnica();
+}
+
+// Configurar observadores quando o DOM estiver pronto
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM carregado - configurando sistema de totais');
+    
+    setTimeout(() => {
+        configurarObservadoresTotais();
+        forcarAtualizacaoTotais();
+    }, 1000);
+});
+
+// Também configurar quando a página for focada (útil para desenvolvimento)
+window.addEventListener('focus', function() {
+    setTimeout(forcarAtualizacaoTotais, 500);
+});
 
 
