@@ -2003,26 +2003,47 @@ function renderPratos() {
 function calcularCustoPrato(prato) {
     let custoTotal = 0;
     
-    // Calcular custo dos ingredientes individuais usando preço com taxa de correção
+    console.log('💰 === CALCULANDO CUSTO DO PRATO ===');
+    console.log('Prato:', prato.nome || 'Sem nome');
+    
+    // Calcular custo dos ingredientes individuais usando cálculo proporcional
     if (prato.ingredientes && prato.ingredientes.length > 0) {
-        custoTotal += prato.ingredientes.reduce((total, ingrediente) => {
+        console.log(`📝 Processando ${prato.ingredientes.length} ingredientes individuais...`);
+        
+        const custoIngredientes = prato.ingredientes.reduce((total, ingrediente) => {
             const insumo = insumosDB.find(i => i.id === ingrediente.insumoId);
-            if (!insumo) return total;
+            if (!insumo) {
+                console.warn(`⚠️ Insumo não encontrado: ${ingrediente.insumoId}`);
+                return total;
+            }
             
-            // Usar a função que calcula preço com taxa de correção
-            const precoComTaxa = getPrecoComTaxaCorrecao(insumo.id);
-            if (precoComTaxa <= 0) return total;
+            // Usar a função de cálculo proporcional que implementamos
+            const custoIngrediente = calcularPrecoProporcionaIngrediente(
+                ingrediente.insumoId, 
+                ingrediente.quantidade, 
+                ingrediente.unidade || insumo.unidade
+            );
             
-            return total + (precoComTaxa * ingrediente.quantidade);
+            console.log(`  ${insumo.nome}: ${ingrediente.quantidade}${ingrediente.unidade || insumo.unidade} = R$ ${custoIngrediente.toFixed(2)}`);
+            
+            return total + custoIngrediente;
         }, 0);
+        
+        console.log(`💵 Custo ingredientes individuais: R$ ${custoIngredientes.toFixed(2)}`);
+        custoTotal += custoIngredientes;
     }
     
     // Calcular custo das fichas técnicas (suporte para ambas estruturas)
     const fichasParaProcessar = prato.fichasTecnicas || prato.fichas;
     if (fichasParaProcessar && fichasParaProcessar.length > 0) {
-        custoTotal += fichasParaProcessar.reduce((total, fichaItem) => {
+        console.log(`📋 Processando ${fichasParaProcessar.length} fichas técnicas...`);
+        
+        const custoFichas = fichasParaProcessar.reduce((total, fichaItem) => {
             const ficha = fichasTecnicasDB.find(f => f.id === fichaItem.fichaId);
-            if (!ficha) return total;
+            if (!ficha) {
+                console.warn(`⚠️ Ficha técnica não encontrada: ${fichaItem.fichaId}`);
+                return total;
+            }
             
             // Calcular o custo da ficha técnica baseado nos seus ingredientes
             const custoFicha = calcularCustoFichaTecnica(ficha);
@@ -2037,20 +2058,30 @@ function calcularCustoPrato(prato) {
                 // Custo por unidade de rendimento
                 const custoPorUnidade = custoFicha / rendimentoNumerico;
                 custoFichaUsada = custoPorUnidade * quantidadeUsada;
+                
+                console.log(`  ${ficha.nome}: ${quantidadeUsada}x (rend. ${rendimentoNumerico}) = R$ ${custoFichaUsada.toFixed(2)}`);
             } else {
                 // Se não tem rendimento, usar quantidade diretamente
                 custoFichaUsada = custoFicha * (fichaItem.quantidade || 1);
+                console.log(`  ${ficha.nome}: ${fichaItem.quantidade || 1}x = R$ ${custoFichaUsada.toFixed(2)}`);
             }
             
             return total + custoFichaUsada;
         }, 0);
+        
+        console.log(`🍽️ Custo fichas técnicas: R$ ${custoFichas.toFixed(2)}`);
+        custoTotal += custoFichas;
     }
     
     // Adicionar custos de produção se definidos
     if (prato.custoFinalizacao && prato.custoFinalizacao > 0) {
         const custoProducao = custoTotal * (prato.custoFinalizacao / 100);
+        console.log(`🔧 Custo de finalização (${prato.custoFinalizacao}%): R$ ${custoProducao.toFixed(2)}`);
         custoTotal += custoProducao;
     }
+    
+    console.log(`💎 CUSTO TOTAL FINAL: R$ ${custoTotal.toFixed(2)}`);
+    console.log('💰 === FIM CÁLCULO CUSTO PRATO ===');
     
     return custoTotal;
 }
@@ -5876,11 +5907,25 @@ function atualizarPrecoIngrediente(container) {
 
 // Função para atualizar o total de todos os insumos
 function atualizarTotalInsumos() {
+    console.log('🔍 === INÍCIO DEBUG TOTAL INSUMOS ===');
+    
     const container = document.getElementById('ingredientesList');
     const totalElement = document.getElementById('totalInsumos');
     
+    console.log('Container encontrado:', !!container);
+    console.log('TotalElement encontrado:', !!totalElement);
+    
+    if (container) {
+        console.log('Container HTML:', container.outerHTML.substring(0, 200) + '...');
+    }
+    
     if (!container || !totalElement) {
-        console.warn('Elementos não encontrados para atualizar total:', { container, totalElement });
+        console.error('❌ Elementos não encontrados para atualizar total:', { 
+            container: !!container, 
+            totalElement: !!totalElement,
+            containerEl: container,
+            totalEl: totalElement
+        });
         return;
     }
     
@@ -5888,24 +5933,50 @@ function atualizarTotalInsumos() {
     const ingredientes = container.querySelectorAll('.ingrediente-item');
     
     console.log(`📊 Atualizando total - ${ingredientes.length} ingredientes encontrados`);
+    console.log('Ingredientes HTML:', Array.from(ingredientes).map(el => el.outerHTML.substring(0, 100)));
     
     ingredientes.forEach((item, index) => {
         const precoDiv = item.querySelector('.ingrediente-preco');
+        console.log(`Ingrediente ${index + 1}:`, {
+            item: item.outerHTML.substring(0, 100),
+            precoDiv: !!precoDiv,
+            precoHTML: precoDiv ? precoDiv.outerHTML : 'N/A'
+        });
+        
         if (precoDiv) {
             const precoText = precoDiv.textContent;
-            console.log(`Ingrediente ${index + 1}: "${precoText}"`);
+            console.log(`  Texto original: "${precoText}"`);
             
             // Remover "R$" e espaços, trocar vírgula por ponto
             const precoLimpo = precoText.replace('R$', '').replace(/\s/g, '').replace(',', '.');
             const preco = parseFloat(precoLimpo) || 0;
             
-            console.log(`  Convertido: "${precoLimpo}" -> ${preco}`);
+            console.log(`  Processado: "${precoLimpo}" -> ${preco}`);
             total += preco;
+        } else {
+            console.warn(`  ⚠️ Div de preço não encontrada para ingrediente ${index + 1}`);
         }
     });
     
-    console.log(`💰 Total calculado: R$ ${total.toFixed(2)}`);
-    totalElement.textContent = `R$ ${total.toFixed(2)}`;
+    console.log(`💰 Total final calculado: ${total}`);
+    console.log(`💰 Total formatado: R$ ${total.toFixed(2)}`);
+    
+    // Tentar diferentes formas de atualizar o elemento
+    try {
+        totalElement.textContent = `R$ ${total.toFixed(2)}`;
+        console.log('✅ Elemento atualizado via textContent');
+        console.log('Elemento após atualização:', totalElement.outerHTML);
+    } catch (error) {
+        console.error('❌ Erro ao atualizar elemento:', error);
+        try {
+            totalElement.innerHTML = `R$ ${total.toFixed(2)}`;
+            console.log('✅ Elemento atualizado via innerHTML (fallback)');
+        } catch (error2) {
+            console.error('❌ Erro no fallback:', error2);
+        }
+    }
+    
+    console.log('🔍 === FIM DEBUG TOTAL INSUMOS ===');
 }
 
 // Função para selecionar insumo em ficha técnica
@@ -6031,6 +6102,44 @@ function forcarAtualizacaoTotais() {
     atualizarTotalInsumos();
     atualizarTotalFichaTecnica();
 }
+
+// Função de teste para debug - pode ser chamada do console
+function debugTotais() {
+    console.log('🧪 === TESTE MANUAL DE TOTAIS ===');
+    
+    // Verificar elementos
+    const container = document.getElementById('ingredientesList');
+    const totalElement = document.getElementById('totalInsumos');
+    
+    console.log('Container existe:', !!container);
+    console.log('Total element existe:', !!totalElement);
+    
+    if (container) {
+        const ingredientes = container.querySelectorAll('.ingrediente-item');
+        console.log(`Ingredientes encontrados: ${ingredientes.length}`);
+        
+        ingredientes.forEach((item, i) => {
+            const precoDiv = item.querySelector('.ingrediente-preco');
+            const insumoSelect = item.querySelector('.ingrediente-insumo');
+            const quantidadeInput = item.querySelector('.ingrediente-quantidade');
+            
+            console.log(`Ingrediente ${i+1}:`, {
+                insumo: insumoSelect ? insumoSelect.value : 'N/A',
+                quantidade: quantidadeInput ? quantidadeInput.value : 'N/A',
+                preco: precoDiv ? precoDiv.textContent : 'N/A'
+            });
+        });
+    }
+    
+    // Tentar atualizar
+    console.log('Chamando atualizarTotalInsumos...');
+    atualizarTotalInsumos();
+    
+    console.log('🧪 === FIM TESTE ===');
+}
+
+// Disponibilizar função globalmente
+window.debugTotais = debugTotais;
 
 // Configurar observadores quando o DOM estiver pronto
 document.addEventListener('DOMContentLoaded', function() {
