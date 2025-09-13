@@ -2466,6 +2466,7 @@ function removeFichaTecnica(button) {
 
 function removeIngrediente(button) {
     button.closest('.ingrediente-item').remove();
+    atualizarTotalInsumos();
 }
 
 function getIngredientesFromForm() {
@@ -2519,7 +2520,13 @@ function loadIngredientesIntoForm(ingredientes) {
             lastItem.querySelector('.ingrediente-insumo').value = ingrediente.insumoId;
             lastItem.querySelector('.ingrediente-quantidade').value = ingrediente.quantidade;
             lastItem.querySelector('.ingrediente-unidade').value = ingrediente.unidade || '';
+            
+            // Atualizar preço após carregar os dados
+            atualizarPrecoIngrediente(lastItem);
         });
+    } else {
+        // Atualizar total mesmo quando não há ingredientes
+        atualizarTotalInsumos();
     }
 }
 
@@ -2543,6 +2550,9 @@ function resetPratoForm() {
     document.getElementById('pratoModalTitle').textContent = 'Adicionar Prato';
     document.getElementById('ingredientesList').innerHTML = '';
     document.getElementById('fichasList').innerHTML = '';
+    
+    // Resetar totais
+    atualizarTotalInsumos();
     
     // Resetar para a primeira tab (Fichas Técnicas)
     switchTab('fichas');
@@ -2921,6 +2931,7 @@ function addIngredienteFicha() {
 
 function removeIngredienteFicha(button) {
     button.closest('.ingrediente-ficha-item').remove();
+    atualizarTotalFichaTecnica();
 }
 
 function getIngredientesFichaFromForm() {
@@ -2955,7 +2966,13 @@ function loadIngredientesFichaIntoForm(ingredientes) {
             lastItem.querySelector('.ingrediente-ficha-insumo').value = ingrediente.insumoId;
             lastItem.querySelector('.ingrediente-ficha-quantidade').value = ingrediente.quantidade;
             lastItem.querySelector('.ingrediente-ficha-unidade').value = ingrediente.unidade || '';
+            
+            // Atualizar preço após carregar os dados
+            atualizarPrecoIngredienteFicha(lastItem);
         });
+    } else {
+        // Atualizar total mesmo quando não há ingredientes
+        atualizarTotalFichaTecnica();
     }
 }
 
@@ -2964,6 +2981,9 @@ function resetFichaForm() {
     document.getElementById('fichaId').value = '';
     document.getElementById('fichaModalTitle').textContent = 'Adicionar Ficha Técnica';
     document.getElementById('fichaIngredientesList').innerHTML = '';
+    
+    // Resetar total
+    atualizarTotalFichaTecnica();
     
     // Definir valores padrão
     document.getElementById('fichaTipoCorrecao').value = 'incremento';
@@ -5749,3 +5769,194 @@ function validateTermsAcceptance() {
     
     return true;
 }
+
+// =====================================================
+// 💰 FUNÇÕES DE CÁLCULO DE PREÇOS PROPORCIONAIS
+// =====================================================
+
+// Função para selecionar insumo e pré-popular dados
+function selecionarInsumo(selectElement) {
+    const insumoId = selectElement.value;
+    const container = selectElement.parentElement;
+    const unidadeSelect = container.querySelector('.ingrediente-unidade');
+    
+    if (insumoId) {
+        const insumo = insumosDB.find(i => i.id === insumoId);
+        if (insumo) {
+            // Definir a unidade padrão do insumo
+            unidadeSelect.value = insumo.unidade;
+        }
+    }
+    
+    // Atualizar o preço
+    atualizarPrecoIngrediente(container);
+}
+
+// Função para calcular preço proporcional baseado na quantidade e unidade
+function calcularPrecoProporcionaIngrediente(insumoId, quantidade, unidadeUsada) {
+    if (!insumoId || !quantidade || quantidade <= 0) return 0;
+    
+    const insumo = insumosDB.find(i => i.id === insumoId);
+    if (!insumo) return 0;
+    
+    // Obter preço por unidade cadastrada
+    const precoComTaxa = getPrecoComTaxaCorrecao(insumoId);
+    if (precoComTaxa <= 0) return 0;
+    
+    // Converter para a mesma unidade base para fazer o cálculo
+    const unidadeInsumo = insumo.unidade.toLowerCase();
+    const unidadeUsadaLower = unidadeUsada.toLowerCase();
+    
+    let fatorConversao = 1;
+    
+    // Conversões de peso
+    if (unidadeInsumo === 'kg' && unidadeUsadaLower === 'g') {
+        fatorConversao = 1 / 1000; // 1g = 0.001kg
+    } else if (unidadeInsumo === 'g' && unidadeUsadaLower === 'kg') {
+        fatorConversao = 1000; // 1kg = 1000g
+    }
+    // Conversões de volume
+    else if (unidadeInsumo === 'l' && unidadeUsadaLower === 'ml') {
+        fatorConversao = 1 / 1000; // 1ml = 0.001l
+    } else if (unidadeInsumo === 'ml' && unidadeUsadaLower === 'l') {
+        fatorConversao = 1000; // 1l = 1000ml
+    }
+    // Conversões de quantidade
+    else if (unidadeInsumo === 'dz' && unidadeUsadaLower === 'un') {
+        fatorConversao = 1 / 12; // 1un = 1/12 dz
+    } else if (unidadeInsumo === 'un' && unidadeUsadaLower === 'dz') {
+        fatorConversao = 12; // 1dz = 12un
+    }
+    // Se as unidades são iguais ou não há conversão conhecida
+    else if (unidadeInsumo !== unidadeUsadaLower) {
+        console.warn(`Conversão não suportada: ${unidadeInsumo} para ${unidadeUsadaLower}`);
+        fatorConversao = 1; // Assumir mesma unidade
+    }
+    
+    // Calcular preço proporcional
+    const precoFinal = precoComTaxa * quantidade * fatorConversao;
+    
+    console.log(`💰 Cálculo proporcional: ${insumo.nome}`);
+    console.log(`   Preço cadastrado: R$ ${precoComTaxa.toFixed(2)}/${unidadeInsumo}`);
+    console.log(`   Quantidade usada: ${quantidade} ${unidadeUsadaLower}`);
+    console.log(`   Fator conversão: ${fatorConversao}`);
+    console.log(`   Preço final: R$ ${precoFinal.toFixed(2)}`);
+    
+    return precoFinal;
+}
+
+// Função para atualizar preço do ingrediente em tempo real
+function atualizarPrecoIngrediente(container) {
+    const insumoSelect = container.querySelector('.ingrediente-insumo');
+    const quantidadeInput = container.querySelector('.ingrediente-quantidade');
+    const unidadeSelect = container.querySelector('.ingrediente-unidade');
+    const precoDiv = container.querySelector('.ingrediente-preco');
+    
+    if (!insumoSelect || !quantidadeInput || !unidadeSelect || !precoDiv) return;
+    
+    const insumoId = insumoSelect.value;
+    const quantidade = parseFloat(quantidadeInput.value) || 0;
+    const unidade = unidadeSelect.value;
+    
+    if (!insumoId || quantidade <= 0) {
+        precoDiv.textContent = 'R$ 0,00';
+        atualizarTotalInsumos();
+        return;
+    }
+    
+    const precoCalculado = calcularPrecoProporcionaIngrediente(insumoId, quantidade, unidade);
+    precoDiv.textContent = `R$ ${precoCalculado.toFixed(2)}`;
+    
+    // Atualizar o total
+    atualizarTotalInsumos();
+}
+
+// Função para atualizar o total de todos os insumos
+function atualizarTotalInsumos() {
+    const container = document.getElementById('ingredientesList');
+    const totalElement = document.getElementById('totalInsumos');
+    
+    if (!container || !totalElement) return;
+    
+    let total = 0;
+    const ingredientes = container.querySelectorAll('.ingrediente-item');
+    
+    ingredientes.forEach(item => {
+        const precoDiv = item.querySelector('.ingrediente-preco');
+        if (precoDiv) {
+            const precoText = precoDiv.textContent.replace('R$', '').replace(',', '.').trim();
+            const preco = parseFloat(precoText) || 0;
+            total += preco;
+        }
+    });
+    
+    totalElement.textContent = `R$ ${total.toFixed(2)}`;
+}
+
+// Função para selecionar insumo em ficha técnica
+function selecionarInsumoFicha(selectElement) {
+    const insumoId = selectElement.value;
+    const container = selectElement.parentElement;
+    const unidadeSelect = container.querySelector('.ingrediente-ficha-unidade');
+    
+    if (insumoId) {
+        const insumo = insumosDB.find(i => i.id === insumoId);
+        if (insumo) {
+            // Definir a unidade padrão do insumo
+            unidadeSelect.value = insumo.unidade;
+        }
+    }
+    
+    // Atualizar o preço
+    atualizarPrecoIngredienteFicha(container);
+}
+
+// Função para atualizar preço do ingrediente em ficha técnica
+function atualizarPrecoIngredienteFicha(container) {
+    const insumoSelect = container.querySelector('.ingrediente-ficha-insumo');
+    const quantidadeInput = container.querySelector('.ingrediente-ficha-quantidade');
+    const unidadeSelect = container.querySelector('.ingrediente-ficha-unidade');
+    const precoDiv = container.querySelector('.ingrediente-ficha-preco');
+    
+    if (!insumoSelect || !quantidadeInput || !unidadeSelect || !precoDiv) return;
+    
+    const insumoId = insumoSelect.value;
+    const quantidade = parseFloat(quantidadeInput.value) || 0;
+    const unidade = unidadeSelect.value;
+    
+    if (!insumoId || quantidade <= 0) {
+        precoDiv.textContent = 'R$ 0,00';
+        atualizarTotalFichaTecnica();
+        return;
+    }
+    
+    const precoCalculado = calcularPrecoProporcionaIngrediente(insumoId, quantidade, unidade);
+    precoDiv.textContent = `R$ ${precoCalculado.toFixed(2)}`;
+    
+    // Atualizar o total da ficha técnica
+    atualizarTotalFichaTecnica();
+}
+
+// Função para atualizar o total da ficha técnica
+function atualizarTotalFichaTecnica() {
+    const container = document.getElementById('fichaIngredientesList');
+    const totalElement = document.getElementById('totalFichaInsumos'); // Nome correto do elemento
+    
+    if (!container || !totalElement) return;
+    
+    let total = 0;
+    const ingredientes = container.querySelectorAll('.ingrediente-ficha-item');
+    
+    ingredientes.forEach(item => {
+        const precoDiv = item.querySelector('.ingrediente-ficha-preco');
+        if (precoDiv) {
+            const precoText = precoDiv.textContent.replace('R$', '').replace(',', '.').trim();
+            const preco = parseFloat(precoText) || 0;
+            total += preco;
+        }
+    });
+    
+    totalElement.textContent = `R$ ${total.toFixed(2)}`;
+}
+
+
