@@ -6,6 +6,12 @@ function atualizarPrecoIngrediente(container) {
     const precoDisplay = container.querySelector('.ingrediente-preco');
     const precoConvertidoDisplay = container.querySelector('.preco-convertido');
     
+    // Garantir que os elementos foram encontrados
+    if (!insumoSelect || !quantidadeInput || !unidadeSelect || !precoDisplay) {
+        console.error("Elementos necessários não encontrados no container", container);
+        return;
+    }
+    
     const insumoId = insumoSelect.value;
     const quantidade = parseFloat(quantidadeInput.value) || 0;
     const unidade = unidadeSelect.value;
