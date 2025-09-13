@@ -4,7 +4,6 @@ function atualizarPrecoIngrediente(container) {
     const quantidadeInput = container.querySelector('.ingrediente-quantidade');
     const unidadeSelect = container.querySelector('.ingrediente-unidade');
     const precoDisplay = container.querySelector('.ingrediente-preco');
-    const precoConvertidoDisplay = container.querySelector('.preco-convertido');
     
     // Garantir que os elementos foram encontrados
     if (!insumoSelect || !quantidadeInput || !unidadeSelect || !precoDisplay) {
@@ -18,7 +17,6 @@ function atualizarPrecoIngrediente(container) {
     
     if (!insumoId || quantidade <= 0) {
         precoDisplay.textContent = 'R$ 0,00';
-        if (precoConvertidoDisplay) precoConvertidoDisplay.textContent = '';
         // Atualizar o total
         atualizarTotalPrato();
         return;
@@ -28,7 +26,6 @@ function atualizarPrecoIngrediente(container) {
     const insumo = insumosDB.find(i => i.id === insumoId);
     if (!insumo) {
         precoDisplay.textContent = 'R$ 0,00';
-        if (precoConvertidoDisplay) precoConvertidoDisplay.textContent = '';
         // Atualizar o total
         atualizarTotalPrato();
         return;
@@ -41,34 +38,6 @@ function atualizarPrecoIngrediente(container) {
     
     // Atualizar o display do preço
     precoDisplay.textContent = `R$ ${precoFinal.toFixed(2)}`;
-    
-    // Atualizar o display de preço convertido
-    if (precoConvertidoDisplay) {
-        // Formatação e cálculos para o preço convertido
-        if (quantidade > 0) {
-            // Mostrar valor unitário
-            const valorUnitario = precoFinal / quantidade;
-            
-            // Informações sobre a conversão
-            let textoConversao = `R$ ${valorUnitario.toFixed(2)}/${unidade}`;
-            
-            // Se o insumo tem uma unidade diferente da selecionada, mostrar informações adicionais
-            if (insumo.unidade.toLowerCase() !== unidade.toLowerCase()) {
-                // Calcular o fator de conversão entre as unidades
-                const fatorConversao = obterFatorConversao(insumo.unidade, unidade);
-                
-                // Informação sobre o preço original
-                const precoOriginal = precoComTaxa;
-                const precoOriginalExibicao = `${precoOriginal.toFixed(2)}/${insumo.unidade}`;
-                
-                textoConversao = `${quantidade} ${unidade} = ${(quantidade * fatorConversao).toFixed(2)} ${insumo.unidade} (R$ ${precoOriginalExibicao})`;
-            }
-            
-            precoConvertidoDisplay.textContent = textoConversao;
-        } else {
-            precoConvertidoDisplay.textContent = '';
-        }
-    }
     
     // Atualizar o total do prato
     atualizarTotalPrato();
@@ -80,7 +49,6 @@ function atualizarPrecoIngredienteFicha(container) {
     const quantidadeInput = container.querySelector('.ingrediente-ficha-quantidade');
     const unidadeSelect = container.querySelector('.ingrediente-ficha-unidade');
     const precoDisplay = container.querySelector('.ingrediente-ficha-preco');
-    const precoConvertidoDisplay = container.querySelector('.preco-ficha-convertido');
     
     const insumoId = insumoSelect.value;
     const quantidade = parseFloat(quantidadeInput.value) || 0;
@@ -88,7 +56,6 @@ function atualizarPrecoIngredienteFicha(container) {
     
     if (!insumoId || quantidade <= 0) {
         precoDisplay.textContent = 'R$ 0,00';
-        if (precoConvertidoDisplay) precoConvertidoDisplay.textContent = '';
         // Atualizar o total
         atualizarTotalFichaTecnica();
         return;
@@ -98,7 +65,6 @@ function atualizarPrecoIngredienteFicha(container) {
     const insumo = insumosDB.find(i => i.id === insumoId);
     if (!insumo) {
         precoDisplay.textContent = 'R$ 0,00';
-        if (precoConvertidoDisplay) precoConvertidoDisplay.textContent = '';
         // Atualizar o total
         atualizarTotalFichaTecnica();
         return;
@@ -111,34 +77,6 @@ function atualizarPrecoIngredienteFicha(container) {
     
     // Atualizar o display do preço
     precoDisplay.textContent = `R$ ${precoFinal.toFixed(2)}`;
-    
-    // Atualizar o display de preço convertido
-    if (precoConvertidoDisplay) {
-        // Formatação e cálculos para o preço convertido
-        if (quantidade > 0) {
-            // Mostrar valor unitário
-            const valorUnitario = precoFinal / quantidade;
-            
-            // Informações sobre a conversão
-            let textoConversao = `R$ ${valorUnitario.toFixed(2)}/${unidade}`;
-            
-            // Se o insumo tem uma unidade diferente da selecionada, mostrar informações adicionais
-            if (insumo.unidade.toLowerCase() !== unidade.toLowerCase()) {
-                // Calcular o fator de conversão entre as unidades
-                const fatorConversao = obterFatorConversao(insumo.unidade, unidade);
-                
-                // Informação sobre o preço original
-                const precoOriginal = precoComTaxa;
-                const precoOriginalExibicao = `${precoOriginal.toFixed(2)}/${insumo.unidade}`;
-                
-                textoConversao = `${quantidade} ${unidade} = ${(quantidade * fatorConversao).toFixed(2)} ${insumo.unidade} (R$ ${precoOriginalExibicao})`;
-            }
-            
-            precoConvertidoDisplay.textContent = textoConversao;
-        } else {
-            precoConvertidoDisplay.textContent = '';
-        }
-    }
     
     // Atualizar o total da ficha técnica
     atualizarTotalFichaTecnica();
