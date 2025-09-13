@@ -3054,16 +3054,37 @@ function getUltimaCompra(insumoId) {
 
 function getPrecoComTaxaCorrecao(insumoId) {
     const insumo = insumosDB.find(i => i.id === insumoId);
+    
+    if (!insumo) {
+        console.warn(`Insumo não encontrado: ${insumoId}`);
+        return 0;
+    }
+    
     const ultimaCompra = getUltimaCompra(insumoId);
     
-    if (!ultimaCompra || !insumo) return 0;
+    // Prioridade 1: Usar preço da última compra se disponível
+    // Prioridade 2: Usar valorUnitario do próprio insumo
+    // Prioridade 3: Retornar 0 se nenhum preço estiver disponível
+    let precoBase = 0;
     
-    const precoBase = ultimaCompra.preco;
+    if (ultimaCompra && ultimaCompra.preco > 0) {
+        precoBase = ultimaCompra.preco;
+        console.log(`Usando preço da última compra para ${insumo.nome}: R$ ${precoBase}`);
+    } else if (insumo.valorUnitario && insumo.valorUnitario > 0) {
+        precoBase = parseFloat(insumo.valorUnitario);
+        console.log(`Usando valorUnitario do insumo ${insumo.nome}: R$ ${precoBase}`);
+    } else {
+        console.warn(`Nenhum preço disponível para o insumo ${insumo.nome} (ID: ${insumoId})`);
+        return 0;
+    }
+    
     const taxaCorrecao = parseFloat(insumo.taxaCorrecao) || 0;
     
     // Aplicar taxa de correção (percentual de acréscimo)
     // Se taxa é 0, o preço permanece o mesmo
     const precoComTaxa = precoBase * (1 + (taxaCorrecao / 100));
+    
+    console.log(`Preço final para ${insumo.nome}: R$ ${precoComTaxa.toFixed(2)} (base: ${precoBase}, taxa: ${taxaCorrecao}%)`);
     
     return precoComTaxa;
 }
