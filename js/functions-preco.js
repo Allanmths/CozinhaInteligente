@@ -151,12 +151,20 @@ function atualizarTotalFichaTecnica() {
     precoElements.forEach(element => {
         // Extrair o valor numérico do formato "R$ XX,XX"
         const valorTexto = element.textContent.replace('R$', '').trim();
-        const valor = parseFloat(valorTexto.replace(',', '.')) || 0;
+        // Lidar com formatos brasileiros (1.000,00) e internacionais (1,000.00)
+        const valorLimpo = valorTexto.replace('.', '').replace(',', '.');
+        const valor = parseFloat(valorLimpo) || 0;
         total += valor;
+        
+        console.log(`Ficha - Valor lido: ${valorTexto} => ${valor} => Total atual: ${total.toFixed(2)}`);
     });
     
-    // Atualizar o elemento de total
-    totalElement.textContent = `R$ ${total.toFixed(2)}`;
+    // Atualizar o elemento de total com formato brasileiro
+    totalElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    
+    // Debug
+    console.log(`Ficha - Total final: ${total.toFixed(2)}`);
+    
 }
 
 // Função para calcular o preço convertido com base na quantidade e unidades
@@ -248,12 +256,20 @@ function atualizarTotalPrato() {
     precoElements.forEach(element => {
         // Extrair o valor numérico do formato "R$ XX,XX"
         const valorTexto = element.textContent.replace('R$', '').trim();
-        const valor = parseFloat(valorTexto.replace(',', '.')) || 0;
+        // Lidar com formatos brasileiros (1.000,00) e internacionais (1,000.00)
+        const valorLimpo = valorTexto.replace('.', '').replace(',', '.');
+        const valor = parseFloat(valorLimpo) || 0;
         total += valor;
+        
+        console.log(`Valor lido: ${valorTexto} => ${valor} => Total atual: ${total.toFixed(2)}`);
     });
     
-    // Atualizar o elemento de total
-    totalElement.textContent = `R$ ${total.toFixed(2)}`;
+    // Atualizar o elemento de total com formato brasileiro
+    totalElement.textContent = `R$ ${total.toFixed(2).replace('.', ',')}`;
+    
+    // Debug
+    console.log(`Total final: ${total.toFixed(2)}`);
+    
     
     // Também podemos atualizar o preço do prato se existir um campo para isso
     const precoPratoInput = document.querySelector('#precoPrato');
