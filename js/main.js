@@ -6195,6 +6195,19 @@ function calcularPrecoSugerido() {
     // Calcular custo total baseado nos ingredientes e fichas técnicas atuais
     const custoTotal = calcularCustoAtualFormulario();
     
+    // Atualizar display do custo total
+    const custoTotalDisplay = document.getElementById('custoTotalDisplay');
+    if (custoTotalDisplay) {
+        custoTotalDisplay.textContent = `R$ ${custoTotal.toFixed(2)}`;
+        
+        // Cor baseada no valor do custo
+        if (custoTotal > 0) {
+            custoTotalDisplay.className = 'w-full px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-center font-semibold text-blue-700';
+        } else {
+            custoTotalDisplay.className = 'w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-center font-semibold text-gray-500';
+        }
+    }
+    
     if (custoTotal <= 0) {
         precoSugeridoDisplay.textContent = 'R$ 0,00';
         precoSugeridoDisplay.className = 'w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-lg text-center font-semibold text-gray-500';
